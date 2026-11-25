@@ -1,5 +1,9 @@
+import { SearchX } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
+import { Card } from '../shared/Card';
+import { EmptyState } from '../shared/EmptyState';
+import { AppPageHeader } from './AppPageHeader';
 
 /**
  * Rendered for any route the registry does not know. Says what happened and
@@ -9,19 +13,26 @@ import { Link } from 'react-router';
 export function NotFound() {
   const { t } = useTranslation('common');
   return (
-    <section className="flex flex-1 items-center justify-center p-8" data-testid="not-found">
-      <div className="max-w-md rounded-xl border border-surface-border bg-surface-raised p-6 text-center">
-        <h1 className="font-display text-xl font-semibold text-text-primary">
-          {t('emptyState.notFoundTitle')}
-        </h1>
-        <p className="mt-2 text-sm text-text-secondary">{t('emptyState.notFoundBody')}</p>
-        <Link
-          to="/"
-          className="mt-4 inline-block rounded-lg border border-surface-border px-3 py-2 text-sm text-text-primary hover:bg-surface-hover"
-        >
-          {t('emptyState.notFoundHome')}
-        </Link>
-      </div>
+    <section className="stack-xl" data-testid="not-found">
+      <AppPageHeader
+        kicker={t('app.name')}
+        title={t('emptyState.notFoundTitle')}
+        currentLabel={t('emptyState.notFoundTitle')}
+      />
+      <Card>
+        <EmptyState
+          icon={<SearchX className="h-6 w-6" />}
+          title={t('emptyState.notFoundBody')}
+          action={
+            <Link
+              to="/"
+              className="inline-flex items-center rounded-lg border border-surface-border bg-surface-raised px-4 py-2 text-sm font-medium text-text-primary hover:bg-surface-hover"
+            >
+              {t('emptyState.notFoundHome')}
+            </Link>
+          }
+        />
+      </Card>
     </section>
   );
 }

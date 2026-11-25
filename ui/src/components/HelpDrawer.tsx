@@ -11,29 +11,26 @@
  * - Keyboard shortcuts
  * - Search functionality
  *
- * Uses theme tokens and useFocusTrap for accessibility.
+ * The frame is the shared RightDrawer and the sections are SettingsTabs.
  */
 
 import {
   Book,
   Boxes,
   FileText,
-  HelpCircle,
   Keyboard,
   LayoutGrid,
   MessageCircleQuestion,
   Network,
-  Search,
   Terminal,
-  X,
 } from 'lucide-react';
 import type { ReactElement, ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBuildVersion } from '../hooks/useBuildVersion';
-import { useFocusTrap } from '../hooks/useFocusTrap';
-import { cn, drawer, layout, spacing } from '../styles/theme';
-import { Tooltip } from '../ui/Tooltip';
+import { RightDrawer } from '../shared/RightDrawer';
+import { SearchInput } from '../shared/SearchInput';
+import { SettingsTabs } from '../shared/SettingsTabs';
 import { FAQSection } from './help-drawer/FAQSection';
 import { GlossarySection } from './help-drawer/GlossarySection';
 import { ItemListSection } from './help-drawer/ItemListSection';
@@ -68,7 +65,7 @@ interface TabConfig {
   icon: ReactNode;
 }
 
-export function HelpDrawer({ isOpen, onClose, section }: HelpDrawerProps): ReactElement | null {
+export function HelpDrawer({ isOpen, onClose, section }: HelpDrawerProps): ReactElement {
   const { t } = useTranslation('help');
   const [activeTab, setActiveTab] = useState<HelpTab>(section ? 'pages' : 'overview');
   const [activePath, setActivePath] = useState(section ?? '/');
@@ -102,123 +99,39 @@ export function HelpDrawer({ isOpen, onClose, section }: HelpDrawerProps): React
     [t],
   );
 
-  const drawerRef = useFocusTrap<HTMLDivElement>({
-    isActive: isOpen,
-    onEscape: onClose,
-  });
-
-  if (!isOpen) {
-    return null;
-  }
+  const tc = useTranslation('common').t;
 
   return (
-    <>
-      {/* Backdrop */}
-      <div className={drawer.overlay}>
-        <button
-          type="button"
-          className={cn(drawer.backdrop, 'cursor-default')}
-          onClick={onClose}
-          aria-label={t('drawer.backdropAriaLabel')}
+    <RightDrawer
+      open={isOpen}
+      onClose={onClose}
+      title={t('drawer.title')}
+      closeLabel={t('drawer.closeAriaLabel')}
+      data-testid="help-drawer"
+      footer={
+        <span className="mr-auto text-xs text-text-muted" data-testid="help-drawer-version">
+          NIAC v{buildVersion.version} · {buildVersion.commit}
+        </span>
+      }
+    >
+      <div className="stack">
+        <SearchInput
+          value={searchQuery}
+          onValueChange={setSearchQuery}
+          label={t('drawer.searchLabel')}
+          clearLabel={tc('accessibility.clearSearch')}
+          placeholder={t('drawer.searchPlaceholder')}
         />
-
-        {/* Drawer */}
-        <div
-          ref={drawerRef}
-          data-testid="help-drawer"
-          role="dialog"
-          aria-modal="true"
-          aria-label={t('drawer.drawerAriaLabel')}
-          className={cn(drawer.content, drawer.size.lg, 'max-w-full animate-slide-in-right')}
+        <SettingsTabs
+          tabs={TABS}
+          value={activeTab}
+          onChange={(id) => {
+            const tab = TABS.find((candidate) => candidate.id === id);
+            if (tab) setActiveTab(tab.id);
+          }}
+          label={t('drawer.tabsLabel')}
         >
-          {/* Header */}
-          <div className="sticky top-0 bg-bg-surface border-b border-surface-border z-10">
-            <div className="px-4 py-row-lg flex-between">
-              <div className={layout.inline.default}>
-                <HelpCircle className="w-5 h-5 text-brand-accent" aria-hidden="true" />
-                <div>
-                  <h2 className="heading-3 text-text-primary">{t('drawer.title')}</h2>
-                  <Tooltip
-                    text={`commit ${buildVersion.commit} · built ${buildVersion.buildTime}`}
-                    side="bottom"
-                  >
-                    <button
-                      type="button"
-                      className="caption text-text-muted min-h-8 rounded focus-visible:outline-2 focus-visible:outline-brand-accent"
-                      data-testid="help-drawer-version"
-                    >
-                      NIAC v{buildVersion.version}
-                    </button>
-                  </Tooltip>
-                </div>
-              </div>
-              <button
-                type="button"
-                data-testid="help-drawer-close"
-                onClick={onClose}
-                className={cn(
-                  'pad-xs hover:bg-surface-hover rounded-lg transition-colors',
-                  'text-text-muted hover:text-text-primary',
-                )}
-                aria-label={t('drawer.closeAriaLabel')}
-              >
-                <X className="w-5 h-5" aria-hidden="true" />
-              </button>
-            </div>
-
-            {/* Search */}
-            <div className="px-4 pb-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
-                <input
-                  type="text"
-                  placeholder={t('drawer.searchPlaceholder')}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className={cn(
-                    'w-full pl-10 pr-4 py-row bg-surface-hover border border-surface-border rounded-lg',
-                    'text-sm text-text-primary placeholder:text-text-muted',
-                    'focus:outline-none focus:ring-2 focus:ring-brand-primary/50',
-                  )}
-                />
-              </div>
-            </div>
-
-            {/* Tab Navigation */}
-            <div className="border-b border-surface-border px-cell">
-              {/*
-                Wraps rather than clipping. The strip is ~851px of tabs inside a
-                fixed-width drawer (~455px of content), so a non-wrapping row with
-                overflow-x: visible left Commands / Glossary / Shortcuts / FAQ
-                unreachable by mouse at every viewport width — widening the window
-                does not help, because the drawer width is fixed (D1).
-              */}
-              <div className="flex flex-wrap gap-tight -mb-px" role="tablist">
-                {TABS.map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={activeTab === tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={cn(
-                      'flex items-center gap-compact px-3 py-2.5 text-sm font-medium transition-colors',
-                      'border-b-2 -mb-[2px]',
-                      activeTab === tab.id
-                        ? 'border-brand-primary text-text-primary'
-                        : 'border-transparent text-text-muted hover:text-text-primary hover:border-surface-border',
-                    )}
-                  >
-                    {tab.icon}
-                    <span>{tab.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Content */}
-          <div className={cn(spacing.drawer, 'stack-xl')}>
+          <div className="stack-xl">
             {activeTab === 'overview' && <OverviewSection searchQuery={searchQuery} />}
             {activeTab === 'pages' && (
               <PagesSection
@@ -240,9 +153,9 @@ export function HelpDrawer({ isOpen, onClose, section }: HelpDrawerProps): React
             {activeTab === 'shortcuts' && <ShortcutsSection searchQuery={searchQuery} />}
             {activeTab === 'faq' && <FAQSection searchQuery={searchQuery} />}
           </div>
-        </div>
+        </SettingsTabs>
       </div>
-    </>
+    </RightDrawer>
   );
 }
 

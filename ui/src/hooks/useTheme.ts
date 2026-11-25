@@ -1,159 +1,133 @@
 /**
- * Theme Management Hook
+ * Theme store.
  *
- * Manages application theme with support for light, dark, and system modes.
- *
- * Features:
- * - Light and dark theme modes
- * - Automatic system theme detection via prefers-color-scheme
- * - Persistent theme storage in localStorage (key: 'niac-theme')
- * - Automatic system theme change detection while in 'system' mode
- * - Theme toggling functionality
+ * One module-level store shared by every caller, so the Settings control and
+ * the rail-footer toggle can never disagree. The preference is 'light',
+ * 'dark' or 'system'; with nothing stored it is 'system', so the app follows
+ * the operating system until the operator picks a side. The preference is
+ * persisted in localStorage (key 'niac-theme'), and while it is 'system' an
+ * OS change re-applies immediately.
  *
  * The theme is applied by adding/removing the 'dark' class on the document
- * root element. Tailwind CSS / our index.css uses that class to switch
- * between :root (light) and .dark (dark) custom properties.
- *
- * Default value when no stored preference exists is 'dark' — this matches
- * the seed/stem behaviour and is the intended out-of-the-box appearance.
- *
- * Usage:
- * ```typescript
- * const { theme, isDark, toggleTheme, setTheme } = useTheme();
- *
- * <button onClick={toggleTheme}>Toggle Theme</button>
- * <button onClick={() => setTheme('system')}>Use System Theme</button>
- * ```
+ * root; index.css switches between :root (light) and .dark properties.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 
-/** Theme mode options */
+/** Theme preference. */
 export type Theme = 'light' | 'dark' | 'system';
 
-/** localStorage key for theme persistence */
+type EffectiveTheme = 'light' | 'dark';
+
 const STORAGE_KEY = 'niac-theme';
+const DARK_QUERY = '(prefers-color-scheme: dark)';
 
-/**
- * Detects the system's preferred color scheme.
- *
- * @returns 'dark' if system prefers dark mode, 'light' otherwise.
- *          Defaults to 'dark' if detection is unavailable.
- */
-function getSystemTheme(): 'light' | 'dark' {
+function systemTheme(): EffectiveTheme {
   if (typeof window !== 'undefined' && window.matchMedia) {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    return window.matchMedia(DARK_QUERY).matches ? 'dark' : 'light';
   }
-  return 'dark';
+  return 'light';
 }
 
-/**
- * Applies the theme to the document root element.
- * Resolves 'system' theme to actual light/dark preference.
- *
- * @param theme - Theme to apply ('light', 'dark', or 'system')
- */
-function applyTheme(theme: Theme): void {
-  if (typeof document === 'undefined') {
-    return;
-  }
-  const root: HTMLElement = document.documentElement;
-  const effectiveTheme: 'light' | 'dark' = theme === 'system' ? getSystemTheme() : theme;
-
-  if (effectiveTheme === 'dark') {
-    root.classList.add('dark');
-  } else {
-    root.classList.remove('dark');
-  }
-}
-
-/**
- * Read the stored theme from localStorage. Defaults to 'dark' when no
- * preference is stored, ensuring dark mode is the out-of-the-box default.
- */
 function readStoredTheme(): Theme {
-  if (typeof window === 'undefined') {
-    return 'dark';
-  }
   try {
-    const stored = window.localStorage.getItem(STORAGE_KEY) as Theme | null;
+    const stored = window.localStorage.getItem(STORAGE_KEY);
     if (stored === 'light' || stored === 'dark' || stored === 'system') {
       return stored;
     }
   } catch {
-    // localStorage may be unavailable (e.g. private browsing)
+    // localStorage may be unavailable (private browsing)
   }
-  return 'dark';
+  return 'system';
 }
 
-/**
- * Custom hook for managing application theme.
- *
- * Handles theme persistence, system theme detection, and automatic updates
- * when system theme changes.
- *
- * @returns Theme state and control functions
- */
+function resolve(theme: Theme): EffectiveTheme {
+  return theme === 'system' ? systemTheme() : theme;
+}
+
+function applyToDocument(effective: EffectiveTheme): void {
+  if (typeof document !== 'undefined') {
+    document.documentElement.classList.toggle('dark', effective === 'dark');
+  }
+}
+
+interface ThemeSnapshot {
+  theme: Theme;
+  effectiveTheme: EffectiveTheme;
+}
+
+let snapshot: ThemeSnapshot | undefined;
+const listeners = new Set<() => void>();
+
+function current(): ThemeSnapshot {
+  if (snapshot === undefined) {
+    const theme = readStoredTheme();
+    snapshot = { theme, effectiveTheme: resolve(theme) };
+  }
+  return snapshot;
+}
+
+function publish(theme: Theme): void {
+  const effectiveTheme = resolve(theme);
+  snapshot = { theme, effectiveTheme };
+  applyToDocument(effectiveTheme);
+  for (const listener of listeners) {
+    listener();
+  }
+}
+
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  const query = window.matchMedia(DARK_QUERY);
+  const onSystemChange = (): void => {
+    if (current().theme === 'system') {
+      publish('system');
+    }
+  };
+  query.addEventListener('change', onSystemChange);
+  return (): void => {
+    listeners.delete(listener);
+    query.removeEventListener('change', onSystemChange);
+  };
+}
+
+function setTheme(theme: Theme): void {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, theme);
+  } catch {
+    // Ignore storage failures (private browsing, quota)
+  }
+  publish(theme);
+}
+
+/** Test seam: forget the cached preference so the next read hits storage. */
+export function resetThemeStore(): void {
+  snapshot = undefined;
+  applyToDocument(current().effectiveTheme);
+  for (const listener of listeners) {
+    listener();
+  }
+}
+
 export function useTheme(): {
   theme: Theme;
-  effectiveTheme: 'light' | 'dark';
+  effectiveTheme: EffectiveTheme;
   setTheme: (newTheme: Theme) => void;
   toggleTheme: () => void;
   isDark: boolean;
 } {
-  const [theme, setThemeState] = useState<Theme>(readStoredTheme);
-
-  const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>(() =>
-    theme === 'system' ? getSystemTheme() : theme,
-  );
-
-  const setTheme = useCallback((newTheme: Theme): void => {
-    setThemeState(newTheme);
-    try {
-      window.localStorage.setItem(STORAGE_KEY, newTheme);
-    } catch {
-      // Ignore storage failures (private browsing, quota, etc.)
-    }
-    applyTheme(newTheme);
-    setEffectiveTheme(newTheme === 'system' ? getSystemTheme() : newTheme);
-  }, []);
-
+  const { theme, effectiveTheme } = useSyncExternalStore(subscribe, current, current);
   const toggleTheme = useCallback((): void => {
-    const newTheme: Theme = effectiveTheme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
-  }, [effectiveTheme, setTheme]);
-
-  // Apply theme on mount and listen for system theme changes
-  useEffect(() => {
-    applyTheme(theme);
-
-    if (theme === 'system') {
-      const mediaQuery: MediaQueryList = window.matchMedia('(prefers-color-scheme: dark)');
-      const handler = (e: MediaQueryListEvent): void => {
-        setEffectiveTheme(e.matches ? 'dark' : 'light');
-        applyTheme('system');
-      };
-      mediaQuery.addEventListener('change', handler);
-      return (): void => mediaQuery.removeEventListener('change', handler);
-    }
-    return undefined;
-  }, [theme]);
-
-  return {
-    theme,
-    effectiveTheme,
-    setTheme,
-    toggleTheme,
-    isDark: effectiveTheme === 'dark',
-  };
+    setTheme(current().effectiveTheme === 'dark' ? 'light' : 'dark');
+  }, []);
+  return { theme, effectiveTheme, setTheme, toggleTheme, isDark: effectiveTheme === 'dark' };
 }
 
 /**
- * Apply the initial theme synchronously, before React mounts. This avoids
- * a brief flash of light mode at boot when the user has stored 'dark'.
- *
- * Call from main.tsx before `createRoot(...).render(...)`.
+ * Apply the stored (or system) theme synchronously, before React mounts, so
+ * there is no flash of the wrong theme at boot. Call from main.tsx before
+ * `createRoot(...).render(...)`.
  */
 export function initThemeFromStorage(): void {
-  applyTheme(readStoredTheme());
+  applyToDocument(current().effectiveTheme);
 }

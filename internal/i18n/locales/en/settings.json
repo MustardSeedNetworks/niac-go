@@ -17,12 +17,9 @@
     "language": "Language",
     "languageDescription": "Language of the NIAC interface. Saved in this browser.",
     "light": "Light",
-    "persistenceNote": "Dark mode is the default. Your preference is saved across sessions.",
-    "quickToggle": "Quick toggle",
+    "persistenceNote": "Follows your system by default. Your choice is saved in this browser.",
     "sectionDescription": "Customize the appearance of NIAC",
     "sectionTitle": "Theme",
-    "switchToDark": "Switch to dark mode",
-    "switchToLight": "Switch to light mode",
     "system": "System"
   },
   "debug": {
@@ -32,8 +29,8 @@
     "devToolsTitle": "Developer Tools"
   },
   "drawer": {
-    "backdropAriaLabel": "Close settings drawer",
     "closeAriaLabel": "Close settings",
+    "tabsLabel": "Settings sections",
     "title": "Settings"
   },
   "network": {

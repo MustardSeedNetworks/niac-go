@@ -152,6 +152,9 @@
     "uptimeMS": "{{min}}m {{sec}}s",
     "uptimeS": "{{value}}s"
   },
+  "help": {
+    "openFor": "Open help for {{title}}"
+  },
   "jargon": {
     "ariaLabel": "About {{term}}",
     "groupedByTerm": "grouped by {{term}}"

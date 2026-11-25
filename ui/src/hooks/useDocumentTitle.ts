@@ -23,8 +23,7 @@ export function useDocumentTitle(): void {
   useEffect(() => {
     const product = t('app.name');
     const page = pages.find((candidate) => candidate.path === pathname);
-    // The dashboard is the product's front page, so "Dashboard | NIAC" would
-    // only be a longer way of saying NIAC.
-    document.title = page && page.path !== '/' ? `${page.label} | ${product}` : product;
+    // `page | product`, the format all four products share.
+    document.title = page ? `${page.label} | ${product}` : product;
   }, [pathname, pages, t]);
 }

@@ -1,4 +1,3 @@
-import { Tooltip } from '../ui/Tooltip';
 // Copyright (c) 2025 Mustard Seed Networks. All rights reserved.
 
 /**
@@ -7,12 +6,12 @@ import { Tooltip } from '../ui/Tooltip';
  * Main configuration panel for NIAC.
  *
  * Features:
- * - Appearance settings (theme toggle placeholder for future)
+ * - Appearance settings (theme, language)
  * - Network interface display
  * - Debug logging controls
  * - About/version information
  *
- * Uses theme tokens and useFocusTrap for accessibility.
+ * The frame is the shared RightDrawer and the sections are SettingsTabs.
  */
 
 import {
@@ -24,9 +23,7 @@ import {
   Network,
   Palette,
   PlugZap,
-  Settings,
   Sun,
-  X,
 } from 'lucide-react';
 import type { ReactElement, ReactNode } from 'react';
 import { useEffect, useState } from 'react';
@@ -34,18 +31,21 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { fetchInterfaces } from '../api/client';
 import type { NetworkInterface } from '../api/types';
-import { iconSizes } from '../constants/sizes';
 import type { ConnectionState } from '../hooks/useConnectionStatus';
-import { useFocusTrap } from '../hooks/useFocusTrap';
-import type { Theme, useTheme } from '../hooks/useTheme';
+import { type Theme, useTheme } from '../hooks/useTheme';
 import { languages } from '../i18n';
-import { cn, drawer, layout, spacing } from '../styles/theme';
+import { FormField } from '../shared/FormField';
+import { RightDrawer } from '../shared/RightDrawer';
+import { SegmentedControl } from '../shared/SegmentedControl';
+import { Select } from '../shared/Select';
+import { SettingsTabs } from '../shared/SettingsTabs';
+import { Skeleton } from '../shared/Skeleton';
+import { cn, layout } from '../styles/theme';
 import { ConnectionStatus } from '../ui/ConnectionStatus';
 import { SimulationSection } from './settings/SimulationSection';
 
 interface SettingsDrawerProps {
   connectionStatus: ConnectionState;
-  themeState: ReturnType<typeof useTheme>;
   isOpen: boolean;
   onClose: () => void;
   version?: string;
@@ -71,101 +71,39 @@ const TABS: TabConfig[] = [
 
 export function SettingsDrawer({
   connectionStatus,
-  themeState,
   isOpen,
   onClose,
   version = '0.0.0',
-}: SettingsDrawerProps): ReactElement | null {
+}: SettingsDrawerProps): ReactElement {
   const { t } = useTranslation('settings');
   const [activeTab, setActiveTab] = useState<SettingsTab>('simulation');
 
-  const drawerRef = useFocusTrap<HTMLDivElement>({
-    isActive: isOpen,
-    onEscape: onClose,
-  });
-
-  if (!isOpen) {
-    return null;
-  }
-
   return (
-    <>
-      {/* Backdrop */}
-      <div className={drawer.overlay}>
-        <button
-          type="button"
-          className={cn(drawer.backdrop, 'cursor-default')}
-          onClick={onClose}
-          aria-label={t('drawer.backdropAriaLabel')}
-        />
-
-        {/* Drawer */}
-        <div
-          ref={drawerRef}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="settings-drawer-title"
-          data-testid="settings-drawer"
-          className={cn(drawer.content, drawer.size.lg, 'max-w-full animate-slide-in-right')}
-        >
-          {/* Header */}
-          <div className="sticky top-0 bg-bg-surface border-b border-surface-border px-4 py-row-lg flex-between z-10">
-            <div className={layout.inline.default}>
-              <Settings className="w-5 h-5 text-brand-accent" aria-hidden="true" />
-              <h2 id="settings-drawer-title" className="heading-3 text-text-primary">
-                {t('drawer.title')}
-              </h2>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              data-testid="settings-drawer-close"
-              className={cn(
-                'pad-xs hover:bg-surface-hover rounded-lg transition-colors',
-                'text-text-muted hover:text-text-primary',
-              )}
-              aria-label={t('drawer.closeAriaLabel')}
-            >
-              <X className="w-5 h-5" aria-hidden="true" />
-            </button>
-          </div>
-
-          {/* Tab Navigation */}
-          <div className="border-b border-surface-border px-cell overflow-x-auto">
-            <nav className="flex min-w-max gap-tight">
-              {TABS.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={activeTab === tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={cn(
-                    'flex items-center gap-compact px-3 py-2.5 text-sm font-medium transition-colors',
-                    'border-b-2',
-                    activeTab === tab.id
-                      ? 'border-brand-primary text-text-primary'
-                      : 'border-transparent text-text-muted hover:text-text-primary hover:border-surface-border',
-                  )}
-                >
-                  {tab.icon}
-                  <span>{t(`tabs.${tab.id}`)}</span>
-                </button>
-              ))}
-            </nav>
-          </div>
-
-          {/* Content */}
-          <div className={cn(spacing.drawer, 'stack-xl')}>
-            {activeTab === 'simulation' && <SimulationSection />}
-            {activeTab === 'appearance' && <AppearanceSection themeState={themeState} />}
-            {activeTab === 'network' && <NetworkSection status={connectionStatus} />}
-            {activeTab === 'debug' && <DebugSection onClose={onClose} />}
-            {activeTab === 'about' && <AboutSection version={version} />}
-          </div>
+    <RightDrawer
+      open={isOpen}
+      onClose={onClose}
+      title={t('drawer.title')}
+      closeLabel={t('drawer.closeAriaLabel')}
+      data-testid="settings-drawer"
+    >
+      <SettingsTabs
+        tabs={TABS.map((tab) => ({ id: tab.id, label: t(`tabs.${tab.id}`), icon: tab.icon }))}
+        value={activeTab}
+        onChange={(id) => {
+          const tab = TABS.find((candidate) => candidate.id === id);
+          if (tab) setActiveTab(tab.id);
+        }}
+        label={t('drawer.tabsLabel')}
+      >
+        <div className="stack-xl">
+          {activeTab === 'simulation' && <SimulationSection />}
+          {activeTab === 'appearance' && <AppearanceSection />}
+          {activeTab === 'network' && <NetworkSection status={connectionStatus} />}
+          {activeTab === 'debug' && <DebugSection onClose={onClose} />}
+          {activeTab === 'about' && <AboutSection version={version} />}
         </div>
-      </div>
-    </>
+      </SettingsTabs>
+    </RightDrawer>
   );
 }
 
@@ -209,123 +147,46 @@ const SettingRow = ({ label, description, children }: SettingRowProps): ReactEle
 // Appearance Section
 // =============================================================================
 
-function AppearanceSection({ themeState }: Pick<SettingsDrawerProps, 'themeState'>): ReactElement {
+function AppearanceSection(): ReactElement {
   const { t, i18n } = useTranslation('settings');
   // 'en-US' from the browser detector resolves to the supported 'en'.
   const activeLanguage = languages.find(
     (language) => language.code === i18n.language.split('-')[0],
   )?.code;
-  const { theme, setTheme, isDark, toggleTheme } = themeState;
+  const { theme, setTheme } = useTheme();
 
-  const options: Array<{
-    id: Theme;
-    labelKey: 'appearance.dark' | 'appearance.light' | 'appearance.system';
-    icon: ReactNode;
-  }> = [
-    {
-      id: 'dark',
-      labelKey: 'appearance.dark',
-      icon: <Moon className="w-4 h-4" aria-hidden="true" />,
-    },
-    {
-      id: 'light',
-      labelKey: 'appearance.light',
-      icon: <Sun className="w-4 h-4" aria-hidden="true" />,
-    },
-    {
-      id: 'system',
-      labelKey: 'appearance.system',
-      icon: <Monitor className="w-4 h-4" aria-hidden="true" />,
-    },
+  const options: Array<{ value: Theme; label: string; icon: ReactNode }> = [
+    { value: 'system', label: t('appearance.system'), icon: <Monitor className="h-4 w-4" /> },
+    { value: 'light', label: t('appearance.light'), icon: <Sun className="h-4 w-4" /> },
+    { value: 'dark', label: t('appearance.dark'), icon: <Moon className="h-4 w-4" /> },
   ];
 
   return (
     <Section title={t('appearance.sectionTitle')} description={t('appearance.sectionDescription')}>
-      <div className="grid grid-cols-3 gap-compact">
-        {options.map((option) => {
-          const selected = theme === option.id;
-          return (
-            <button
-              key={option.id}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => setTheme(option.id)}
-              className={cn(
-                'flex flex-col items-center gap-compact pad-sm rounded-lg border transition-all',
-                selected
-                  ? 'border-brand-primary bg-brand-primary/10'
-                  : 'border-surface-border hover:border-brand-primary/40 hover:bg-surface-hover',
-              )}
-            >
-              <div
-                className={cn(
-                  'w-8 h-8 rounded-lg flex-center',
-                  selected
-                    ? 'bg-brand-primary/15 text-brand-primary-strong'
-                    : 'bg-surface-hover text-text-secondary',
-                )}
-              >
-                {option.icon}
-              </div>
-              <span
-                className={cn(
-                  'text-xs font-medium',
-                  selected ? 'text-text-primary' : 'text-text-muted',
-                )}
-              >
-                {t(option.labelKey)}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-      <Tooltip
-        text={isDark ? t('appearance.switchToLight') : t('appearance.switchToDark')}
-        className="w-full"
-      >
-        <button
-          type="button"
-          onClick={toggleTheme}
-          className={cn(
-            'mt-heading w-full flex-between gap-compact p-2.5 rounded-lg border transition-colors',
-            'border-surface-border bg-surface-hover hover:bg-surface-base text-text-primary',
-          )}
-        >
-          <span className="text-sm">{t('appearance.quickToggle')}</span>
-          <span className="flex items-center gap-1.5 text-xs text-text-muted">
-            {isDark ? (
-              <>
-                <Sun className="w-4 h-4" aria-hidden="true" />
-                {t('appearance.light')}
-              </>
-            ) : (
-              <>
-                <Moon className="w-4 h-4" aria-hidden="true" />
-                {t('appearance.dark')}
-              </>
-            )}
-          </span>
-        </button>
-      </Tooltip>
-      <p className="text-xs text-text-muted mt-inline">{t('appearance.persistenceNote')}</p>
-      <SettingRow
-        label={t('appearance.language')}
-        description={t('appearance.languageDescription')}
-      >
-        <select
-          value={activeLanguage ?? 'en'}
-          onChange={(event) => void i18n.changeLanguage(event.target.value)}
-          data-testid="language-select"
-          aria-label={t('appearance.language')}
-          className="rounded-lg border border-surface-border bg-surface-base px-2 py-1 text-sm text-text-primary"
-        >
-          {languages.map((language) => (
-            <option key={language.code} value={language.code}>
-              {language.nativeLabel}
-            </option>
-          ))}
-        </select>
-      </SettingRow>
+      <SegmentedControl
+        options={options}
+        value={theme}
+        onChange={(value) => {
+          const option = options.find((candidate) => candidate.value === value);
+          if (option) setTheme(option.value);
+        }}
+        label={t('appearance.sectionTitle')}
+      />
+      <p className="text-xs text-text-muted">{t('appearance.persistenceNote')}</p>
+      <FormField label={t('appearance.language')} hint={t('appearance.languageDescription')}>
+        {(control) => (
+          <Select
+            {...control}
+            value={activeLanguage ?? 'en'}
+            options={languages.map((language) => ({
+              value: language.code,
+              label: language.nativeLabel,
+            }))}
+            onValueChange={(value) => void i18n.changeLanguage(value)}
+            data-testid="language-select"
+          />
+        )}
+      </FormField>
     </Section>
   );
 }
@@ -370,7 +231,12 @@ function NetworkSection({ status }: { status: ConnectionState }): ReactElement {
         description={t('network.interfacesDescription')}
       >
         <div className="stack-sm">
-          {loading && <p className="text-xs text-text-muted">{t('network.loadingInterfaces')}</p>}
+          {loading && (
+            <div role="status" aria-label={t('network.loadingInterfaces')} className="stack-sm">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          )}
           {!loading && interfaces.length === 0 && (
             <p className="text-xs text-text-muted">{t('network.noInterfacesFound')}</p>
           )}
@@ -490,15 +356,10 @@ function AboutSection({ version }: AboutSectionProps): ReactElement {
   return (
     <>
       <Section title={t('about.applicationTitle')}>
-        <div className="bg-surface-hover rounded-lg pad stack">
-          <div className="flex items-center gap-default">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-brand-primary to-brand-primary flex-center shadow-lg shadow-brand-primary/30">
-              <Network className={`${iconSizes.xl} text-text-primary`} />
-            </div>
-            <div>
-              <h4 className="text-lg font-bold text-text-primary">NIAC</h4>
-              <p className="text-sm text-text-muted">{t('about.subtitle')}</p>
-            </div>
+        <div className="stack">
+          <div>
+            <h4 className="text-lg font-bold text-text-primary">NIAC</h4>
+            <p className="text-sm text-text-muted">{t('about.subtitle')}</p>
           </div>
           <div className="grid grid-cols-2 gap-compact pt-2 border-t border-surface-border">
             <InfoItem label={t('about.version')} value={version} />

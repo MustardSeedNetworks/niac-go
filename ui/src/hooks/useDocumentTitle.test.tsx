@@ -26,16 +26,12 @@ describe('useDocumentTitle', () => {
 
   it.each([
     ['/runtime', 'Simulation'],
-    ['/walk-analyzer', 'Walk Analyzer'],
+    ['/walk-analyzer', 'Walk analyzer'],
     ['/packets', 'Packets'],
+    ['/', 'Dashboard'],
   ])('names %s in the tab', (path, label) => {
     at(path);
     expect(document.title).toBe(`${label} | NIAC`);
-  });
-
-  it('is the product alone at the dashboard, not "Dashboard | NIAC"', () => {
-    at('/');
-    expect(document.title).toBe('NIAC');
   });
 
   it('leaves the title alone on a route the registry does not know', () => {

@@ -2,6 +2,7 @@ import { Wrench } from 'lucide-react';
 import { memo, type ReactNode, type RefObject, Suspense, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Route, Routes, useLocation } from 'react-router';
+import { AppPageHeader } from './components/AppPageHeader';
 import { ErrorBoundary, PageErrorBoundary } from './components/ErrorBoundary';
 import { HelpDrawer } from './components/HelpDrawer';
 import { NotFound } from './components/NotFound';
@@ -17,8 +18,6 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useTheme } from './hooks/useTheme';
 import { useNavGroups } from './navGroups';
 import { DeviceEditorPageRef, type PageConfig, usePages } from './pageRegistry';
-import { Breadcrumbs } from './ui/Breadcrumbs';
-import { PageHeader } from './ui/PageHeader';
 import { PageLoader } from './ui/PageLoader';
 import { SidebarLayout } from './ui/Sidebar';
 import './App.css';
@@ -45,8 +44,7 @@ export default function App() {
 
 function AppShell() {
   const status = useConnectionStatus();
-  const themeState = useTheme();
-  const { isDark, toggleTheme } = themeState;
+  const { isDark, toggleTheme } = useTheme();
   const { t } = useTranslation('pages');
   const { version } = useBuildVersion();
   const navGroups = useNavGroups();
@@ -117,6 +115,7 @@ function AppShell() {
                 page={{
                   path: '/device-config/new',
                   label: t('deviceEditor.newLabel'),
+                  eyebrow: t('deviceEditor.eyebrow'),
                   title: t('deviceEditor.newTitle'),
                   description: t('deviceEditor.newDescription'),
                   icon: Wrench,
@@ -136,6 +135,7 @@ function AppShell() {
                 page={{
                   path: '/device-config/:hostname',
                   label: t('deviceEditor.editLabel'),
+                  eyebrow: t('deviceEditor.eyebrow'),
                   title: t('deviceEditor.editTitle'),
                   description: t('deviceEditor.editDescription'),
                   icon: Wrench,
@@ -151,7 +151,6 @@ function AppShell() {
       </Suspense>
       <SettingsDrawer
         connectionStatus={status}
-        themeState={themeState}
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         version={version}
@@ -193,13 +192,11 @@ const PageWithErrorBoundary = memo(
     return (
       <PageErrorBoundary key={location.pathname}>
         <section className="stack-xl" data-testid="page-frame">
-          <Breadcrumbs />
-          <PageHeader
+          <AppPageHeader
             titleRef={titleRef}
-            icon={page.icon}
-            eyebrow={page.eyebrow}
+            kicker={page.eyebrow}
             title={page.title}
-            description={page.description}
+            subtitle={page.description}
             onHelp={documented ? () => onOpenHelp(page.path) : undefined}
           />
           {children}

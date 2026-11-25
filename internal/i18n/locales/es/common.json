@@ -228,5 +228,8 @@
     "success": "Estado: correcto",
     "unknown": "Estado: desconocido",
     "warning": "Estado: advertencia"
+  },
+  "help": {
+    "openFor": "Abrir la ayuda de {{title}}"
   }
 }

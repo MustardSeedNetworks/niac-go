@@ -2,6 +2,7 @@
   "alerts": {
     "alertPolicy": "Alert policy",
     "description": "Configure alert thresholds and webhook targets for the running daemon.",
+    "eyebrow": "Tools",
     "label": "Alerts",
     "loadError": "Unable to load alerts: {{message}}",
     "loadingAlerts": "Loading alert configuration…",
@@ -58,10 +59,11 @@
     "emptyStateDescription": "Upload two YAML configuration files above to see a side-by-side comparison with color-coded changes and interactive merge controls.",
     "exportResultButton": "Export Result",
     "exportSuccessMessage": "Merged configuration exported successfully",
+    "eyebrow": "Tools",
     "fileSummary": "{{size}} | {{lines}} lines",
     "helpTextComplete": "All changes resolved. You can now preview and export the merged configuration.",
     "helpTextEmpty": "Upload two YAML config files to start comparing and merging.",
-    "label": "Compare & Merge",
+    "label": "Compare & merge",
     "leftChoiceLabel": "Left",
     "leftCount_one": "{{count}} left",
     "leftCount_other": "{{count}} left",
@@ -99,7 +101,7 @@
     "serverSideMergeTitle": "Server-side overlay merge",
     "sideBySideComparison": "Side-by-Side Comparison",
     "sourceTag": "Source",
-    "title": "Compare & Merge",
+    "title": "Compare & merge",
     "undecidedBlocksWarning_one": "{{count}} block is still undecided. It will keep the original (left) content until you choose Left, Both, or Right.",
     "undecidedBlocksWarning_other": "{{count}} blocks are still undecided. They will keep the original (left) content until you choose Left, Both, or Right.",
     "uploadFilesToCompare": "Upload files to compare",
@@ -145,9 +147,9 @@
     "resultsSection": "Results",
     "searchPlaceholder": "Search configs…",
     "selectButton": "Select",
-    "selectedLabel": "Selected",
     "selectItemTitle": "Select {{name}}",
     "selectNetworkTitle": "Select this network — click Start Simulation below to run it",
+    "selectedLabel": "Selected",
     "uploadLocalFile": "Upload local file…",
     "viewDensityLabel": "View density"
   },
@@ -157,7 +159,7 @@
       "clickHint": "Select a type to inject it on the Fault Injection page.",
       "title": "Error Injection Types"
     },
-    "eyebrow": "Simulation",
+    "eyebrow": "Overview",
     "label": "Dashboard",
     "quickActions": {
       "debugConsoleDescription": "View live logs",
@@ -224,6 +226,7 @@
     "detailsLabel": "Details",
     "exportButton": "Export",
     "exportLogsAriaLabel": "Export logs to file",
+    "eyebrow": "Inspect",
     "filterByLevelAriaLabel": "Filter by log level",
     "filterByProtocolAriaLabel": "Filter by protocol",
     "filterLogsPlaceholder": "Filter logs...",
@@ -264,16 +267,18 @@
   },
   "deviceEditor": {
     "editDescription": "Edit device configuration settings.",
-    "editLabel": "Edit Device",
-    "editTitle": "Edit Device",
+    "editLabel": "Edit device",
+    "editTitle": "Edit device",
+    "eyebrow": "Library",
     "newDescription": "Create a new network device configuration.",
-    "newLabel": "New Device",
-    "newTitle": "New Device"
+    "newLabel": "New device",
+    "newTitle": "New device"
   },
   "deviceLibrary": {
     "description": "Reusable device definitions: search, filter, edit, clone, and delete. Click a device to open the visual editor.",
-    "label": "Device Library",
-    "title": "Device Library"
+    "eyebrow": "Library",
+    "label": "Device library",
+    "title": "Device library"
   },
   "devices": {
     "actionsHeader": "Actions",
@@ -291,8 +296,9 @@
     "discardChangesButton": "Discard changes",
     "editInLibrary": "Edit in Device Library",
     "emptyMessage": "No devices defined in the loaded configuration",
+    "eyebrow": "Live view",
     "ipAddressesHeader": "IP addresses",
-    "label": "Running Devices",
+    "label": "Running devices",
     "noConfigMessage": "No simulation is running. Pick a network on Simulation and start it to see and edit the running YAML here.",
     "saveHelpTextPrefix": "Save runs the same validation as",
     "saveHelpTextSuffix": ", writes the YAML to disk, then diff-reloads the running stack — added devices spin up, removed devices stop, existing devices are updated in place.",
@@ -302,7 +308,7 @@
     "selectButton": "Edit",
     "selectedLabel": "Editing",
     "subtitle": "Devices rendered from active YAML config",
-    "title": "Running Devices",
+    "title": "Running devices",
     "useInEditor": "Use in device editor",
     "walkCopied": "Copied {{name}}",
     "walkCopyError": "Unable to copy walk name",
@@ -314,7 +320,7 @@
   "groups": {
     "inspect": "Inspect",
     "library": "Library",
-    "liveView": "Live View",
+    "liveView": "Live view",
     "overview": "Overview",
     "tools": "Tools"
   },
@@ -356,11 +362,11 @@
     "refreshButton": "Refresh",
     "refreshTitle": "Re-fetch the file listing from the daemon's library directory",
     "revertButton": "Revert",
-    "revertingButton": "Reverting…",
     "revertLabel": "Revert {{name}} to its original",
     "revertModalMessagePrefix": "Revert",
     "revertModalMessageSuffix": "to its original? This discards edits.",
     "revertModalTitle": "Revert to original",
+    "revertingButton": "Reverting…",
     "sanitizeBatchModalMessage_one": "Sanitize {{count}} selected walk? This writes a sanitized copy in place; the original stays recoverable via Revert.",
     "sanitizeBatchModalMessage_other": "Sanitize {{count}} selected walks? This writes sanitized copies in place; originals stay recoverable via Revert.",
     "sanitizeBatchModalTitle": "Sanitize selected walks",
@@ -378,9 +384,9 @@
     "sanitizingButton": "Sanitizing…",
     "searchPlaceholder": "Search by name…",
     "selectAllAriaLabel": "Select all walks",
+    "selectRowAriaLabel": "Select {{name}}",
     "selectedCount_one": "{{count}} selected",
     "selectedCount_other": "{{count}} selected",
-    "selectRowAriaLabel": "Select {{name}}",
     "sizeHeader": "Size",
     "sourceBundle": "bundle",
     "sourceHeader": "Source",
@@ -416,8 +422,9 @@
       "uploadFailed": "Upload failed"
     },
     "description": "Read-only browser for the on-disk {{format}} captures the daemon serves from the unified library.",
-    "label": "{{format}}s",
-    "title": "{{format}} Library",
+    "eyebrow": "Library",
+    "label": "{{format}} library",
+    "title": "{{format}} library",
     "uploader": {
       "analyzeButton": "Analyze PCAP",
       "analyzing": "Analyzing…",
@@ -437,8 +444,9 @@
   },
   "libraryWalks": {
     "description": "Read-only browser for the on-disk {{protocol}} walk files the daemon serves from the unified library.",
-    "label": "Walks",
-    "title": "Walk Library"
+    "eyebrow": "Library",
+    "label": "Walk library",
+    "title": "Walk library"
   },
   "newSimWizard": {
     "backLabel": "Back",
@@ -519,6 +527,7 @@
       "yamlEditorAria": "Scenario device YAML",
       "yamlLabel": "YAML"
     },
+    "eyebrow": "Overview",
     "finish": {
       "draftLabel": "From draft {{name}}",
       "gotoRuntime": "Go to Simulation",
@@ -603,7 +612,7 @@
       "loopTime": "Loop time (s)",
       "scaleTime": "Time scale"
     },
-    "label": "New Simulation",
+    "label": "New simulation",
     "networks": {
       "add": "Add",
       "addressingTitle": "Addressing",
@@ -692,7 +701,7 @@
       "review": "Review",
       "scenario": "Scenario"
     },
-    "title": "New Simulation",
+    "title": "New simulation",
     "topology": {
       "addDevice": "Add device",
       "cancel": "Cancel",
@@ -740,6 +749,7 @@
       "headerPackets": "Packets"
     },
     "description": "Live wire view of packets on the running simulation, or offline inspection of a captured {{format}} file.",
+    "eyebrow": "Inspect",
     "filterBar": {
       "inputPlaceholder": "Display filter (e.g., ip.src == 10.0.0.1 && tcp)"
     },
@@ -887,7 +897,7 @@
     "description": "Monitor runtime status, view network interfaces, and manage NIAC configuration.",
     "errorNoConfig": "Please select a configuration above or upload a config file",
     "errorNoInterface": "Please select an interface above",
-    "eyebrow": "Runtime",
+    "eyebrow": "Overview",
     "fabric": {
       "attachment": "Attachment",
       "drops": "Drops",
@@ -924,10 +934,10 @@
       "previewOnly": "Preview only — Start to launch",
       "selectedPrefix": "Selected:"
     },
+    "recentRunStats": "{{time}} · duration {{duration}} · RX {{rx}} · TX {{tx}}",
     "recentRunsDescription": "Past simulation runs the daemon recorded.",
     "recentRunsFailed": "Run history could not be read: {{error}}",
     "recentRunsTag": "History",
-    "recentRunStats": "{{time}} · duration {{duration}} · RX {{rx}} · TX {{tx}}",
     "recentRunsTitle": "Run history",
     "reviewConnectionLabel": "Review connection",
     "rollup": {
@@ -993,6 +1003,7 @@
     "deviceNoun_other": "devices",
     "empty": "No segments defined in the loaded configuration.",
     "emptySegmentDevices": "No devices in this segment.",
+    "eyebrow": "Library",
     "label": "Segments",
     "title": "Segments",
     "untaggedHeader": "Untagged",
@@ -1050,6 +1061,7 @@
       "voip-phone": "VoIP Phone",
       "workstation": "Workstation"
     },
+    "eyebrow": "Live view",
     "header": {
       "allSites": "All sites",
       "clearTypeFiltersTitle": "Remove all device-type filters and show every device in the topology",
@@ -1149,12 +1161,13 @@
   },
   "traffic": {
     "description": "Inject controlled errors into the running simulation and replay captured {{format}} files.",
+    "eyebrow": "Tools",
     "idle": {
       "body": "Fault injection and PCAP replay act on a running simulation's devices, so there is nothing here to act on yet. Start a simulation and these controls come back with it.",
       "headline": "No simulation is running",
       "startAction": "Start a Simulation"
     },
-    "label": "Fault Injection",
+    "label": "Fault injection",
     "page": {
       "errorInjectionDescription": "Inject network errors on device interfaces for testing and simulation scenarios.",
       "errorInjectionTitle": "Error Injection",
@@ -1206,7 +1219,7 @@
       "replayTimeScaleHelp": "1.0 = Original timing, 2.0 = 2x faster, 0.5 = 2x slower",
       "replayTimeScaleLabel": "Time Scale"
     },
-    "title": "Fault Injection"
+    "title": "Fault injection"
   },
   "walkAnalyzer": {
     "analyzeButton": "Analyze",
@@ -1215,6 +1228,7 @@
     "description": "Parse an SNMP walk file into device identity, interface inventory, and LLDP/CDP neighbor adjacencies.",
     "deviceHeading": "Device",
     "engineNote": "Same engine as <code>niac analyze-walk</code>. Parses SNMPv2-MIB, IF-MIB/ifXTable, LLDP-MIB, and CISCO-CDP-MIB into device identity, interface inventory, and neighbor adjacencies.",
+    "eyebrow": "Tools",
     "fromWalksDir": "From walks/ directory",
     "fromWalksDirHelp": "Walk files in the library walks directory. To analyze a file outside it, paste its path below.",
     "interfacesHeading": "Interfaces",
@@ -1227,7 +1241,7 @@
       "speed": "Speed",
       "type": "Type"
     },
-    "label": "Walk Analyzer",
+    "label": "Walk analyzer",
     "localInterface": "Local Interface",
     "neighborsHeading": "Neighbors",
     "noInterfacesFound": "No interfaces found.",
@@ -1279,7 +1293,7 @@
       "neighbors": "Neighbors",
       "physical": "Physical"
     },
-    "title": "Walk Analyzer"
+    "title": "Walk analyzer"
   },
   "walkValidator": {
     "autoFixButton": "Auto-fix",
@@ -1297,6 +1311,7 @@
     },
     "description": "Validate and auto-fix {{protocol}} walk files used by the simulated {{protocol}} agents.",
     "engineNote": "Same engine as <code>niac analyze-walk</code>. Validate detects malformed lines, missing OIDs<oid/>, and unquoted strings; fix auto-rewrites the file in place.",
+    "eyebrow": "Tools",
     "fixedCount": "fixed: {{fixed}}",
     "fixingButton": "Fixing…",
     "fromWalksDir": "From walks/ directory",
@@ -1308,7 +1323,7 @@
       "original": "Original",
       "severity": "Severity"
     },
-    "label": "{{protocol}} Walks",
+    "label": "{{protocol}} walks",
     "lineSummary": "{{total}} lines, {{valid}} valid",
     "noIssues": "No issues reported.",
     "noMatchingIssues": "No issues match that OID filter.",
@@ -1324,7 +1339,7 @@
     "resultInvalid": "INVALID",
     "resultValid": "VALID",
     "showingFiltered": "Showing first {{shown}} of {{filtered}} matching issues ({{total}} total) — auto-fix to clear them all.",
-    "title": "{{protocol}} Walks",
+    "title": "{{protocol}} walks",
     "validateAllButton": "Validate all",
     "validateAllHelp": "Validates every walk file the running config uses, in one pass.",
     "validateButton": "Validate",

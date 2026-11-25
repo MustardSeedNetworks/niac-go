@@ -43,7 +43,7 @@
       "title": "Tipos de inyección de errores",
       "clickHint": "Seleccione un tipo para inyectarlo en la página de Inyección de fallos."
     },
-    "eyebrow": "Simulación",
+    "eyebrow": "Resumen",
     "rollup": {
       "checking": "Comprobando el daemon",
       "degraded": "El stack está en ejecución pero no puede intercambiar tramas",
@@ -145,7 +145,7 @@
       "deviceCount_one": "{{count}} dispositivo se lanzará al hacer clic en Iniciar.",
       "deviceCount_other": "{{count}} dispositivos se lanzarán al hacer clic en Iniciar."
     },
-    "eyebrow": "Ejecución",
+    "eyebrow": "Resumen",
     "rollup": {
       "checking": "Comprobando el daemon",
       "degraded": "La simulación está en ejecución pero no puede intercambiar tramas",
@@ -466,7 +466,8 @@
       "selectInterface": "Seleccionar una interfaz libre",
       "speed": "Velocidad del puerto (Mbps)",
       "vlans": "VLAN permitidas"
-    }
+    },
+    "eyebrow": "Resumen"
   },
   "devices": {
     "label": "Dispositivos en ejecución",
@@ -502,7 +503,8 @@
     "deviceFragmentMissing": "Este dispositivo no tiene un bloque editable en la configuración cargada — edita toda la configuración.",
     "deviceFragmentInvalid": "El YAML del dispositivo no se puede analizar, por lo que no se guardó.",
     "deviceFragmentNameMissing": "Un dispositivo necesita un nombre, por lo que no se guardó.",
-    "actionsHeader": "Acciones"
+    "actionsHeader": "Acciones",
+    "eyebrow": "Vista en vivo"
   },
   "segments": {
     "deviceNoun_one": "dispositivo",
@@ -513,12 +515,14 @@
     "vlanHeader": "VLAN {{tag}}",
     "untaggedHeader": "Untagged",
     "emptySegmentDevices": "No hay dispositivos en este segmento.",
-    "empty": "No hay segmentos definidos en la configuración cargada."
+    "empty": "No hay segmentos definidos en la configuración cargada.",
+    "eyebrow": "Biblioteca"
   },
   "deviceLibrary": {
     "label": "Biblioteca de dispositivos",
     "title": "Biblioteca de dispositivos",
-    "description": "Definiciones de dispositivos reutilizables: buscar, filtrar, editar, clonar y eliminar. Haga clic en un dispositivo para abrir el editor visual."
+    "description": "Definiciones de dispositivos reutilizables: buscar, filtrar, editar, clonar y eliminar. Haga clic en un dispositivo para abrir el editor visual.",
+    "eyebrow": "Biblioteca"
   },
   "deviceEditor": {
     "newLabel": "Nuevo dispositivo",
@@ -526,7 +530,8 @@
     "newDescription": "Cree una nueva configuración de dispositivo de red.",
     "editLabel": "Editar dispositivo",
     "editTitle": "Editar dispositivo",
-    "editDescription": "Edite los ajustes de configuración del dispositivo."
+    "editDescription": "Edite los ajustes de configuración del dispositivo.",
+    "eyebrow": "Biblioteca"
   },
   "topology": {
     "label": "Topología",
@@ -675,7 +680,8 @@
       "unknown": "Desconocido",
       "voip-phone": "Teléfono VoIP",
       "workstation": "Estación de trabajo"
-    }
+    },
+    "eyebrow": "Vista en vivo"
   },
   "alerts": {
     "label": "Alertas",
@@ -698,7 +704,8 @@
     "alertPolicy": "Política de alertas",
     "recentErrors": "Contador de errores recientes:",
     "loadingAlerts": "Cargando la configuración de alertas…",
-    "loadError": "No se pudieron cargar las alertas: {{message}}"
+    "loadError": "No se pudieron cargar las alertas: {{message}}",
+    "eyebrow": "Herramientas"
   },
   "traffic": {
     "label": "Inyección de fallos",
@@ -759,7 +766,8 @@
       "headline": "No hay ninguna simulación en ejecución",
       "body": "La inyección de fallos y la reproducción de PCAP actúan sobre los dispositivos de una simulación en ejecución, así que todavía no hay nada sobre lo que actuar. Inicie una simulación y estos controles volverán con ella.",
       "startAction": "Iniciar una simulación"
-    }
+    },
+    "eyebrow": "Herramientas"
   },
   "debug": {
     "label": "Registros",
@@ -818,7 +826,8 @@
     "pauseButton": "Pausar",
     "exportLogsAriaLabel": "Exportar registros a archivo",
     "exportButton": "Exportar",
-    "clearAllLogsAriaLabel": "Borrar todos los registros"
+    "clearAllLogsAriaLabel": "Borrar todos los registros",
+    "eyebrow": "Inspeccionar"
   },
   "packets": {
     "captureStatusFailed": "No se pudo leer el estado de captura",
@@ -955,7 +964,8 @@
     },
     "filterBar": {
       "inputPlaceholder": "Filtro de visualización (p. ej., ip.src == 10.0.0.1 && tcp)"
-    }
+    },
+    "eyebrow": "Inspeccionar"
   },
   "configDiff": {
     "label": "Comparar y fusionar",
@@ -1046,7 +1056,8 @@
     "yamlTabsError": "Línea {{lineNum}}: no se permiten tabulaciones en YAML, use espacios",
     "yamlIndentationError": "Línea {{lineNum}}: sangría inconsistente (debe ser múltiplo de 2 espacios)",
     "noneChoiceLabel": "Ninguno",
-    "mergePreviewEditorAria": "Vista previa de la configuración combinada, solo lectura"
+    "mergePreviewEditorAria": "Vista previa de la configuración combinada, solo lectura",
+    "eyebrow": "Herramientas"
   },
   "walkValidator": {
     "label": "Walks de {{protocol}}",
@@ -1097,11 +1108,12 @@
     "lineSummary": "{{total}} líneas, {{valid}} válidas",
     "resultValid": "VÁLIDO",
     "resultInvalid": "NO VÁLIDO",
-    "fixedCount": "corregidos: {{fixed}}"
+    "fixedCount": "corregidos: {{fixed}}",
+    "eyebrow": "Herramientas"
   },
   "walkAnalyzer": {
-    "label": "Analizador de Walk",
-    "title": "Analizador de Walk",
+    "label": "Analizador de walks",
+    "title": "Analizador de walks",
     "description": "Analice un archivo walk de SNMP para extraer la identidad del dispositivo, el inventario de interfaces y las adyacencias de vecinos LLDP/CDP.",
     "pageTitle": "Analizador de Walk",
     "noWalksFound": "No se encontraron walks",
@@ -1170,15 +1182,17 @@
       "admin": "Admin.",
       "oper": "Oper.",
       "description": "Descripción"
-    }
+    },
+    "eyebrow": "Herramientas"
   },
   "libraryWalks": {
-    "label": "Walks",
-    "title": "Biblioteca de Walk",
-    "description": "Navegador de solo lectura para los archivos walk de {{protocol}} en disco que el daemon sirve desde la biblioteca unificada."
+    "label": "Biblioteca de walks",
+    "title": "Biblioteca de walks",
+    "description": "Navegador de solo lectura para los archivos walk de {{protocol}} en disco que el daemon sirve desde la biblioteca unificada.",
+    "eyebrow": "Biblioteca"
   },
   "libraryPcaps": {
-    "label": "{{format}}",
+    "label": "Biblioteca de {{format}}",
     "title": "Biblioteca de {{format}}",
     "description": "Navegador de solo lectura para las capturas {{format}} en disco que el daemon sirve desde la biblioteca unificada.",
     "uploader": {
@@ -1220,7 +1234,8 @@
       "supportsPcap": "Admite .pcap",
       "supportsPcapng": "Admite .pcapng",
       "maxSizeTag": "Máximo 100 MB"
-    }
+    },
+    "eyebrow": "Biblioteca"
   },
   "configPicker": {
     "localFileSize": "{{size}} KB archivo local",

@@ -2,10 +2,10 @@
   "drawer": {
     "title": "Ayuda",
     "closeAriaLabel": "Cerrar ayuda",
-    "drawerAriaLabel": "Ayuda",
-    "backdropAriaLabel": "Cerrar panel de ayuda",
     "searchPlaceholder": "Buscar ayuda...",
-    "noResults": "No hay coincidencias para \"{{query}}\""
+    "noResults": "No hay coincidencias para \"{{query}}\"",
+    "tabsLabel": "Secciones de ayuda",
+    "searchLabel": "Buscar en la ayuda"
   },
   "tabs": {
     "overview": "Resumen",
