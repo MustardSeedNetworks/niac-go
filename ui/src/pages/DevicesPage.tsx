@@ -16,15 +16,13 @@ import {
 } from '../components/device-editor/useUnsavedChangesGuard';
 import { TableSection } from '../components/TableSection';
 import { POLL_INTERVALS } from '../constants/polling';
-import { iconSizes } from '../constants/sizes';
 import { useAppState } from '../contexts/AppContext';
 import { useConfigResource, useLibraryResource } from '../hooks/usePageResources';
 import { Alert } from '../shared/Alert';
 import { Button, ButtonLink } from '../shared/Button';
-import { CardRow } from '../shared/Card';
+import { Card, CardRow } from '../shared/Card';
 import { Skeleton } from '../shared/Skeleton';
 import { ActionButton } from '../ui/ActionButton';
-import { BaseCard } from '../ui/BaseCard';
 import { linkTo } from '../ui/linkTo';
 import { SmallText } from '../ui/Typography';
 import { findDeviceFragment } from '../utils/device-fragment';
@@ -279,17 +277,15 @@ function ConfigEditorCard({
 
   if (noConfigLoaded && !data) {
     return (
-      <BaseCard
+      <Card
         title={t('devices.yamlEditorTitle')}
         subtitle={t('devices.yamlEditorSubtitle')}
-        icon={<FileCog className={`${iconSizes.lg} text-status-success`} />}
-        data={null}
-        emptyMessage={t('devices.noConfigMessage')}
-        getStatus={() => 'success'}
-        testId="config-editor-idle"
-      >
-        {() => null}
-      </BaseCard>
+        icon={<FileCog className="h-5 w-5" />}
+        status="success"
+        statusLabel={tCommon('statusLabel.success')}
+        empty={t('devices.noConfigMessage')}
+        data-testid="config-editor-idle"
+      />
     );
   }
 
@@ -317,27 +313,27 @@ function ConfigEditorCard({
           {error.message}
         </p>
       )}
-      <BaseCard<{ content: string; path: string; modifiedAt: string; sizeBytes: number }>
+      <Card
         title={editingDevice ? t('devices.deviceEditorTitle') : t('devices.yamlEditorTitle')}
         subtitle={
           editingDevice ? t('devices.deviceEditorSubtitle') : t('devices.yamlEditorSubtitle')
         }
-        icon={<FileCog className={`${iconSizes.lg} text-status-success`} />}
-        data={data}
+        icon={<FileCog className="h-5 w-5" />}
+        status={dirty ? 'warning' : 'success'}
+        statusLabel={tCommon(dirty ? 'statusLabel.warning' : 'statusLabel.success')}
         loading={loading && !data}
-        error={dirty ? undefined : error?.message}
-        getStatus={() => (dirty ? 'warning' : 'success')}
-        testId="config-editor-card"
+        {...(!dirty && error ? { error: error.message } : {})}
+        data-testid="config-editor-card"
       >
-        {(cfg) => (
+        {data ? (
           <>
             {editingDevice ? (
               <CardRow label={t('devices.selectedLabel')} value={selected ?? ''} mono />
             ) : (
               <>
-                <CardRow label={tCommon('labels.path')} value={cfg.path} mono />
-                <CardRow label={tCommon('labels.updatedAt')} value={formatTime(cfg.modifiedAt)} />
-                <CardRow label={tCommon('labels.size')} value={formatBytes(cfg.sizeBytes)} />
+                <CardRow label={tCommon('labels.path')} value={data.path} mono />
+                <CardRow label={tCommon('labels.updatedAt')} value={formatTime(data.modifiedAt)} />
+                <CardRow label={tCommon('labels.size')} value={formatBytes(data.sizeBytes)} />
               </>
             )}
             {fragmentMissing && (
@@ -393,8 +389,8 @@ function ConfigEditorCard({
             </SmallText>
             <WalkFileBrowser files={walkFiles ?? []} onCopy={handleWalkCopy} />
           </>
-        )}
-      </BaseCard>
+        ) : null}
+      </Card>
     </>
   );
 }
