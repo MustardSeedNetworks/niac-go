@@ -75,6 +75,13 @@ const portOptions = () =>
     .getAllByRole('option')
     .map((option) => option.textContent);
 
+/** The table row a client's MAC is in. Cheaper than a role query, which computes every row's name. */
+async function rowOf(mac: string): Promise<HTMLElement> {
+  const row = (await screen.findByText(mac)).closest('tr');
+  if (!row) throw new Error(`no row for ${mac}`);
+  return row;
+}
+
 describe('AttachedClientsCard', () => {
   beforeEach(() => {
     fetchSessionClients.mockReset().mockResolvedValue([]);
@@ -104,7 +111,7 @@ describe('AttachedClientsCard', () => {
     ]);
     render(<AttachedClientsCard sessionId="hospital" />);
 
-    const first = await screen.findByRole('row', { name: /00:c0:17:00:00:01/ });
+    const first = await rowOf('00:c0:17:00:00:01');
     expect(within(first).getByTestId('attached-client-device')).toHaveTextContent('MED-ACC-SW01');
     expect(within(first).getByTestId('attached-client-port')).toHaveTextContent(
       'GigabitEthernet1/0/45',
@@ -112,7 +119,7 @@ describe('AttachedClientsCard', () => {
     expect(first).toHaveTextContent('10.51.210.20');
     expect(first).toHaveTextContent('untagged');
 
-    const second = screen.getByRole('row', { name: /00:c0:17:00:00:02/ });
+    const second = await rowOf('00:c0:17:00:00:02');
     expect(within(second).getByTestId('attached-client-device')).toHaveTextContent('MED-ACC-SW02');
     expect(within(second).getByTestId('attached-client-port')).toHaveTextContent(
       'GigabitEthernet1/0/46',
@@ -124,7 +131,7 @@ describe('AttachedClientsCard', () => {
     fetchSessionClients.mockResolvedValue([client({})]);
     render(<AttachedClientsCard sessionId="hospital" />);
 
-    const row = await screen.findByRole('row', { name: /00:c0:17:00:00:01/ });
+    const row = await rowOf('00:c0:17:00:00:01');
     expect(within(row).getByTestId('attached-client-device')).toHaveTextContent('Not placed');
     expect(within(row).getByTestId('attached-client-port')).toHaveTextContent('Not placed');
   });
@@ -161,7 +168,7 @@ describe('AttachedClientsCard', () => {
       if (fabric) fabric.topology.attachments = [];
       render(<AttachedClientsCard sessionId="hospital" fabric={fabric} />);
 
-      await screen.findByRole('row', { name: /00:c0:17:00:00:01/ });
+      await rowOf('00:c0:17:00:00:01');
       expect(screen.queryByTestId('attached-client-move')).not.toBeInTheDocument();
     });
 
