@@ -16,10 +16,10 @@ import type { ErrorType } from '../api/types';
 import { iconSizes } from '../constants/sizes';
 import { useAppState } from '../contexts/AppContext';
 import { useSimulationStatus } from '../hooks/useSimulationStatus';
+import { CategoryChip } from '../shared/CategoryChip';
 import { Card, CardContent } from '../ui/Card';
 import { LinkButton } from '../ui/LinkButton';
 import { type RollupState, StatusRollup } from '../ui/StatusRollup';
-import { Tag } from '../ui/Tag';
 import { AccentLink, H2 } from '../ui/Typography';
 import { formatNumber, formatTime, formatUptime } from '../utils/format';
 
@@ -262,7 +262,7 @@ export function DashboardPage() {
           <CardContent className="stack-lg">
             <div className="flex-between">
               <H2>{t('dashboard.recentRuns.title')}</H2>
-              <Tag colorScheme="gray">{t('dashboard.recentRuns.tag')}</Tag>
+              <CategoryChip label={t('dashboard.recentRuns.tag')} />
             </div>
             <div className="stack">
               {(history ?? []).slice(0, 4).map((item) => (
@@ -274,9 +274,11 @@ export function DashboardPage() {
                     <p className="font-mono text-xs text-brand-accent">
                       {formatTime(item.startedAt)}
                     </p>
-                    <Tag colorScheme="gray" className="text-[10px]">
-                      {t('dashboard.recentRuns.deviceCountShort', { value: item.deviceCount })}
-                    </Tag>
+                    <CategoryChip
+                      label={t('dashboard.recentRuns.deviceCountShort', {
+                        value: item.deviceCount,
+                      })}
+                    />
                   </div>
                   <p className="text-text-primary font-medium text-sm wrap-anywhere">
                     {item.configName}

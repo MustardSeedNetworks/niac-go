@@ -1,9 +1,9 @@
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PcapPacket } from '../api/types';
+import { CategoryChip } from '../shared/CategoryChip';
 import { Card, CardContent } from '../ui/Card';
 import { DataTable, type DataTableColumn } from '../ui/DataTable';
-import { Tag } from '../ui/Tag';
 import { SmallText } from '../ui/Typography';
 import {
   type Conversation,
@@ -11,7 +11,6 @@ import {
   getConversationDuration,
 } from '../utils/conversations';
 import { formatBytes, formatDurationSeconds } from '../utils/format';
-import { getProtocolColor } from '../utils/protocol-colors';
 import { GlossaryPopover } from './GlossaryPopover';
 import type { Packet } from './PacketList';
 
@@ -51,11 +50,7 @@ export const ConversationList = memo(function ConversationList({
       key: 'protocol',
       header: tPages('packets.list.headerProtocol'),
       sortAccessor: (conv) => conv.protocol,
-      cell: (conv) => (
-        <Tag colorScheme={getProtocolColor(conv.protocol)} className="text-xs">
-          {conv.protocol}
-        </Tag>
-      ),
+      cell: (conv) => <CategoryChip label={conv.protocol} />,
     },
     {
       key: 'packets',

@@ -14,7 +14,6 @@ import { Card, CardContent } from '../ui/Card';
 import { DataTable, type DataTableColumn } from '../ui/DataTable';
 import { useDialogLabels } from '../ui/dialogLabels';
 import { Input } from '../ui/Input';
-import { Tag } from '../ui/Tag';
 import { SmallText } from '../ui/Typography';
 import { getErrorMessage } from '../utils/format';
 
@@ -180,14 +179,17 @@ export function ErrorInjectionPanel() {
       key: 'value',
       header: t('injection.tableHeaderValue'),
       cell: (row) => (
-        <Tag colorScheme="yellow">
-          {row.value.prefixBits !== undefined
-            ? `/${row.value.prefixBits}`
-            : (row.value.address ??
-              (row.errorType === 'High Utilization'
-                ? `${row.value.value}%`
-                : `${row.value.value}/s`))}
-        </Tag>
+        <StatusPill
+          tone="warning"
+          label={
+            row.value.prefixBits !== undefined
+              ? `/${row.value.prefixBits}`
+              : (row.value.address ??
+                (row.errorType === 'High Utilization'
+                  ? `${row.value.value}%`
+                  : `${row.value.value}/s`))
+          }
+        />
       ),
     },
     {
@@ -438,3 +440,4 @@ export function ErrorInjectionPanel() {
 }
 
 import { useActionPermission } from '../contexts/ScopeContext';
+import { StatusPill } from '../shared/StatusPill';

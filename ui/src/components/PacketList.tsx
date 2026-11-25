@@ -1,11 +1,10 @@
 import { memo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTimeDisplay } from '../hooks/useTimeDisplay';
-import { Tag } from '../ui/Tag';
+import { CategoryChip } from '../shared/CategoryChip';
 import { Tooltip } from '../ui/Tooltip';
 import { SmallText } from '../ui/Typography';
 import type { PacketByteRange } from '../utils/protocol-byte-ranges';
-import { getProtocolColor } from '../utils/protocol-colors';
 import { formatTimeByMode, getTimeDisplayLabel } from '../utils/time-display';
 
 /**
@@ -68,9 +67,7 @@ const PacketRow = memo(
       style={rowStyle}
     >
       <div className="flex items-center gap-compact">
-        <Tag colorScheme={getProtocolColor(packet.protocol)} className="text-xs">
-          {packet.protocol}
-        </Tag>
+        <CategoryChip label={packet.protocol} />
         <SmallText className="text-text-muted font-mono text-xs">{formattedTime}</SmallText>
       </div>
       <div className="mt-tight text-sm text-text-primary truncate">

@@ -3,9 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { deviceTypeIcons, normalizeDeviceType } from '../../constants/device-types';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../shared/Button';
+import { StatusPill } from '../../shared/StatusPill';
 import { ActionButton } from '../../ui/ActionButton';
 import { Card, CardContent } from '../../ui/Card';
-import { Tag } from '../../ui/Tag';
 import { Tooltip } from '../../ui/Tooltip';
 import { H2, SmallText } from '../../ui/Typography';
 import type { AuthoredDevice } from './generated/authored-device.generated';
@@ -73,11 +73,7 @@ export function DeviceEditorHeader({
                   : t('editor.header.editDeviceSubtitle')}
               </SmallText>
             </div>
-            {isDirty && (
-              <Tag colorScheme="yellow" className="ml-inline">
-                {t('editor.header.unsavedBadge')}
-              </Tag>
-            )}
+            {isDirty && <StatusPill tone="warning" label={t('editor.header.unsavedBadge')} />}
           </div>
           <div className="flex gap-compact">
             <Button variant="secondary" onClick={onToggleYamlPreview}>

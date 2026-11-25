@@ -6,8 +6,8 @@ import { DeviceTable } from '../components/DeviceTable';
 import { iconSizes } from '../constants/sizes';
 import { useAppContext } from '../contexts/AppContext';
 import { useSegmentsResource } from '../hooks/usePageResources';
+import { CategoryChip } from '../shared/CategoryChip';
 import { BaseCard } from '../ui/BaseCard';
-import { Tag } from '../ui/Tag';
 import { H3, SmallText } from '../ui/Typography';
 
 /**
@@ -86,12 +86,11 @@ const SegmentSection = memo(({ segment }: { segment: SegmentSummary }) => {
         <H3>{heading}</H3>
         {/* The count changes as the simulation runs, so it is a figure; the
             noun beside it is prose and must not be monospaced with it. */}
-        <Tag colorScheme="blue">
-          <span className="figure" data-testid={`segment-count-${segment.vlanTag}`}>
-            {segment.devices.length}
-          </span>{' '}
-          {t('segments.deviceNoun', { count: segment.devices.length })}
-        </Tag>
+        <span data-testid={`segment-count-${segment.vlanTag}`}>
+          <CategoryChip
+            label={`${segment.devices.length} ${t('segments.deviceNoun', { count: segment.devices.length })}`}
+          />
+        </span>
       </div>
       {segment.devices.length === 0 ? (
         <SmallText className="text-text-muted">{t('segments.emptySegmentDevices')}</SmallText>

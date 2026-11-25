@@ -6,9 +6,9 @@ import { fetchLibraryNetworkContent } from '../../api/library-client';
 import type { DeviceSummary } from '../../api/types';
 import { DeviceTable } from '../../components/DeviceTable';
 import { iconSizes } from '../../constants/sizes';
+import { CategoryChip } from '../../shared/CategoryChip';
 import type { ConfigSource } from '../../stores/ui-store';
 import { Card, CardContent } from '../../ui/Card';
-import { Tag } from '../../ui/Tag';
 import { H2, SmallText } from '../../ui/Typography';
 
 /**
@@ -264,9 +264,7 @@ export function SelectedNetworkPreview({
                   <div className="flex items-center gap-compact">
                     <Icon className={`${iconSizes.sm} text-text-muted`} />
                     <span className="font-medium text-text-primary">{d.name}</span>
-                    <Tag colorScheme="gray" className="text-[10px] capitalize">
-                      {d.type}
-                    </Tag>
+                    <CategoryChip label={d.type} />
                   </div>
                   {(d.mac || d.ips.length > 0) && (
                     <div className="mt-tight font-mono text-[11px] text-text-muted">
@@ -278,9 +276,7 @@ export function SelectedNetworkPreview({
                   {d.services.length > 0 && (
                     <div className="mt-tight flex flex-wrap gap-tight">
                       {d.services.map((svc) => (
-                        <Tag key={svc} colorScheme="purple" className="text-[10px]">
-                          {svc}
-                        </Tag>
+                        <CategoryChip key={svc} label={svc} />
                       ))}
                     </div>
                   )}

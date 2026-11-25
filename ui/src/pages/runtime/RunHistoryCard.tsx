@@ -5,8 +5,8 @@ import { useLocation } from 'react-router';
 import { iconSizes } from '../../constants/sizes';
 import { useRunHistory } from '../../hooks/useRunHistory';
 import { Button } from '../../shared/Button';
+import { CategoryChip } from '../../shared/CategoryChip';
 import { Card, CardContent } from '../../ui/Card';
-import { Tag } from '../../ui/Tag';
 import { H2, SmallText } from '../../ui/Typography';
 import { formatDuration, formatNumber, formatTime } from '../../utils/format';
 
@@ -36,7 +36,7 @@ export function RunHistoryCard() {
             <History className={`${iconSizes.lg} text-text-muted`} />
             {t('runtime.recentRunsTitle')}
           </H2>
-          <Tag colorScheme="gray">{t('runtime.recentRunsTag')}</Tag>
+          <CategoryChip label={t('runtime.recentRunsTag')} />
         </div>
         <SmallText className="text-text-muted">{t('runtime.recentRunsDescription')}</SmallText>
         <div className="stack-sm text-sm text-text-secondary">

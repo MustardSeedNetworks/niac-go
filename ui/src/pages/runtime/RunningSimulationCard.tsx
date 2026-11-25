@@ -7,9 +7,9 @@ import { StatBlock } from '../../components/StatBlock';
 import { iconSizes } from '../../constants/sizes';
 import { useToast } from '../../hooks/useToast';
 import { Button } from '../../shared/Button';
+import { StatusPill } from '../../shared/StatusPill';
 import { ActionButton } from '../../ui/ActionButton';
 import { Card, CardContent } from '../../ui/Card';
-import { Tag } from '../../ui/Tag';
 import { H2, SmallText } from '../../ui/Typography';
 import { formatTime, formatUptime } from '../../utils/format';
 
@@ -70,7 +70,7 @@ export function RunningSimulationCard({
             <div className="h-3 w-3 animate-pulse rounded-full bg-status-success" />
             <H2>{t('runtime.running.title')}</H2>
           </div>
-          <Tag colorScheme="green">{t('runtime.running.active')}</Tag>
+          <StatusPill tone="success" label={t('runtime.running.active')} />
         </div>
 
         <div className="grid gap-comfortable md:grid-cols-2 lg:grid-cols-3">

@@ -9,10 +9,11 @@ import { iconSizes } from '../constants/sizes';
 import { useLogStream } from '../hooks/useEventSource';
 import { useToast } from '../hooks/useToast';
 import { Button } from '../shared/Button';
+import { CategoryChip } from '../shared/CategoryChip';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
+import { StatusPill } from '../shared/StatusPill';
 import { Card, CardContent } from '../ui/Card';
 import { useDialogLabels } from '../ui/dialogLabels';
-import { Tag } from '../ui/Tag';
 import { Tooltip } from '../ui/Tooltip';
 
 // Maximum number of logs to buffer
@@ -180,22 +181,19 @@ export function DebugConsolePage() {
     if (paused) {
       return {
         label: t('debug.statusPaused'),
-        color: 'yellow' as const,
-        indicator: 'bg-status-warning',
+        tone: 'warning' as const,
       };
     }
     if (connected) {
       return {
         label: t('debug.statusLive'),
-        color: 'green' as const,
-        indicator: 'bg-status-success animate-pulse',
+        tone: 'success' as const,
       };
     }
     // SSE auto-reconnects, so disconnected state is brief
     return {
       label: t('debug.statusConnecting'),
-      color: 'yellow' as const,
-      indicator: 'bg-status-warning animate-pulse',
+      tone: 'warning' as const,
     };
   }, [connected, paused, t]);
 
@@ -235,8 +233,7 @@ export function DebugConsolePage() {
                   onClick={reconnect}
                   className="flex items-center gap-compact rounded-lg border border-surface-border bg-bg-base/50 px-3 py-compact-md text-sm transition-colors hover:bg-bg-elevated/50"
                 >
-                  <span className={`h-2 w-2 rounded-full ${connectionStatus.indicator}`} />
-                  <Tag colorScheme={connectionStatus.color}>{connectionStatus.label}</Tag>
+                  <StatusPill tone={connectionStatus.tone} label={connectionStatus.label} />
                 </button>
               </Tooltip>
             </div>
@@ -269,14 +266,12 @@ export function DebugConsolePage() {
                 })}
               </span>
               {levelFilter !== 'All' && (
-                <Tag colorScheme="purple">{t('debug.levelTag', { level: levelFilter })}</Tag>
+                <CategoryChip label={t('debug.levelTag', { level: levelFilter })} />
               )}
               {protocolFilter !== 'All' && (
-                <Tag colorScheme="blue">{t('debug.protocolTag', { protocol: protocolFilter })}</Tag>
+                <CategoryChip label={t('debug.protocolTag', { protocol: protocolFilter })} />
               )}
-              {searchQuery && (
-                <Tag colorScheme="gray">{t('debug.searchTag', { query: searchQuery })}</Tag>
-              )}
+              {searchQuery && <CategoryChip label={t('debug.searchTag', { query: searchQuery })} />}
               <button
                 type="button"
                 onClick={() => {

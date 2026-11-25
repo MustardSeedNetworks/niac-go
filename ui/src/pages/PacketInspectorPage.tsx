@@ -32,12 +32,13 @@ import { useCaptureResource } from '../hooks/usePageResources';
 import { useResourceError } from '../hooks/useResourceError';
 import { useToast } from '../hooks/useToast';
 import { Button } from '../shared/Button';
+import { CategoryChip } from '../shared/CategoryChip';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
+import { StatusPill } from '../shared/StatusPill';
 import { ActionButton } from '../ui/ActionButton';
 import { Card, CardContent } from '../ui/Card';
 import { useDialogLabels } from '../ui/dialogLabels';
 import { Inspector, InspectorPane, InspectorPanes, InspectorRecords } from '../ui/Inspector';
-import { Tag } from '../ui/Tag';
 import { H2, SmallText } from '../ui/Typography';
 import { canFollowStream, getStreamFilter } from '../utils/conversations';
 import { buildProtocolLayers, computeHeaderBoundary } from '../utils/protocol-layers';
@@ -64,7 +65,7 @@ function ConnectionStatus({ connected }: { connected: boolean }) {
     return (
       <div className="flex items-center gap-compact">
         <Wifi className={`${iconSizes.md} text-status-success`} />
-        <Tag colorScheme="green">{t('packets.inspector.connectedStatus')}</Tag>
+        <StatusPill tone="success" label={t('packets.inspector.connectedStatus')} />
       </div>
     );
   }
@@ -73,7 +74,7 @@ function ConnectionStatus({ connected }: { connected: boolean }) {
   return (
     <div className="flex items-center gap-compact">
       <WifiOff className={`${iconSizes.md} text-status-warning animate-pulse`} />
-      <Tag colorScheme="yellow">{t('packets.inspector.connectingStatus')}</Tag>
+      <StatusPill tone="warning" label={t('packets.inspector.connectingStatus')} />
     </div>
   );
 }
@@ -319,7 +320,7 @@ export function PacketInspectorPage() {
                     <span className="font-mono text-text-primary">{activeInterface ?? '—'}</span>
                   </SmallText>
                   {captureRunning && !simRunning && (
-                    <Tag colorScheme="violet">{t('packets.inspector.standaloneTag')}</Tag>
+                    <CategoryChip label={t('packets.inspector.standaloneTag')} />
                   )}
                   <ConnectionStatus connected={connected} />
                 </div>
@@ -444,11 +445,12 @@ export function PacketInspectorPage() {
                   {t('packets.inspector.evictedCount', { count: evicted, limit: MAX_PACKETS })}
                 </SmallText>
                 {isPaused && pending > 0 && (
-                  <Tag colorScheme="yellow">
-                    <span data-testid="packet-buffer-pending">
-                      {t('packets.inspector.pendingCount', { count: pending })}
-                    </span>
-                  </Tag>
+                  <span data-testid="packet-buffer-pending">
+                    <StatusPill
+                      tone="warning"
+                      label={t('packets.inspector.pendingCount', { count: pending })}
+                    />
+                  </span>
                 )}
               </div>
             </CardContent>
@@ -470,9 +472,7 @@ export function PacketInspectorPage() {
                       {t('packets.inspector.packetListLabel')}
                     </SmallText>
                     {isPaused && (
-                      <Tag colorScheme="yellow" className="text-xs">
-                        {t('packets.inspector.pausedTag')}
-                      </Tag>
+                      <StatusPill tone="warning" label={t('packets.inspector.pausedTag')} />
                     )}
                   </div>
                   <div className="flex-1 min-h-0">

@@ -2,12 +2,11 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PcapPacket } from '../../api/types';
 import { useTimeDisplay } from '../../hooks/useTimeDisplay';
+import { CategoryChip } from '../../shared/CategoryChip';
 import { Card, CardContent } from '../../ui/Card';
 import { DataTable, type DataTableColumn } from '../../ui/DataTable';
-import { Tag } from '../../ui/Tag';
 import { Tooltip } from '../../ui/Tooltip';
 import { SmallText } from '../../ui/Typography';
-import { getProtocolColor } from '../../utils/protocol-colors';
 import { formatTimeByMode, getTimeDisplayLabel } from '../../utils/time-display';
 
 interface PcapPacketListProps {
@@ -84,11 +83,7 @@ export const PcapPacketList = memo(function PcapPacketList({
     {
       key: 'protocol',
       header: t('packets.list.headerProtocol'),
-      cell: (packet) => (
-        <Tag colorScheme={getProtocolColor(packet.protocol)} className="text-xs">
-          {packet.protocol}
-        </Tag>
-      ),
+      cell: (packet) => <CategoryChip label={packet.protocol} />,
     },
     {
       key: 'length',

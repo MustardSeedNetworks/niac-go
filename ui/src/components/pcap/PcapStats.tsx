@@ -3,11 +3,11 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PcapStats as PcapStatsType } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
+import { CategoryChip } from '../../shared/CategoryChip';
+import { StatusPill } from '../../shared/StatusPill';
 import { Card, CardContent } from '../../ui/Card';
-import { Tag } from '../../ui/Tag';
 import { H2, SmallText } from '../../ui/Typography';
 import { formatBytes, formatDurationMs, useFormatTime } from '../../utils/format';
-import { getProtocolColor } from '../../utils/protocol-colors';
 
 interface PcapStatsProps {
   stats: PcapStatsType | null;
@@ -72,9 +72,7 @@ const ProtocolBreakdown = memo(function ProtocolBreakdown({
           <div key={protocol} className="stack-xs">
             <div className="flex-between">
               <div className="flex items-center gap-compact">
-                <Tag colorScheme={getProtocolColor(protocol)} className="text-xs">
-                  {protocol}
-                </Tag>
+                <CategoryChip label={protocol} />
                 <SmallText className="text-text-muted">{count.toLocaleString()}</SmallText>
               </div>
               <SmallText className="text-text-muted">{percentage.toFixed(1)}%</SmallText>
@@ -123,9 +121,7 @@ const TopEndpoints = memo(function TopEndpoints({
                 className="flex-between rounded-lg border border-surface-border bg-bg-base/50 px-3 py-row"
               >
                 <span className="font-mono text-sm text-text-primary">{item.ip}</span>
-                <Tag colorScheme="blue" className="text-xs">
-                  {item.count.toLocaleString()}
-                </Tag>
+                <CategoryChip label={item.count.toLocaleString()} />
               </div>
             ))}
           </div>
@@ -150,9 +146,7 @@ const TopEndpoints = memo(function TopEndpoints({
                 className="flex-between rounded-lg border border-surface-border bg-bg-base/50 px-3 py-row"
               >
                 <span className="font-mono text-sm text-text-primary">{item.ip}</span>
-                <Tag colorScheme="green" className="text-xs">
-                  {item.count.toLocaleString()}
-                </Tag>
+                <StatusPill tone="success" label={item.count.toLocaleString()} />
               </div>
             ))}
           </div>

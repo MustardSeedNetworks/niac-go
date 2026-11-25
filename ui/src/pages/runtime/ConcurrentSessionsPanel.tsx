@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import type { SimulationStatus } from '../../api/types';
 import { Button } from '../../shared/Button';
+import { StatusPill } from '../../shared/StatusPill';
 import { ActionButton } from '../../ui/ActionButton';
 import { Card, CardContent } from '../../ui/Card';
 import { DataTable, type DataTableColumn } from '../../ui/DataTable';
-import { Tag } from '../../ui/Tag';
 import { H2, SmallText } from '../../ui/Typography';
 import { formatNumber } from '../../utils/format';
 
@@ -64,15 +64,18 @@ export function ConcurrentSessionsPanel({
       cell: (session) =>
         session.degraded ? (
           <div className="stack-compact">
-            <Tag colorScheme="red">{t('runtime.sessions.degraded')}</Tag>
+            <StatusPill tone="error" label={t('runtime.sessions.degraded')} />
             <SmallText>{session.degradedReason || t('runtime.sessions.degradedHelp')}</SmallText>
           </div>
         ) : (
-          <Tag colorScheme="green">
-            {session.sessionId === selectedSessionId
-              ? t('runtime.sessions.selected')
-              : t('runtime.running.active')}
-          </Tag>
+          <StatusPill
+            tone="success"
+            label={
+              session.sessionId === selectedSessionId
+                ? t('runtime.sessions.selected')
+                : t('runtime.running.active')
+            }
+          />
         ),
     },
     {

@@ -4,9 +4,9 @@ import type { ReplayRateMode } from '../api/api-response-types';
 import { fetchReplayStatus, startReplay, stopReplay } from '../api/client';
 import { fetchLibraryPcaps } from '../api/library-client';
 import { useApiResource } from '../hooks/useApiResource';
+import { StatusPill } from '../shared/StatusPill';
 import { ActionButton } from '../ui/ActionButton';
 import { Card, CardContent } from '../ui/Card';
-import { Tag } from '../ui/Tag';
 import { SmallText } from '../ui/Typography';
 import { formatBytes, getErrorMessage } from '../utils/format';
 
@@ -153,7 +153,7 @@ export function ReplayControlPanel() {
             <div className="flex-between">
               <div>
                 <div className="flex items-center gap-compact mb-tight">
-                  <Tag colorScheme="green">{t('traffic.page.replayStatusRunning')}</Tag>
+                  <StatusPill tone="success" label={t('traffic.page.replayStatusRunning')} />
                   <span className="font-medium">{replayStatus.file}</span>
                 </div>
                 <SmallText className="text-text-muted">

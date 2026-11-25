@@ -11,7 +11,7 @@ import type { DeviceSummary } from '../../api/types';
 import { getTopologyDeviceColor, getTopologyDeviceIcon } from '../../constants/device-types';
 import { useAppContext } from '../../contexts/AppContext';
 import { Button } from '../../shared/Button';
-import { Tag } from '../../ui/Tag';
+import { CategoryChip } from '../../shared/CategoryChip';
 import { sessionPool } from '../runtime/sessionPool';
 import { DeviceAttachmentPool } from './DeviceAttachmentPool';
 
@@ -90,9 +90,7 @@ export function DeviceDetailsPanel({ device, onClose, onEdit }: DeviceDetailsPan
           </div>
           <div className="flex flex-wrap gap-tight">
             {device.protocols.map((proto) => (
-              <Tag key={proto} colorScheme="purple" className="text-xs">
-                {proto}
-              </Tag>
+              <CategoryChip key={proto} label={proto} />
             ))}
           </div>
         </div>

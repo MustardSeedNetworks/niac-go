@@ -4,9 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import type { TFunction } from '../../i18n';
 import { Button } from '../../shared/Button';
+import { CategoryChip } from '../../shared/CategoryChip';
 import { ActionButton } from '../../ui/ActionButton';
 import { Card, CardContent } from '../../ui/Card';
-import { Tag } from '../../ui/Tag';
 import { SmallText } from '../../ui/Typography';
 import { formatBytes } from '../../utils/format';
 
@@ -233,9 +233,7 @@ export function PcapUploader({
                 <p className="font-medium text-text-primary">{selectedFile.name}</p>
                 <SmallText className="text-text-muted">{formatBytes(selectedFile.size)}</SmallText>
               </div>
-              <Tag colorScheme="purple" className="text-xs">
-                {tCommon('status.ready')}
-              </Tag>
+              <CategoryChip label={tCommon('status.ready')} />
             </div>
 
             <div className="flex items-center gap-compact">

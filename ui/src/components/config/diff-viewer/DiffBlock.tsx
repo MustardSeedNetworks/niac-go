@@ -3,7 +3,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../../constants/sizes';
 import { Button } from '../../../shared/Button';
-import { Tag } from '../../../ui/Tag';
+import { CategoryChip } from '../../../shared/CategoryChip';
 import { SmallText } from '../../../ui/Typography';
 import { DiffLineComponent } from './DiffLine';
 import type { DiffBlock, DiffLine, MergeDecision } from './types';
@@ -77,11 +77,7 @@ export function DiffBlockMergeControls({
       >
         {choiceLabels.right}
       </Button>
-      {decision && (
-        <Tag colorScheme="purple" className="ml-inline text-xs">
-          {choiceLabels[decision.choice].toUpperCase()}
-        </Tag>
-      )}
+      {decision && <CategoryChip label={choiceLabels[decision.choice].toUpperCase()} />}
     </div>
   );
 }

@@ -10,11 +10,11 @@ import { useToast } from '../hooks/useToast';
 import { useWalkSanitize } from '../hooks/useWalkSanitize';
 import { Button } from '../shared/Button';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
+import { StatusPill } from '../shared/StatusPill';
 import { ActionButton } from '../ui/ActionButton';
 import { Card, CardContent } from '../ui/Card';
 import { DataTable, type DataTableColumn, type DataTableSelection } from '../ui/DataTable';
 import { useDialogLabels } from '../ui/dialogLabels';
-import { Tag } from '../ui/Tag';
 import { H2, SmallText } from '../ui/Typography';
 
 /**
@@ -93,7 +93,7 @@ function LibraryFilesView({ kind }: Props) {
         <span className="inline-flex items-center gap-compact">
           {entry.name}
           {kind === 'walks' && entry.edited && (
-            <Tag colorScheme="yellow">{tPages('libraryFiles.editedTag')}</Tag>
+            <StatusPill tone="warning" label={tPages('libraryFiles.editedTag')} />
           )}
         </span>
       ),

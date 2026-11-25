@@ -20,9 +20,10 @@ import { useColoringRules } from '../hooks/useColoringRules';
 import { useDisplayFilter } from '../hooks/useDisplayFilter';
 import { useToast } from '../hooks/useToast';
 import { Button } from '../shared/Button';
+import { CategoryChip } from '../shared/CategoryChip';
+import { StatusPill } from '../shared/StatusPill';
 import { Card, CardContent } from '../ui/Card';
 import { Inspector, InspectorPane, InspectorPanes, InspectorRecords } from '../ui/Inspector';
-import { Tag } from '../ui/Tag';
 import { Tooltip } from '../ui/Tooltip';
 import { H2, SmallText } from '../ui/Typography';
 import { canFollowStream, getStreamFilter } from '../utils/conversations';
@@ -283,17 +284,19 @@ export function PcapAnalyzerPage() {
                     {tPages('libraryPcaps.analyzer.pageHeading')}
                     <GlossaryPopover term="pcap" />
                   </H2>
-                  <Tag colorScheme="green">
-                    {tPages('libraryPcaps.analyzer.packetsCountTag', {
+                  <StatusPill
+                    tone="success"
+                    label={tPages('libraryPcaps.analyzer.packetsCountTag', {
                       count: analysisResult.packets.length,
                     })}
-                  </Tag>
+                  />
                   {analysisResult.truncated && (
-                    <Tag colorScheme="yellow">
-                      {tPages('libraryPcaps.analyzer.truncatedNotice', {
+                    <StatusPill
+                      tone="warning"
+                      label={tPages('libraryPcaps.analyzer.truncatedNotice', {
                         shown: analysisResult.packets.length,
                       })}
-                    </Tag>
+                    />
                   )}
                 </div>
 
@@ -452,9 +455,9 @@ export function PcapAnalyzerPage() {
                   {tPages('libraryPcaps.analyzer.aboutDescription')}
                 </SmallText>
                 <div className="mt-heading flex flex-wrap gap-compact">
-                  <Tag colorScheme="gray">{tPages('libraryPcaps.analyzer.supportsPcap')}</Tag>
-                  <Tag colorScheme="gray">{tPages('libraryPcaps.analyzer.supportsPcapng')}</Tag>
-                  <Tag colorScheme="gray">{tPages('libraryPcaps.analyzer.maxSizeTag')}</Tag>
+                  <CategoryChip label={tPages('libraryPcaps.analyzer.supportsPcap')} />
+                  <CategoryChip label={tPages('libraryPcaps.analyzer.supportsPcapng')} />
+                  <CategoryChip label={tPages('libraryPcaps.analyzer.maxSizeTag')} />
                 </div>
               </div>
             </div>

@@ -3,8 +3,8 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { accessibleNameIncluding } from '../../lib/accessibleName';
+import { StatusPill } from '../../shared/StatusPill';
 import { Card, CardContent } from '../../ui/Card';
-import { Tag } from '../../ui/Tag';
 
 export interface CollapsibleSectionProps {
   title: string;
@@ -60,11 +60,7 @@ export function CollapsibleSection({
                   boundary, so the chip would glue onto the title. */}
               {required ? ' ' : null}
             </h3>
-            {required && (
-              <Tag colorScheme="red" className="text-xs">
-                {requiredLabel}
-              </Tag>
-            )}
+            {required && <StatusPill tone="error" label={requiredLabel} />}
           </button>
           {onEnableChange && (
             <div className="ml-inline">
@@ -85,9 +81,10 @@ export function CollapsibleSection({
           )}
         </div>
         {enabled !== undefined && (
-          <Tag colorScheme={enabled ? 'green' : 'gray'} className="text-xs">
-            {enabled ? t('labels.enabled') : t('labels.disabled')}
-          </Tag>
+          <StatusPill
+            tone={enabled ? 'success' : 'unknown'}
+            label={enabled ? t('labels.enabled') : t('labels.disabled')}
+          />
         )}
       </div>
       {isExpanded && <CardContent className="pt-0 pb-6 px-6">{children}</CardContent>}

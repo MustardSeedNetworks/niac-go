@@ -13,7 +13,6 @@ import { MergeControls, MergePreviewModal } from '../components/config/MergeCont
 import { iconSizes } from '../constants/sizes';
 import { ActionButton } from '../ui/ActionButton';
 import { Card, CardContent } from '../ui/Card';
-import { Tag } from '../ui/Tag';
 import { H2, P, SmallText } from '../ui/Typography';
 import { FileUploadZone, type UploadedFile } from './config-diff/FileUploadZone';
 
@@ -171,11 +170,11 @@ export function ConfigDiffPage() {
            * counter remains on the right when files are present. */}
           {hasFiles && (
             <div className="flex items-center justify-end gap-compact">
-              <Tag colorScheme="purple">
-                {t('configDiff.changesCount', {
+              <CategoryChip
+                label={t('configDiff.changesCount', {
                   count: diffBlocks.filter((b) => b.type !== 'unchanged').length,
                 })}
-              </Tag>
+              />
             </div>
           )}
 
@@ -216,11 +215,7 @@ export function ConfigDiffPage() {
               <H2 className="text-lg" data-testid="diff-panel-original-title">
                 {t('configDiff.originalFileTitle')}
               </H2>
-              {leftFile && (
-                <Tag colorScheme="blue" className="text-xs">
-                  {t('configDiff.sourceTag')}
-                </Tag>
-              )}
+              {leftFile && <CategoryChip label={t('configDiff.sourceTag')} />}
             </div>
             <FileUploadZone
               label={t('configDiff.uploadOriginalLabel')}
@@ -240,11 +235,7 @@ export function ConfigDiffPage() {
               <H2 className="text-lg" data-testid="diff-panel-modified-title">
                 {t('configDiff.modifiedFileTitle')}
               </H2>
-              {rightFile && (
-                <Tag colorScheme="green" className="text-xs">
-                  {t('configDiff.changesTag')}
-                </Tag>
-              )}
+              {rightFile && <StatusPill tone="success" label={t('configDiff.changesTag')} />}
             </div>
             <FileUploadZone
               label={t('configDiff.uploadModifiedLabel')}
@@ -397,3 +388,5 @@ export function ConfigDiffPage() {
 }
 
 import { useActionPermission } from '../contexts/ScopeContext';
+import { CategoryChip } from '../shared/CategoryChip';
+import { StatusPill } from '../shared/StatusPill';

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
+import { CategoryChip } from '../../shared/CategoryChip';
 import { Card, CardContent } from '../../ui/Card';
-import { Tag } from '../../ui/Tag';
 import { H2 } from '../../ui/Typography';
 import { YamlEditor } from '../config/YamlEditor';
 
@@ -15,7 +15,7 @@ export function YamlPreviewSection({ yamlContent }: YamlPreviewSectionProps) {
       <CardContent>
         <H2 className="mb-heading flex items-center gap-compact text-base">
           <span>{t('editor.sections.yamlPreview.title')}</span>
-          <Tag colorScheme="gray">{t('editor.sections.yamlPreview.readOnly')}</Tag>
+          <CategoryChip label={t('editor.sections.yamlPreview.readOnly')} />
         </H2>
         <YamlEditor
           ariaLabel={t('editor.sections.yamlPreview.editorAria')}

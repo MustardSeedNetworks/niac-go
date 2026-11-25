@@ -1,6 +1,5 @@
 import {
   AlertCircle,
-  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -12,11 +11,12 @@ import { useCallback, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../shared/Button';
+import { CategoryChip } from '../../shared/CategoryChip';
 import { ConfirmDialog } from '../../shared/ConfirmDialog';
+import { StatusPill } from '../../shared/StatusPill';
 import { Card, CardContent } from '../../ui/Card';
 import { useDialogLabels } from '../../ui/dialogLabels';
 import { Modal } from '../../ui/Modal';
-import { Tag } from '../../ui/Tag';
 import { H2, SmallText } from '../../ui/Typography';
 import { copyToClipboard } from '../../utils/file';
 import type { DiffBlock, MergeDecision } from './DiffViewer';
@@ -126,17 +126,14 @@ export function MergeControls({
           {stats.totalChanges > 0 && (
             <div className="flex items-center gap-compact">
               {stats.isComplete ? (
-                <Tag colorScheme="green" className="flex items-center gap-tight">
-                  <CheckCircle2 className={iconSizes.xs} />
-                  {t('configDiff.allResolvedTag')}
-                </Tag>
+                <StatusPill tone="success" label={t('configDiff.allResolvedTag')} />
               ) : (
-                <Tag colorScheme="yellow" className="flex items-center gap-tight">
-                  <AlertCircle className={iconSizes.xs} />
-                  {t('configDiff.pendingCount', {
+                <StatusPill
+                  tone="warning"
+                  label={t('configDiff.pendingCount', {
                     count: stats.totalChanges - stats.decisionsCount,
                   })}
-                </Tag>
+                />
               )}
             </div>
           )}
@@ -186,21 +183,19 @@ export function MergeControls({
           <div className="flex items-center gap-comfortable flex-wrap">
             <SmallText className="text-text-muted">{t('configDiff.decisionsLabel')}</SmallText>
             {stats.leftCount > 0 && (
-              <Tag colorScheme="blue" className="text-xs">
-                <ChevronLeft className={`${iconSizes.xs} mr-1`} />
-                {t('configDiff.leftCount', { count: stats.leftCount })}
-              </Tag>
+              <CategoryChip
+                icon={<ChevronLeft className="h-3.5 w-3.5" />}
+                label={t('configDiff.leftCount', { count: stats.leftCount })}
+              />
             )}
             {stats.rightCount > 0 && (
-              <Tag colorScheme="green" className="text-xs">
-                <ChevronRight className={`${iconSizes.xs} mr-1`} />
-                {t('configDiff.rightCount', { count: stats.rightCount })}
-              </Tag>
+              <CategoryChip
+                icon={<ChevronRight className="h-3.5 w-3.5" />}
+                label={t('configDiff.rightCount', { count: stats.rightCount })}
+              />
             )}
             {stats.bothCount > 0 && (
-              <Tag colorScheme="purple" className="text-xs">
-                {t('configDiff.bothCount', { count: stats.bothCount })}
-              </Tag>
+              <CategoryChip label={t('configDiff.bothCount', { count: stats.bothCount })} />
             )}
           </div>
         )}
