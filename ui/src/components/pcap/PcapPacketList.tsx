@@ -16,7 +16,7 @@ interface PcapPacketListProps {
   totalPackets: number;
   selectedPacketId: string | null;
   onSelectPacket: (packet: PcapPacket) => void;
-  /** The coloring rule matching a packet. Shown as a swatch on its number. */
+  /** The coloring rule matching a packet; tints its row. */
   getRowStyle?: (packet: PcapPacket) => React.CSSProperties | undefined;
 }
 
@@ -46,17 +46,7 @@ export const PcapPacketList = memo(function PcapPacketList({
     {
       key: 'number',
       header: '#',
-      cell: (packet) => (
-        // The coloring rule has no row to paint (rows are one height so the
-        // list can be windowed), so it colours the number.
-        <span
-          data-testid={`pcap-packet-${packet.number}`}
-          className="inline-block rounded px-1.5 font-mono text-xs text-text-muted"
-          style={getRowStyle?.(packet)}
-        >
-          {packet.number}
-        </span>
-      ),
+      cell: (packet) => <span className="font-mono text-xs text-text-muted">{packet.number}</span>,
     },
     {
       key: 'time',
@@ -141,6 +131,13 @@ export const PcapPacketList = memo(function PcapPacketList({
         caption={t('packets.list.headerPacket')}
         labels={labels}
         onRowClick={onSelectPacket}
+        getRowProps={(packet) => {
+          const style = getRowStyle?.(packet);
+          return {
+            'data-testid': `pcap-packet-${packet.number}`,
+            ...(style ? { style } : {}),
+          };
+        }}
         {...(selectedPacketId ? { selectedRowKey: selectedPacketId } : {})}
         virtualize={{ rowHeight: 44 }}
         maxHeight={560}
