@@ -30,9 +30,9 @@ import { useTranslation } from 'react-i18next';
 import { useBuildVersion } from '../hooks/useBuildVersion';
 import { RightDrawer } from '../shared/RightDrawer';
 import { SearchInput } from '../shared/SearchInput';
-import { SettingsTabs } from '../shared/SettingsTabs';
 import { FAQSection } from './help-drawer/FAQSection';
 import { GlossarySection } from './help-drawer/GlossarySection';
+import { HelpTabs } from './help-drawer/HelpTabs';
 import { ItemListSection } from './help-drawer/ItemListSection';
 import { OverviewSection } from './help-drawer/OverviewSection';
 import { PagesSection } from './help-drawer/PagesSection';
@@ -122,7 +122,7 @@ export function HelpDrawer({ isOpen, onClose, section }: HelpDrawerProps): React
           clearLabel={tc('accessibility.clearSearch')}
           placeholder={t('drawer.searchPlaceholder')}
         />
-        <SettingsTabs
+        <HelpTabs
           tabs={TABS}
           value={activeTab}
           onChange={(id) => {
@@ -153,7 +153,7 @@ export function HelpDrawer({ isOpen, onClose, section }: HelpDrawerProps): React
             {activeTab === 'shortcuts' && <ShortcutsSection searchQuery={searchQuery} />}
             {activeTab === 'faq' && <FAQSection searchQuery={searchQuery} />}
           </div>
-        </SettingsTabs>
+        </HelpTabs>
       </div>
     </RightDrawer>
   );

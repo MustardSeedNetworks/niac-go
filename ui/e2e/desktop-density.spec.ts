@@ -130,8 +130,12 @@ async function measureDensity(page: Page): Promise<Density> {
   return page.evaluate(() => {
     const title = document.querySelector('[data-testid="page-header-title"]');
     const block = title?.closest('[data-testid="page-header"]') ?? null;
+    // The budget is the title block (kicker, title, subtitle). The breadcrumb
+    // trail above it is its own row, with the 4px that separates them.
+    const trail = block?.querySelector('[data-testid="breadcrumbs"]');
+    const trailHeight = trail ? trail.getBoundingClientRect().height + 4 : 0;
     return {
-      headerFootprint: block ? Math.round(block.getBoundingClientRect().height) : -1,
+      headerFootprint: block ? Math.round(block.getBoundingClientRect().height - trailHeight) : -1,
       documentHeight: document.documentElement.scrollHeight,
     };
   });

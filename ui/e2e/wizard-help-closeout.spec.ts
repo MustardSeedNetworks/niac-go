@@ -91,7 +91,7 @@ for (const theme of ['light', 'dark']) {
     await expect(drawer.getByRole('button').first()).toBeFocused();
     await close.focus();
     await page.keyboard.press('Tab');
-    const search = drawer.getByRole('textbox');
+    const search = drawer.getByRole('searchbox');
     await expect(search).toBeFocused();
     await search.evaluate(async (element) => {
       await Promise.all(element.getAnimations().map((animation) => animation.finished));
@@ -150,7 +150,7 @@ test('Spanish page help and shared glossary render from the active locale', asyn
     ['/packets', 'Captura en vivo'],
   ]) {
     await page.goto(route);
-    await page.getByRole('button', { name: /^Open help for / }).click();
+    await page.getByRole('button', { name: /^Abrir la ayuda de / }).click();
     const drawer = page.getByTestId('help-drawer');
     await expect(drawer.getByText(text, { exact: false }).last()).toBeVisible();
     await page.getByTestId('help-drawer-close').click();

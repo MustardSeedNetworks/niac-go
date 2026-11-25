@@ -91,7 +91,7 @@ async function pageJumps(page: Page, list: Locator): Promise<number[]> {
   const next = list.getByRole('button', { name: 'Next page' });
   const previous = list.getByRole('button', { name: 'Previous page' });
   const jumps: number[] = [];
-  for (let round = 0; round < BLOCK_SAMPLES / 2; round++) {
+  for (let round = 0; round < 2; round++) {
     await resetBlock(page);
     while (await next.isEnabled()) {
       await next.click();

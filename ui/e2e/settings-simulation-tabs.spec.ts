@@ -32,7 +32,9 @@ for (const width of [1280, 390]) {
             return scroller.scrollHeight - scroller.clientHeight;
           }),
         )
-        .toBe(0);
+        // The shared tab strip lets its active tab's 1px bottom overlap spill
+        // into the scroller; anything beyond that is a wrapped second row.
+        .toBeLessThanOrEqual(1);
       await drawer.getByRole('tab', { name: 'About', exact: true }).click();
       await expect(drawer.getByRole('tab', { name: 'About', exact: true })).toHaveAttribute(
         'aria-selected',
