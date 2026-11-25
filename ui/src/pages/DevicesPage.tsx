@@ -320,7 +320,7 @@ function ConfigEditorCard({
         }
         icon={<FileCog className="h-5 w-5" />}
         status={dirty ? 'warning' : 'success'}
-        statusLabel={tCommon(dirty ? 'statusLabel.warning' : 'statusLabel.success')}
+        statusLabel={dirty ? tCommon('statusLabel.warning') : tCommon('statusLabel.success')}
         loading={loading && !data}
         {...(!dirty && error ? { error: error.message } : {})}
         data-testid="config-editor-card"
