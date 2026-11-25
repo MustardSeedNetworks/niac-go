@@ -7,6 +7,9 @@ import { useUsableInterfacesResource } from '../../hooks/usePageResources';
 import { useResourceError } from '../../hooks/useResourceError';
 import { useToast } from '../../hooks/useToast';
 import { Card } from '../../shared/Card';
+import { FormField } from '../../shared/FormField';
+import { Input } from '../../shared/Input';
+import { Select } from '../../shared/Select';
 import { ActionButton } from '../../ui/ActionButton';
 import { SmallText } from '../../ui/Typography';
 
@@ -85,39 +88,38 @@ export function StandaloneCaptureStarter({
           </div>
         </div>
         <div className="grid gap-default sm:grid-cols-[1fr_2fr_auto] sm:items-end">
-          <label className="flex flex-col gap-tight text-sm text-text-muted">
-            {t('packets.inspector.interfaceLabel')}
-            <select
-              value={selectedIface}
-              onChange={(e) => setSelectedIface(e.target.value)}
-              disabled={busy || interfaces.length === 0}
-              className="rounded-lg border border-surface-border bg-bg-base/60 px-3 py-row text-sm text-text-primary focus:border-brand-accent focus:outline-none"
-            >
-              {interfaces.length === 0 ? (
-                <option value="">{t('packets.inspector.noInterfaces')}</option>
-              ) : (
-                interfaces.map((iface) => (
-                  <option key={iface.name} value={iface.name}>
-                    {iface.name}
-                    {iface.addresses && iface.addresses.length > 0
-                      ? ` (${iface.addresses[0]})`
-                      : ''}
-                  </option>
-                ))
-              )}
-            </select>
-          </label>
-          <label className="flex flex-col gap-tight text-sm text-text-muted">
-            {t('packets.inspector.standaloneBpfLabel')}
-            <input
-              type="text"
-              value={bpfFilter}
-              onChange={(e) => setBpfFilter(e.target.value)}
-              disabled={busy}
-              placeholder={t('packets.inspector.standaloneBpfPlaceholder')}
-              className="rounded-lg border border-surface-border bg-bg-base/60 px-3 py-row font-mono text-sm text-text-primary focus:border-brand-accent focus:outline-none"
-            />
-          </label>
+          <FormField label={t('packets.inspector.interfaceLabel')}>
+            {(control) => (
+              <Select
+                {...control}
+                value={selectedIface}
+                onValueChange={setSelectedIface}
+                disabled={busy || interfaces.length === 0}
+                options={
+                  interfaces.length === 0
+                    ? [{ value: '', label: t('packets.inspector.noInterfaces') }]
+                    : interfaces.map((iface) => ({
+                        value: iface.name,
+                        label: iface.addresses?.[0]
+                          ? `${iface.name} (${iface.addresses[0]})`
+                          : iface.name,
+                      }))
+                }
+              />
+            )}
+          </FormField>
+          <FormField label={t('packets.inspector.standaloneBpfLabel')}>
+            {(control) => (
+              <Input
+                {...control}
+                value={bpfFilter}
+                onChange={(e) => setBpfFilter(e.target.value)}
+                disabled={busy}
+                placeholder={t('packets.inspector.standaloneBpfPlaceholder')}
+                className="font-mono"
+              />
+            )}
+          </FormField>
           <ActionButton
             variant="primary"
             action="start"

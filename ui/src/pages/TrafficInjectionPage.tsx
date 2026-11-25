@@ -9,7 +9,6 @@ import { useSimulationStatus } from '../hooks/useSimulationStatus';
 import { ButtonLink } from '../shared/Button';
 import { linkTo } from '../ui/linkTo';
 import { StatusRollup } from '../ui/StatusRollup';
-import { H2, P } from '../ui/Typography';
 
 export function TrafficInjectionPage() {
   const { t } = useTranslation('pages');
@@ -45,26 +44,11 @@ export function TrafficInjectionPage() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Error Injection */}
-      <div className="stack-lg">
-        <div>
-          <H2>{t('traffic.page.errorInjectionTitle')}</H2>
-          <P className="text-text-muted">{t('traffic.page.errorInjectionDescription')}</P>
-        </div>
-        <ErrorInjectionPanel />
-        <DeviceFaultPanel />
-        <DeviceActionPanel />
-      </div>
-
-      {/* PCAP Replay */}
-      <div className="stack-lg">
-        <div>
-          <H2>{t('traffic.page.pcapReplayTitle')}</H2>
-          <P className="text-text-muted">{t('traffic.page.pcapReplayDescription')}</P>
-        </div>
-        <ReplayControlPanel />
-      </div>
+    <div className="stack-xl">
+      <ErrorInjectionPanel />
+      <DeviceFaultPanel />
+      <DeviceActionPanel />
+      <ReplayControlPanel />
     </div>
   );
 }

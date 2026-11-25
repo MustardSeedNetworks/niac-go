@@ -8,11 +8,12 @@ import { clearAllErrors, clearError, injectError } from '../api/client';
 import type { ErrorType } from '../api/types';
 import { useAppState } from '../contexts/AppContext';
 import { type ErrorInjectionFormFields, ErrorInjectionSchema } from '../schemas/forms';
+import { Alert } from '../shared/Alert';
 import { Card } from '../shared/Card';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { DataTable, type DataTableColumn } from '../shared/DataTable';
 import { FormField } from '../shared/FormField';
-import { Input } from '../shared/Input';
+import { controlClass, Input } from '../shared/Input';
 import { ActionButton } from '../ui/ActionButton';
 import { useDialogLabels } from '../ui/dialogLabels';
 import { SmallText } from '../ui/Typography';
@@ -24,6 +25,7 @@ export function ErrorInjectionPanel() {
   const dialogLabels = useDialogLabels();
   const permission = useActionPermission('inject');
   const { t } = useTranslation('errors');
+  const { t: tPages } = useTranslation('pages');
   const { data: errorInfo, error, refetch: refetchErrors } = useAppState('errorTypes');
   // Deep-link support: the Dashboard's Error Injection quick action links
   // here with ?errorType=<type> so a specific error type arrives
@@ -221,20 +223,16 @@ export function ErrorInjectionPanel() {
   return (
     <div className="stack-lg" data-testid="interface-fault-panel">
       {/* Injection Form */}
-      <Card>
+      <Card
+        title={tPages('traffic.page.errorInjectionTitle')}
+        subtitle={tPages('traffic.page.errorInjectionDescription')}
+      >
         <div>
           <form onSubmit={handleSubmit(onInject)} className="stack-lg">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-comfortable">
               {/* Device Selector */}
-              <div>
-                <label htmlFor="error-device" className="block text-sm font-medium mb-2">
-                  {t('injection.deviceLabel')}
-                </label>
-                <select
-                  id="error-device"
-                  {...register('selectedDevice')}
-                  className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info"
-                >
+              <FormField label={t('injection.deviceLabel')} id="error-device">
+                <select id="error-device" {...register('selectedDevice')} className={controlClass}>
                   <option value="">{t('injection.deviceSelectPlaceholder')}</option>
                   {errorInfo?.targets?.map((target) => (
                     <option key={target.device} value={target.device}>
@@ -248,19 +246,16 @@ export function ErrorInjectionPanel() {
                     {errors.selectedDevice.message}
                   </p>
                 ) : null}
-              </div>
+              </FormField>
 
               {/* Interface Selector — scoped to the selected device's own
                   interfaces (#897 p5f) so a typo can't silently no-op. */}
-              <div>
-                <label htmlFor="error-interface" className="block text-sm font-medium mb-2">
-                  {t('injection.interfaceLabel')}
-                </label>
+              <FormField label={t('injection.interfaceLabel')} id="error-interface">
                 <select
                   id="error-interface"
                   {...register('selectedInterface')}
                   disabled={!selectedTarget?.interfaces.length}
-                  className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={controlClass}
                 >
                   <option value="">{t('injection.interfaceSelectPlaceholder')}</option>
                   {selectedTarget?.interfaces.map((iface) => (
@@ -283,18 +278,11 @@ export function ErrorInjectionPanel() {
                     {errors.selectedInterface.message}
                   </p>
                 ) : null}
-              </div>
+              </FormField>
 
               {/* Error Type Selector */}
-              <div>
-                <label htmlFor="error-type" className="block text-sm font-medium mb-2">
-                  {t('injection.errorTypeLabel')}
-                </label>
-                <select
-                  id="error-type"
-                  {...register('selectedErrorType')}
-                  className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info"
-                >
+              <FormField label={t('injection.errorTypeLabel')} id="error-type">
+                <select id="error-type" {...register('selectedErrorType')} className={controlClass}>
                   <option value="">{t('injection.errorTypeSelectPlaceholder')}</option>
                   {errorInfo?.availableTypes?.map((type: ErrorType) => (
                     <option
@@ -320,7 +308,7 @@ export function ErrorInjectionPanel() {
                     {errors.selectedErrorType.message}
                   </p>
                 ) : null}
-              </div>
+              </FormField>
 
               {/* Value Slider */}
               {addressed ? (
@@ -354,15 +342,15 @@ export function ErrorInjectionPanel() {
                   )}
                 </FormField>
               ) : (
-                <div>
-                  <label htmlFor="error-value" className="block text-sm font-medium mb-2">
-                    {t('injection.valueLabel', {
-                      value:
-                        selectedErrorType === 'High Utilization'
-                          ? `${errorValue}%`
-                          : `${errorValue}/s`,
-                    })}
-                  </label>
+                <FormField
+                  label={t('injection.valueLabel', {
+                    value:
+                      selectedErrorType === 'High Utilization'
+                        ? `${errorValue}%`
+                        : `${errorValue}/s`,
+                  })}
+                  id="error-value"
+                >
                   <input
                     id="error-value"
                     type="range"
@@ -377,22 +365,15 @@ export function ErrorInjectionPanel() {
                       {errors.errorValue.message}
                     </p>
                   ) : null}
-                </div>
+                </FormField>
               )}
             </div>
 
             {/* Message Display */}
             {visibleMessage && (
-              <div
-                role={visibleMessage.type === 'error' ? 'alert' : 'status'}
-                className={`pad-sm rounded ${
-                  visibleMessage.type === 'success'
-                    ? 'bg-status-success/10 text-status-success-strong border border-status-success/20'
-                    : 'bg-status-error/10 text-status-error-strong border border-status-error/20'
-                }`}
-              >
+              <Alert tone={visibleMessage.type === 'success' ? 'success' : 'error'}>
                 {visibleMessage.text}
-              </div>
+              </Alert>
             )}
 
             {/* Action Buttons */}

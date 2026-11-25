@@ -5,12 +5,13 @@ import { validFaultAddress } from '../api/behavior-fault-types';
 import { clearError, injectError } from '../api/client';
 import { useAppState } from '../contexts/AppContext';
 import { useActionPermission } from '../contexts/ScopeContext';
+import { Alert } from '../shared/Alert';
 import { Card } from '../shared/Card';
 import { FormField } from '../shared/FormField';
 import { Input } from '../shared/Input';
 import { Select } from '../shared/Select';
 import { ActionButton } from '../ui/ActionButton';
-import { H3, SmallText } from '../ui/Typography';
+import { SmallText } from '../ui/Typography';
 import { getErrorMessage } from '../utils/format';
 
 export function DeviceFaultPanel() {
@@ -85,9 +86,8 @@ export function DeviceFaultPanel() {
   }
 
   return (
-    <Card data-testid="device-fault-panel">
+    <Card title={t('deviceFault.title')} data-testid="device-fault-panel">
       <div className="stack">
-        <H3>{t('deviceFault.title')}</H3>
         <FormField label={t('deviceFault.target')}>
           {(control) => (
             <Select
@@ -159,7 +159,7 @@ export function DeviceFaultPanel() {
             )}
           </FormField>
         )}
-        {(failure || error) && <p role="alert">{failure || getErrorMessage(error)}</p>}
+        {(failure || error) && <Alert tone="error">{failure || getErrorMessage(error)}</Alert>}
         <ActionButton
           action="inject"
           variant="secondary"

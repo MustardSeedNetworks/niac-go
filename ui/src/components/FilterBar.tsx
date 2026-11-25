@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Input } from '../shared/Input';
 import { SmallText } from '../ui/Typography';
 import {
   type AutocompleteSuggestion,
@@ -86,7 +87,7 @@ export const FilterBar = memo(function FilterBar({ value, onChange, placeholder 
   const validationError = value.trim() ? validate(value) : null;
   const isValid = !validationError;
 
-  const borderColor = !value.trim()
+  const _borderColor = !value.trim()
     ? 'border-surface-border'
     : isValid
       ? 'border-status-success/60'
@@ -170,7 +171,7 @@ export const FilterBar = memo(function FilterBar({ value, onChange, placeholder 
       <SmallText className="text-text-muted px-1">{t('filters.displayFilterCaption')}</SmallText>
       <div className="flex items-center gap-compact">
         <div className="relative flex-1">
-          <input
+          <Input
             ref={inputRef}
             type="text"
             value={value}
@@ -179,7 +180,9 @@ export const FilterBar = memo(function FilterBar({ value, onChange, placeholder 
             onBlur={() => setIsFocused(false)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder ?? tPages('packets.filterBar.inputPlaceholder')}
-            className={`w-full rounded-lg border ${borderColor} bg-bg-base/60 px-3 py-row text-sm text-text-primary placeholder:text-text-muted focus:outline-none font-mono transition-colors`}
+            className="font-mono"
+            aria-invalid={validationError ? true : undefined}
+            aria-label={placeholder ?? tPages('packets.filterBar.inputPlaceholder')}
           />
           {validationError && isFocused && (
             <div className="absolute top-full left-0 mt-tight px-cell py-compact bg-status-error/90 border border-status-error/50 rounded text-xs text-status-error z-20 max-w-md">

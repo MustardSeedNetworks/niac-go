@@ -34,12 +34,13 @@ import { useToast } from '../hooks/useToast';
 import { Button } from '../shared/Button';
 import { Card } from '../shared/Card';
 import { CategoryChip } from '../shared/CategoryChip';
+import { Checkbox } from '../shared/Checkbox';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { StatusPill } from '../shared/StatusPill';
 import { ActionButton } from '../ui/ActionButton';
 import { useDialogLabels } from '../ui/dialogLabels';
 import { Inspector, InspectorPane, InspectorPanes, InspectorRecords } from '../ui/Inspector';
-import { H2, SmallText } from '../ui/Typography';
+import { SmallText } from '../ui/Typography';
 import { canFollowStream, getStreamFilter } from '../utils/conversations';
 import { buildProtocolLayers, computeHeaderBoundary } from '../utils/protocol-layers';
 import { PcapAnalyzerPage } from './PcapAnalyzerPage';
@@ -314,7 +315,6 @@ export function PacketInspectorPage() {
               <div className="flex flex-col gap-comfortable sm:flex-row sm:items-center sm:justify-between">
                 {/* Title and connection status */}
                 <div className="flex items-center gap-comfortable">
-                  <H2>{t('packets.title')}</H2>
                   <SmallText className="text-text-muted">
                     {t('packets.inspector.onInterfacePrefix')}{' '}
                     <span className="font-mono text-text-primary">{activeInterface ?? '—'}</span>
@@ -423,17 +423,11 @@ export function PacketInspectorPage() {
                 </div>
 
                 {/* Auto-scroll toggle */}
-                <label className="flex items-center gap-compact cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={autoScroll}
-                    onChange={(e) => setAutoScroll(e.target.checked)}
-                    className="rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-accent focus:ring-offset-surface-base"
-                  />
-                  <SmallText className="text-text-muted">
-                    {t('packets.inspector.autoScrollLabel')}
-                  </SmallText>
-                </label>
+                <Checkbox
+                  checked={autoScroll}
+                  onChange={setAutoScroll}
+                  label={t('packets.inspector.autoScrollLabel')}
+                />
 
                 {/* Packet count */}
                 <SmallText className="text-text-muted">

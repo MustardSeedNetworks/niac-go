@@ -3,11 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { executeDeviceAction } from '../api/client';
 import { useAppState } from '../contexts/AppContext';
 import { useActionPermission } from '../contexts/ScopeContext';
+import { Alert } from '../shared/Alert';
 import { Card } from '../shared/Card';
 import { FormField } from '../shared/FormField';
 import { Select } from '../shared/Select';
 import { ActionButton } from '../ui/ActionButton';
-import { H3, SmallText } from '../ui/Typography';
+import { SmallText } from '../ui/Typography';
 import { getErrorMessage } from '../utils/format';
 
 /**
@@ -49,9 +50,8 @@ export function DeviceActionPanel() {
   }
 
   return (
-    <Card data-testid="device-action-panel">
+    <Card title={t('deviceAction.title')} data-testid="device-action-panel">
       <div className="stack">
-        <H3>{t('deviceAction.title')}</H3>
         <FormField label={t('deviceAction.target')}>
           {(control) => (
             <Select
@@ -89,7 +89,7 @@ export function DeviceActionPanel() {
           )}
         </FormField>
         {selected && <SmallText>{selected.description}</SmallText>}
-        {(failure || error) && <p role="alert">{failure || getErrorMessage(error)}</p>}
+        {(failure || error) && <Alert tone="error">{failure || getErrorMessage(error)}</Alert>}
         {done && <SmallText>{done}</SmallText>}
         <ActionButton
           action="inject"
