@@ -142,26 +142,28 @@ export function DeviceEditorPage() {
             open={expandedSections.has(section.key)}
             onOpenChange={() => toggleSection(section.key)}
           >
-            <div className="stack-lg">
-              <SchemaSectionBody
-                section={section}
-                value={device[section.key as keyof typeof device] as AuthoredValue}
-                onChange={(next) => updateField(section.key as keyof typeof device, next)}
-                suggestions={suggestions}
-              />
-              {section.key === 'snmp_agent' && (
-                <SynthesizeWalkControl
-                  hostname={device.name ?? hostname ?? ''}
-                  disabled={isNewDevice}
-                  onSynthesized={(walkPath) =>
-                    updateField('snmp_agent', {
-                      ...(typeof device.snmp_agent === 'object' ? device.snmp_agent : {}),
-                      walk_file: walkPath,
-                    })
-                  }
+            {expandedSections.has(section.key) && (
+              <div className="stack-lg">
+                <SchemaSectionBody
+                  section={section}
+                  value={device[section.key as keyof typeof device] as AuthoredValue}
+                  onChange={(next) => updateField(section.key as keyof typeof device, next)}
+                  suggestions={suggestions}
                 />
-              )}
-            </div>
+                {section.key === 'snmp_agent' && (
+                  <SynthesizeWalkControl
+                    hostname={device.name ?? hostname ?? ''}
+                    disabled={isNewDevice}
+                    onSynthesized={(walkPath) =>
+                      updateField('snmp_agent', {
+                        ...(typeof device.snmp_agent === 'object' ? device.snmp_agent : {}),
+                        walk_file: walkPath,
+                      })
+                    }
+                  />
+                )}
+              </div>
+            )}
           </CollapsibleSection>
         ))}
       </fieldset>

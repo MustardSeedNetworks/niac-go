@@ -89,11 +89,13 @@ export function DeviceProtocolsEditor({ content, onChange, devices }: DeviceProt
                     open={expanded === key}
                     onOpenChange={() => setExpanded(expanded === key ? null : key)}
                   >
-                    <SchemaSectionBody
-                      section={section}
-                      value={device[section.key as keyof AuthoredDevice] as AuthoredValue}
-                      onChange={(value) => updateSection(name, section.key, value)}
-                    />
+                    {expanded === key && (
+                      <SchemaSectionBody
+                        section={section}
+                        value={device[section.key as keyof AuthoredDevice] as AuthoredValue}
+                        onChange={(value) => updateSection(name, section.key, value)}
+                      />
+                    )}
                   </CollapsibleSection>
                 );
               })}

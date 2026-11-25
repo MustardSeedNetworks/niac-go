@@ -62,164 +62,172 @@ export function BasicSettingsSection({
       open={isExpanded}
       onOpenChange={onToggle}
     >
-      <div className="grid gap-comfortable md:grid-cols-2">
-        <FormField
-          label={t('editor.sections.basic.hostnameLabel')}
-          required={true}
-          // A rename is not an edit: the daemon takes the device's name from
-          // the URL, so a changed `name` on an existing device would be
-          // accepted and ignored. Clone carries a new name.
-          labelAccessory={
-            <FieldHelp
-              field={t('editor.sections.basic.hostnameLabel')}
-              text={
-                isNewDevice
-                  ? t('editor.sections.basic.hostnameHelp')
-                  : t('editor.sections.basic.hostnameFixedHelp')
-              }
-            />
-          }
-          id="device-hostname"
-          error={errors?.name}
-        >
-          <input
-            id="device-hostname"
-            type="text"
-            value={device.name ?? ''}
-            readOnly={!isNewDevice}
-            onChange={(e) => onUpdate('name', e.target.value)}
-            placeholder={t('editor.sections.basic.hostnamePlaceholder')}
-            className={inputClassName}
-          />
-        </FormField>
-
-        <FormField
-          label={t('editor.sections.basic.typeLabel')}
-          labelAccessory={
-            <FieldHelp
-              field={t('editor.sections.basic.typeLabel')}
-              text={t('editor.sections.basic.typeHelp')}
-            />
-          }
-          id="device-type"
-        >
-          <select
-            id="device-type"
-            value={device.type ?? ''}
-            onChange={(e) => onUpdate('type', e.target.value === '' ? undefined : e.target.value)}
-            className={selectClassName}
-          >
-            <option value="">{t('editor.fields.unset')}</option>
-            {DEVICE_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-        </FormField>
-
-        <fieldset className="md:col-span-2 stack">
-          <legend className="label">{t('editor.sections.basic.identityLabel')}</legend>
-          <div className="flex gap-comfortable">
-            <label htmlFor="device-identity-mac" className="flex items-center gap-compact text-sm">
-              <input
-                id="device-identity-mac"
-                type="radio"
-                name="device-identity"
-                checked={identity === 'mac'}
-                onChange={() => selectIdentity('mac')}
-              />
-              {t('editor.sections.basic.identityMac')}
-            </label>
-            <label
-              htmlFor="device-identity-vendor"
-              className="flex items-center gap-compact text-sm"
-            >
-              <input
-                id="device-identity-vendor"
-                type="radio"
-                name="device-identity"
-                checked={identity === 'vendor'}
-                onChange={() => selectIdentity('vendor')}
-              />
-              {t('editor.sections.basic.identityVendor')}
-            </label>
-          </div>
-        </fieldset>
-
-        {identity === 'mac' ? (
+      {isExpanded && (
+        <div className="grid gap-comfortable md:grid-cols-2">
           <FormField
-            label={t('editor.sections.basic.macLabel')}
+            label={t('editor.sections.basic.hostnameLabel')}
             required={true}
+            // A rename is not an edit: the daemon takes the device's name from
+            // the URL, so a changed `name` on an existing device would be
+            // accepted and ignored. Clone carries a new name.
             labelAccessory={
               <FieldHelp
-                field={t('editor.sections.basic.macLabel')}
-                text={t('editor.sections.basic.macHelp')}
+                field={t('editor.sections.basic.hostnameLabel')}
+                text={
+                  isNewDevice
+                    ? t('editor.sections.basic.hostnameHelp')
+                    : t('editor.sections.basic.hostnameFixedHelp')
+                }
               />
             }
-            id="device-mac"
-            error={errors?.mac}
+            id="device-hostname"
+            error={errors?.name}
           >
             <input
-              id="device-mac"
+              id="device-hostname"
               type="text"
-              value={device.mac ?? ''}
-              onChange={(e) => onUpdate('mac', e.target.value.toUpperCase())}
-              placeholder={t('editor.sections.basic.macPlaceholder')}
-              className={monoInputClassName}
+              value={device.name ?? ''}
+              readOnly={!isNewDevice}
+              onChange={(e) => onUpdate('name', e.target.value)}
+              placeholder={t('editor.sections.basic.hostnamePlaceholder')}
+              className={inputClassName}
             />
           </FormField>
-        ) : (
-          <>
+
+          <FormField
+            label={t('editor.sections.basic.typeLabel')}
+            labelAccessory={
+              <FieldHelp
+                field={t('editor.sections.basic.typeLabel')}
+                text={t('editor.sections.basic.typeHelp')}
+              />
+            }
+            id="device-type"
+          >
+            <select
+              id="device-type"
+              value={device.type ?? ''}
+              onChange={(e) => onUpdate('type', e.target.value === '' ? undefined : e.target.value)}
+              className={selectClassName}
+            >
+              <option value="">{t('editor.fields.unset')}</option>
+              {DEVICE_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+          </FormField>
+
+          <fieldset className="md:col-span-2 stack">
+            <legend className="label">{t('editor.sections.basic.identityLabel')}</legend>
+            <div className="flex gap-comfortable">
+              <label
+                htmlFor="device-identity-mac"
+                className="flex items-center gap-compact text-sm"
+              >
+                <input
+                  id="device-identity-mac"
+                  type="radio"
+                  name="device-identity"
+                  checked={identity === 'mac'}
+                  onChange={() => selectIdentity('mac')}
+                />
+                {t('editor.sections.basic.identityMac')}
+              </label>
+              <label
+                htmlFor="device-identity-vendor"
+                className="flex items-center gap-compact text-sm"
+              >
+                <input
+                  id="device-identity-vendor"
+                  type="radio"
+                  name="device-identity"
+                  checked={identity === 'vendor'}
+                  onChange={() => selectIdentity('vendor')}
+                />
+                {t('editor.sections.basic.identityVendor')}
+              </label>
+            </div>
+          </fieldset>
+
+          {identity === 'mac' ? (
             <FormField
-              label={t('editor.sections.basic.vendorLabel')}
+              label={t('editor.sections.basic.macLabel')}
               required={true}
               labelAccessory={
                 <FieldHelp
-                  field={t('editor.sections.basic.vendorLabel')}
-                  text={t('editor.sections.basic.vendorHelp')}
+                  field={t('editor.sections.basic.macLabel')}
+                  text={t('editor.sections.basic.macHelp')}
                 />
               }
-              id="device-vendor"
-              error={errors?.vendor ?? errors?.mac}
+              id="device-mac"
+              error={errors?.mac}
             >
               <input
-                id="device-vendor"
+                id="device-mac"
                 type="text"
-                value={device.vendor ?? ''}
-                onChange={(e) => onUpdate('vendor', e.target.value)}
-                placeholder={t('editor.sections.basic.vendorPlaceholder')}
-                className={inputClassName}
-              />
-            </FormField>
-
-            <FormField
-              // Without a distinct suffix every device of one vendor is
-              // allocated the same address, so this is part of the identity
-              // choice rather than an advanced option.
-              label={t('editor.sections.basic.macSuffixLabel')}
-              labelAccessory={
-                <FieldHelp
-                  field={t('editor.sections.basic.macSuffixLabel')}
-                  text={t('editor.sections.basic.macSuffixHelp')}
-                />
-              }
-              id="device-mac-suffix"
-            >
-              <input
-                id="device-mac-suffix"
-                type="number"
-                min={0}
-                value={device.mac_suffix ?? ''}
-                onChange={(e) =>
-                  onUpdate('mac_suffix', e.target.value === '' ? undefined : e.target.valueAsNumber)
-                }
+                value={device.mac ?? ''}
+                onChange={(e) => onUpdate('mac', e.target.value.toUpperCase())}
+                placeholder={t('editor.sections.basic.macPlaceholder')}
                 className={monoInputClassName}
               />
             </FormField>
-          </>
-        )}
-      </div>
+          ) : (
+            <>
+              <FormField
+                label={t('editor.sections.basic.vendorLabel')}
+                required={true}
+                labelAccessory={
+                  <FieldHelp
+                    field={t('editor.sections.basic.vendorLabel')}
+                    text={t('editor.sections.basic.vendorHelp')}
+                  />
+                }
+                id="device-vendor"
+                error={errors?.vendor ?? errors?.mac}
+              >
+                <input
+                  id="device-vendor"
+                  type="text"
+                  value={device.vendor ?? ''}
+                  onChange={(e) => onUpdate('vendor', e.target.value)}
+                  placeholder={t('editor.sections.basic.vendorPlaceholder')}
+                  className={inputClassName}
+                />
+              </FormField>
+
+              <FormField
+                // Without a distinct suffix every device of one vendor is
+                // allocated the same address, so this is part of the identity
+                // choice rather than an advanced option.
+                label={t('editor.sections.basic.macSuffixLabel')}
+                labelAccessory={
+                  <FieldHelp
+                    field={t('editor.sections.basic.macSuffixLabel')}
+                    text={t('editor.sections.basic.macSuffixHelp')}
+                  />
+                }
+                id="device-mac-suffix"
+              >
+                <input
+                  id="device-mac-suffix"
+                  type="number"
+                  min={0}
+                  value={device.mac_suffix ?? ''}
+                  onChange={(e) =>
+                    onUpdate(
+                      'mac_suffix',
+                      e.target.value === '' ? undefined : e.target.valueAsNumber,
+                    )
+                  }
+                  className={monoInputClassName}
+                />
+              </FormField>
+            </>
+          )}
+        </div>
+      )}
     </CollapsibleSection>
   );
 }

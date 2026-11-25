@@ -164,14 +164,11 @@
     "config": "Config",
     "conversations": "Conversations",
     "devices": "Devices",
-    "disabled": "Disabled",
-    "enabled": "Enabled",
     "interface": "Interface",
     "interfaces": "Interfaces",
     "none": "None",
     "path": "Path",
     "required": "Required",
-    "search": "Search...",
     "size": "Size",
     "status": "Status",
     "type": "Type",
@@ -214,10 +211,7 @@
     "saving": "Saving..."
   },
   "statusLabel": {
-    "error": "Status: error",
-    "loading": "Status: loading",
     "success": "Status: success",
-    "unknown": "Status: unknown",
     "warning": "Status: warning"
   },
   "table": {

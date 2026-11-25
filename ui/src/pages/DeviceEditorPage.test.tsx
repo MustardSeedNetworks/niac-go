@@ -83,9 +83,13 @@ describe('DeviceEditorPage — unsaved-changes navigation guard', () => {
       }),
     );
     const router = renderPage();
-    await waitFor(() => expect(screen.getByLabelText(/hostname/i)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: /^hostname/i })).toBeInTheDocument(),
+    );
     await flushPendingEffects();
-    fireEvent.change(screen.getByLabelText(/hostname/i), { target: { value: 'edge-01' } });
+    fireEvent.change(screen.getByRole('textbox', { name: /^hostname/i }), {
+      target: { value: 'edge-01' },
+    });
     fireEvent.change(screen.getByRole('textbox', { name: /mac address/i }), {
       target: { value: '00:1A:2B:3C:4D:5E' },
     });
@@ -97,10 +101,12 @@ describe('DeviceEditorPage — unsaved-changes navigation guard', () => {
   });
   it('shows a confirmation on Back when the form is dirty, and Stay keeps the user on the page', async () => {
     const router = renderPage();
-    await waitFor(() => expect(screen.getByLabelText(/hostname/i)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: /^hostname/i })).toBeInTheDocument(),
+    );
     await flushPendingEffects();
 
-    fireEvent.change(screen.getByLabelText(/hostname/i), {
+    fireEvent.change(screen.getByRole('textbox', { name: /^hostname/i }), {
       target: { value: 'edge-01' },
     });
 
@@ -116,10 +122,12 @@ describe('DeviceEditorPage — unsaved-changes navigation guard', () => {
 
   it('navigates away after the user confirms Leave', async () => {
     const router = renderPage();
-    await waitFor(() => expect(screen.getByLabelText(/hostname/i)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: /^hostname/i })).toBeInTheDocument(),
+    );
     await flushPendingEffects();
 
-    fireEvent.change(screen.getByLabelText(/hostname/i), {
+    fireEvent.change(screen.getByRole('textbox', { name: /^hostname/i }), {
       target: { value: 'edge-01' },
     });
 
@@ -131,7 +139,9 @@ describe('DeviceEditorPage — unsaved-changes navigation guard', () => {
 
   it('navigates immediately on Back when the form has no unsaved changes', async () => {
     const router = renderPage();
-    await waitFor(() => expect(screen.getByLabelText(/hostname/i)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: /^hostname/i })).toBeInTheDocument(),
+    );
     await flushPendingEffects();
 
     fireEvent.click(screen.getByRole('button', { name: 'Back to device list' }));

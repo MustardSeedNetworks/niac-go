@@ -72,9 +72,6 @@
     "size": "Tamaño",
     "path": "Ruta",
     "devices": "Dispositivos",
-    "search": "Buscar...",
-    "disabled": "Deshabilitado",
-    "enabled": "Habilitado",
     "none": "Ninguno",
     "required": "Obligatorio",
     "view": "Vista",
@@ -232,10 +229,7 @@
     "online": "En línea"
   },
   "statusLabel": {
-    "error": "Estado: error",
-    "loading": "Estado: cargando",
     "success": "Estado: correcto",
-    "unknown": "Estado: desconocido",
     "warning": "Estado: advertencia"
   },
   "help": {
