@@ -1,7 +1,7 @@
 import type { Action } from '../contexts/permissions';
 import { useActionPermission } from '../contexts/ScopeContext';
 import { Button, type ButtonProps } from '../shared/Button';
-import { Tooltip } from '../shared/Tooltip';
+import { Tooltip } from './Tooltip';
 
 type ActionButtonProps = ButtonProps & { action?: Action | undefined };
 
@@ -11,6 +11,10 @@ type ActionButtonProps = ButtonProps & { action?: Action | undefined };
  * call site, once: a denied scope disables the button and the tooltip says why
  * (a disabled button still explains itself), so a read-only token never sees a
  * control that would 403. With no `action` the button is not gated.
+ *
+ * The explanation is the local Tooltip, not the shared one: the shared bubble
+ * is `pointer-events-none`, so it cannot be hovered (WCAG 1.4.13), which
+ * e2e/tooltip-keyboard.spec.ts asserts.
  */
 export function ActionButton({ action, title, disabled, ...rest }: ActionButtonProps) {
   const permission = useActionPermission(action);

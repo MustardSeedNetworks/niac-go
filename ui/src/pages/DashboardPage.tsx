@@ -230,7 +230,7 @@ export function DashboardPage() {
                 const Icon = action.icon;
                 return (
                   <AccentLink key={action.path} to={action.path} className="no-underline">
-                    <div className="flex items-center gap-default rounded-lg border border-surface-border bg-surface-hover pad text-left hover:bg-surface-hover hover:border-brand-primary/30 transition-all group">
+                    <div className="group flex items-center gap-default rounded-lg pad-sm text-left hover:bg-surface-hover transition-colors">
                       <div
                         className={`flex-shrink-0 h-10 w-10 rounded-lg ${action.tileClass} flex-center group-hover:scale-110 transition-transform`}
                       >
@@ -268,7 +268,7 @@ export function DashboardPage() {
               {(history ?? []).slice(0, 4).map((item) => (
                 <div
                   key={item.id}
-                  className="rounded-lg border border-surface-border bg-bg-base/50 pad-sm hover:border-surface-border transition-colors"
+                  className="border-t border-hairline pt-3 first:border-t-0 first:pt-0"
                 >
                   <div className="flex-between mb-tight">
                     <p className="font-mono text-xs text-brand-accent">

@@ -48,7 +48,7 @@ test.describe('Modal buttons are reachable by mouse', () => {
     expect(count).toBeGreaterThan(0);
 
     for (let i = 0; i < count; i++) {
-      const label = (await buttons.nth(i).innerText()).trim() || `button ${i}`;
+      const label = (await buttons.nth(i).textContent()).trim() || `button ${i}`;
       const result = await hitTestCentre(buttons.nth(i));
       expect(result.isSelf, `dialog button "${label}" is covered by ${result.actual}`).toBe(true);
     }

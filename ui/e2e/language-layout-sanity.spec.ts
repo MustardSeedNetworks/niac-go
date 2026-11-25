@@ -57,9 +57,9 @@ const noClippedText = async (page: Page, selector: string): Promise<void> => {
       .filter((el) => {
         const e = el as HTMLElement;
         // Only count elements that actually have visible text.
-        return e.scrollWidth > e.clientWidth && e.innerText.trim().length > 0;
+        return e.scrollWidth > e.clientWidth && e.textContent.trim().length > 0;
       })
-      .map((el) => (el as HTMLElement).innerText.trim().slice(0, 80)),
+      .map((el) => (el as HTMLElement).textContent.trim().slice(0, 80)),
   );
   expect(clipped, `${selector} elements with clipped text:\n  ${clipped.join('\n  ')}`).toEqual([]);
 };

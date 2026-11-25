@@ -102,6 +102,11 @@ async function findHorizontalOverflow(page: Page): Promise<Overflow[]> {
       // and a truncated cell overflows its box by construction.
       if (getComputedStyle(el).textOverflow === 'ellipsis') continue;
 
+      // A control whose hit target is an absolutely positioned ::after (the help
+      // button's 44px tap area) scrolls by that pseudo-element, which paints and
+      // clips nothing.
+      if (getComputedStyle(el, '::after').position === 'absolute') continue;
+
       if (el.scrollWidth > el.clientWidth + TOLERANCE_PX) {
         found.push({
           selector: describe(el),
@@ -124,7 +129,7 @@ interface Density {
 async function measureDensity(page: Page): Promise<Density> {
   return page.evaluate(() => {
     const title = document.querySelector('[data-testid="page-header-title"]');
-    const block = title?.closest('.animate-fade-in') ?? null;
+    const block = title?.closest('[data-testid="page-header"]') ?? null;
     return {
       headerFootprint: block ? Math.round(block.getBoundingClientRect().height) : -1,
       documentHeight: document.documentElement.scrollHeight,

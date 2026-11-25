@@ -23,7 +23,7 @@ for (const width of [1280, 390]) {
       await expect
         .poll(() => drawer.evaluate((element) => element.scrollWidth <= element.clientWidth))
         .toBe(true);
-      const navigation = drawer.getByRole('navigation');
+      const navigation = drawer.getByRole('tablist', { name: 'Settings sections' });
       await expect
         .poll(() =>
           navigation.evaluate((element) => {

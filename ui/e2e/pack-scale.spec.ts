@@ -103,6 +103,10 @@ async function pageJumps(page: Page, list: Locator): Promise<number[]> {
     }
     jumps.push(await readBlock(page));
   }
+  // Leave the list on its last page, where the final device is.
+  while (await next.isEnabled()) {
+    await next.click();
+  }
   return jumps;
 }
 
@@ -170,9 +174,11 @@ for (const viewport of VIEWPORTS) {
         const { devices } = buildScalePack();
         const started = Date.now();
         await page.goto('/device-config');
-        await page.getByRole('radio', { name: mode === 'table' ? 'Table view' : 'Card view' }).check({
-          force: true,
-        });
+        await page
+          .getByRole('radio', { name: mode === 'table' ? 'Table view' : 'Card view' })
+          .check({
+            force: true,
+          });
         const list = page.getByTestId('device-list-rows');
         // Table rows are the shared DataTable's body rows (its spacer rows carry
         // no aria-selected); cards are the windowed card grid's cards.

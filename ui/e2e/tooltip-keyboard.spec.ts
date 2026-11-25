@@ -56,7 +56,9 @@ test('walk controls keep their labels and expose instructions by keyboard', asyn
   await page.goto('/walk-analyzer');
   const path = page.getByTestId('walk-analyzer-path-input');
   await expect(path).toBeVisible();
-  const originalName = await path.evaluate((element) => element.closest('label')?.innerText.trim());
+  const originalName = await path.evaluate((element) =>
+    element.closest('label')?.textContent.trim(),
+  );
   expect(originalName).toBeTruthy();
   await checkTooltip(page, path);
   await expect(path).toHaveAccessibleName(originalName);
@@ -149,9 +151,7 @@ test('collapsed navigation keeps every name and reveals its label on focus', asy
   await expect(page).toHaveURL(/\/runtime$/);
 });
 
-test('activating Help clears its tooltip and moves focus into the drawer', async ({
-  page,
-}) => {
+test('activating Help clears its tooltip and moves focus into the drawer', async ({ page }) => {
   await page.goto('/runtime');
   const help = sidebar(page, 'desktop').getByTestId('sidebar-help-button');
   const descriptionId = await help.getAttribute('aria-describedby');

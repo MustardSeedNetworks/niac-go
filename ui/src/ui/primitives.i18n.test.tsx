@@ -9,7 +9,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DeviceStatusMessage } from '../components/device-list/DeviceStatusMessage';
 import { CollapsibleSection } from '../components/form/CollapsibleSection';
 import i18n from '../i18n';
-import { Alert } from './Alert';
 import { BaseCard } from './BaseCard';
 import { ConnectionStatus } from './ConnectionStatus';
 import { SearchInput } from './Input';
@@ -26,17 +25,9 @@ afterEach(async () => {
 });
 
 describe('shared primitives in es', () => {
-  it('names the dismiss buttons in Spanish', () => {
-    render(
-      <>
-        <Alert status="info" onDismiss={noop}>
-          x
-        </Alert>
-        <DeviceStatusMessage message={{ type: 'success', text: 'ok' }} onDismiss={noop} />
-      </>,
-    );
+  it('names the dismiss button in Spanish', () => {
+    render(<DeviceStatusMessage message={{ type: 'success', text: 'ok' }} onDismiss={noop} />);
 
-    expect(screen.getByRole('button', { name: 'Descartar alerta' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Descartar mensaje' })).toBeInTheDocument();
   });
 

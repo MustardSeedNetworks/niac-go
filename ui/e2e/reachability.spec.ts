@@ -11,7 +11,7 @@ import { expect, test } from '@playwright/test';
 
 /** True when a click at the element's centre would actually reach it. */
 async function reachable(
-  page: import('@playwright/test').Page,
+  _page: import('@playwright/test').Page,
   handle: import('@playwright/test').Locator,
 ): Promise<boolean> {
   return handle.evaluate((el) => {
@@ -20,7 +20,7 @@ async function reachable(
     // Off-screen entirely?
     if (r.right <= 0 || r.bottom <= 0 || r.left >= innerWidth || r.top >= innerHeight) return false;
     const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
-    return hit === el || el.contains(hit) || Boolean(hit && hit.contains(el));
+    return hit === el || el.contains(hit) || Boolean(hit?.contains(el));
   });
 }
 
@@ -38,7 +38,7 @@ test.describe('Help drawer tabs (D1)', () => {
 
     for (let i = 0; i < count; i++) {
       const tab = tabs.nth(i);
-      const label = (await tab.innerText()).trim() || `tab ${i}`;
+      const label = (await tab.textContent()).trim() || `tab ${i}`;
       expect(await reachable(page, tab), `tab "${label}" is not reachable by mouse`).toBe(true);
     }
   });
