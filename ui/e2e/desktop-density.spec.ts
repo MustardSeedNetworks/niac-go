@@ -102,10 +102,10 @@ async function findHorizontalOverflow(page: Page): Promise<Overflow[]> {
       // and a truncated cell overflows its box by construction.
       if (getComputedStyle(el).textOverflow === 'ellipsis') continue;
 
-      // A control whose hit target is an absolutely positioned ::after (the help
-      // button's 44px tap area) scrolls by that pseudo-element, which paints and
+      // A control that extends its tap target past its box (the help button's
+      // ::after) says so, and scrolls by that pseudo-element, which paints and
       // clips nothing.
-      if (getComputedStyle(el, '::after').position === 'absolute') continue;
+      if (el.hasAttribute('data-touch-target-overflow')) continue;
 
       if (el.scrollWidth > el.clientWidth + TOLERANCE_PX) {
         found.push({

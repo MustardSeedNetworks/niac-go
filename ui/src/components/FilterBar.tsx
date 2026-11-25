@@ -85,13 +85,6 @@ export const FilterBar = memo(function FilterBar({ value, onChange, placeholder 
   const inputRef = useRef<HTMLInputElement>(null);
 
   const validationError = value.trim() ? validate(value) : null;
-  const isValid = !validationError;
-
-  const _borderColor = !value.trim()
-    ? 'border-surface-border'
-    : isValid
-      ? 'border-status-success/60'
-      : 'border-status-error/60';
 
   // Update suggestions on input change
   useEffect(() => {
