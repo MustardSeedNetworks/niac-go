@@ -171,6 +171,8 @@ for (const viewport of VIEWPORTS) {
 
     for (const mode of ['table', 'cards'] as const) {
       test(`device list (${mode}) mounts a window and reaches the whole pack`, async ({ page }) => {
+        // The table pages through all 11 pages of the pack, twice over.
+        test.slow(mode === 'table');
         const { devices } = buildScalePack();
         const started = Date.now();
         await page.goto('/device-config');

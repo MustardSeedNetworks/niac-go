@@ -158,7 +158,7 @@ test('Spanish page help and shared glossary render from the active locale', asyn
   await page.getByTestId('sidebar-desktop').getByTestId('sidebar-help-button').click();
   const drawer = page.getByTestId('help-drawer');
   await drawer.getByRole('tab', { name: 'Glosario', exact: true }).click();
-  await drawer.getByRole('textbox').fill('Borrador');
+  await drawer.getByRole('searchbox').fill('Borrador');
   await expect(drawer.getByText('Borrador', { exact: true })).toBeVisible();
   await expect(
     drawer.getByText('Configuración de simulación guardada y editable.', { exact: false }),

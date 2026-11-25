@@ -81,7 +81,16 @@ export function HelpTabs({ tabs, value, onChange, label, children }: HelpTabsPro
           })}
         </div>
       </div>
-      <div id={`${prefix}-panel`} role="tabpanel" aria-labelledby={tabId(value)} className="pt-4">
+      {/* tabIndex 0 (WAI-ARIA tabs pattern): a section with nothing tabbable, like
+          Overview, still ends the dialog's tab order on something the focus trap
+          can wrap from. Without it Tab leaves the modal drawer. */}
+      <div
+        id={`${prefix}-panel`}
+        role="tabpanel"
+        tabIndex={0}
+        aria-labelledby={tabId(value)}
+        className="pt-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
+      >
         {children}
       </div>
     </div>
