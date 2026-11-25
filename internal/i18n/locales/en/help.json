@@ -15,10 +15,6 @@
     "reportIssue": "Report an issue"
   },
   "glossary": {
-    "aRecord": {
-      "definition": "DNS record mapping a name to an IPv4 address.",
-      "term": "A record"
-    },
     "aaaa": {
       "definition": "DNS record mapping a name to an IPv6 address (\"quad-A\").",
       "term": "AAAA"
@@ -34,6 +30,10 @@
     "apiToken": {
       "definition": "Bearer token gating the NIAC daemon’s REST API. Set via NIAC_API_TOKEN environment variable.",
       "term": "API token"
+    },
+    "aRecord": {
+      "definition": "DNS record mapping a name to an IPv4 address.",
+      "term": "A record"
     },
     "arp": {
       "definition": "Address Resolution Protocol (RFC 826). Maps IPv4 addresses to MAC addresses on a local Ethernet link.",
@@ -307,10 +307,6 @@
       "definition": "Simple Network Management Protocol. Query and monitor device state via OIDs.",
       "term": "SNMP"
     },
-    "snmpWalk": {
-      "definition": "An SNMP walk is a saved sequence of OID/value pairs collected by walking a device's MIB tree with GetNext requests. NIAC replays these files to simulate a device's SNMP responses.",
-      "term": "SNMP walk"
-    },
     "snmpv1": {
       "definition": "Original SNMP (RFC 1157). Community-string auth, 32-bit counters, lossy traps.",
       "term": "SNMPv1"
@@ -322,6 +318,10 @@
     "snmpv3": {
       "definition": "SNMP with USM-based authentication and optional encryption (RFC 3414/3826).",
       "term": "SNMPv3"
+    },
+    "snmpWalk": {
+      "definition": "An SNMP walk is a saved sequence of OID/value pairs collected by walking a device's MIB tree with GetNext requests. NIAC replays these files to simulate a device's SNMP responses.",
+      "term": "SNMP walk"
     },
     "stpRSTPMSTP": {
       "definition": "Spanning Tree Protocol family (IEEE 802.1D / 802.1w / 802.1s). Loop prevention via BPDU exchange.",

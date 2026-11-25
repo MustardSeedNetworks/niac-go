@@ -106,7 +106,6 @@
       "downloadYaml": "Descargar YAML"
     },
     "sessions": {
-      "actions": "Acciones",
       "devices": "Dispositivos",
       "help": "Cada escenario permanece aislado en su VLAN física asignada.",
       "packetCounts": "RX {{received}} / TX {{transmitted}}",
@@ -478,7 +477,6 @@
     "editInLibrary": "Editar en la biblioteca de dispositivos",
     "useInEditor": "Usar en el editor de dispositivos",
     "subtitle": "Dispositivos generados a partir del YAML de configuración activo",
-    "emptyMessage": "No hay dispositivos definidos en la configuración cargada",
     "walkListFailed": "No se pudo cargar la lista de archivos walk",
     "yamlEditorTitle": "Editor YAML",
     "yamlEditorSubtitle": "Editar configuración activa",
@@ -494,7 +492,6 @@
     "walkCopied": "{{name}} copiado",
     "walkCopyError": "No se pudo copiar el nombre del walk",
     "copyNameButton": "Copiar nombre",
-    "selectButton": "Editar",
     "selectedLabel": "Editando",
     "deviceEditorTitle": "Configuración del dispositivo",
     "deviceEditorSubtitle": "El YAML del dispositivo seleccionado, reinsertado en la configuración al guardar",
@@ -503,7 +500,6 @@
     "deviceFragmentMissing": "Este dispositivo no tiene un bloque editable en la configuración cargada — edita toda la configuración.",
     "deviceFragmentInvalid": "El YAML del dispositivo no se puede analizar, por lo que no se guardó.",
     "deviceFragmentNameMissing": "Un dispositivo necesita un nombre, por lo que no se guardó.",
-    "actionsHeader": "Acciones",
     "eyebrow": "Vista en vivo",
     "deviceHeader": "Dispositivo",
     "protocolsHeader": "Protocolos",
@@ -514,12 +510,10 @@
     "deviceNoun_other": "dispositivos",
     "label": "Segmentos",
     "title": "Segmentos",
-    "description": "Vista de solo lectura de los dispositivos de cada segmento VLAN que describe la configuración activa.",
     "vlanHeader": "VLAN {{tag}}",
     "untaggedHeader": "Untagged",
     "emptySegmentDevices": "No hay dispositivos en este segmento.",
-    "empty": "No hay segmentos definidos en la configuración cargada.",
-    "eyebrow": "Biblioteca"
+    "empty": "No hay segmentos definidos en la configuración cargada."
   },
   "deviceLibrary": {
     "label": "Biblioteca de dispositivos",
@@ -547,12 +541,8 @@
     "title": "Topología",
     "description": "Gráfico visual de la red configurada y la tabla de vecinos {{protocols}} en vivo.",
     "neighbors": {
-      "filterShowAllTitle": "Mostrar todos los protocolos de descubrimiento",
-      "filterByProtocolTitle_one": "Filtrar solo entradas {{protocol}} ({{count}} ahora)",
-      "filterByProtocolTitle_other": "Filtrar solo entradas {{protocol}} ({{count}} ahora)",
       "filterAllLabel": "Todos",
       "searchPlaceholder": "Filtrar por dispositivo o ID de chasis…",
-      "searchTitle": "Coincidencia de subcadena en el dispositivo local, el dispositivo remoto, el ID de chasis o el puerto remoto (no distingue mayúsculas).",
       "searchAriaLabel": "Filtrar vecinos",
       "pollingStatus_one": "Sondeo cada {{seconds}}s · {{count}} entrada",
       "pollingStatus_other": "Sondeo cada {{seconds}}s · {{count}} entradas",
@@ -930,8 +920,7 @@
       "startingLabel": "Iniciando…",
       "startCaptureButton": "Iniciar captura",
       "stopCaptureConfirmTitle": "¿Detener la captura?",
-      "stopCaptureConfirmMessage": "La captura se detiene de inmediato y esta interfaz vuelve a estar inactiva. Las tramas ya recibidas permanecen en el visor; expórtelas primero si las necesita.",
-      "stopCaptureStopping": "Deteniendo…"
+      "stopCaptureConfirmMessage": "La captura se detiene de inmediato y esta interfaz vuelve a estar inactiva. Las tramas ya recibidas permanecen en el visor; expórtelas primero si las necesita."
     },
     "hexDump": {
       "selectPacketPlaceholder": "Seleccione un paquete para ver el volcado hexadecimal",
@@ -1282,7 +1271,6 @@
     "exampleTitle": "Se incluye con NIAC y es de solo lectura. Duplíquelo para editarlo."
   },
   "libraryFiles": {
-    "actionsHeader": "Acciones",
     "contentCaptured": "Capturado",
     "contentGenerated": "Generado",
     "contentHeader": "Contenido",
@@ -1338,9 +1326,7 @@
     "sanitizeSelectedButton": "Sanear seleccionados",
     "sanitizeSuccessMessage": "{{name}} fue saneado. El original sigue siendo recuperable mediante Revertir.",
     "sanitizeSuccessTitle": "Walk saneado",
-    "sanitizingButton": "Saneando…",
     "searchPlaceholder": "Buscar por nombre…",
-    "selectAllAriaLabel": "Seleccionar todos los walks",
     "selectRowAriaLabel": "Seleccionar {{name}}",
     "selectedCount_one": "{{count}} seleccionado",
     "selectedCount_other": "{{count}} seleccionados",

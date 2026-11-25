@@ -147,9 +147,9 @@
     "resultsSection": "Results",
     "searchPlaceholder": "Search configs…",
     "selectButton": "Select",
+    "selectedLabel": "Selected",
     "selectItemTitle": "Select {{name}}",
     "selectNetworkTitle": "Select this network — click Start Simulation below to run it",
-    "selectedLabel": "Selected",
     "uploadLocalFile": "Upload local file…",
     "viewDensityLabel": "View density"
   },
@@ -281,7 +281,6 @@
     "title": "Device library"
   },
   "devices": {
-    "actionsHeader": "Actions",
     "availableSnmpWalks": "Available SNMP walks",
     "configParseErrorLine": "Line {{line}}: {{message}}",
     "configSaved": "Configuration saved",
@@ -296,7 +295,6 @@
     "deviceSaved": "Device saved and config reloaded",
     "discardChangesButton": "Discard changes",
     "editInLibrary": "Edit in Device Library",
-    "emptyMessage": "No devices defined in the loaded configuration",
     "eyebrow": "Live view",
     "ipAddressesHeader": "IP addresses",
     "label": "Running devices",
@@ -307,7 +305,6 @@
     "saveReloadButton": "Save & reload simulation",
     "saveReloadTitle": "Validate, write to disk, and diff-reload the running simulation",
     "savingLabel": "Saving…",
-    "selectButton": "Edit",
     "selectedLabel": "Editing",
     "subtitle": "Devices rendered from active YAML config",
     "tableCaption": "Running devices",
@@ -328,7 +325,6 @@
     "tools": "Tools"
   },
   "libraryFiles": {
-    "actionsHeader": "Actions",
     "contentCaptured": "Captured",
     "contentGenerated": "Generated",
     "contentHeader": "Content",
@@ -365,11 +361,11 @@
     "refreshButton": "Refresh",
     "refreshTitle": "Re-fetch the file listing from the daemon's library directory",
     "revertButton": "Revert",
+    "revertingButton": "Reverting…",
     "revertLabel": "Revert {{name}} to its original",
     "revertModalMessagePrefix": "Revert",
     "revertModalMessageSuffix": "to its original? This discards edits.",
     "revertModalTitle": "Revert to original",
-    "revertingButton": "Reverting…",
     "sanitizeBatchModalMessage_one": "Sanitize {{count}} selected walk? This writes a sanitized copy in place; the original stays recoverable via Revert.",
     "sanitizeBatchModalMessage_other": "Sanitize {{count}} selected walks? This writes sanitized copies in place; originals stay recoverable via Revert.",
     "sanitizeBatchModalTitle": "Sanitize selected walks",
@@ -384,12 +380,10 @@
     "sanitizeSelectedButton": "Sanitize selected",
     "sanitizeSuccessMessage": "{{name}} was sanitized. The original stays recoverable via Revert.",
     "sanitizeSuccessTitle": "Walk sanitized",
-    "sanitizingButton": "Sanitizing…",
     "searchPlaceholder": "Search by name…",
-    "selectAllAriaLabel": "Select all walks",
-    "selectRowAriaLabel": "Select {{name}}",
     "selectedCount_one": "{{count}} selected",
     "selectedCount_other": "{{count}} selected",
+    "selectRowAriaLabel": "Select {{name}}",
     "sizeHeader": "Size",
     "sourceBundle": "bundle",
     "sourceHeader": "Source",
@@ -814,7 +808,6 @@
       "stopCaptureButton": "Stop capture",
       "stopCaptureConfirmMessage": "The capture stops immediately and this interface goes back to idle. Frames already received stay in the viewer; export them first if you need them.",
       "stopCaptureConfirmTitle": "Stop the capture?",
-      "stopCaptureStopping": "Stopping…",
       "summaryLabel": "Summary",
       "viewTabsAriaLabel": "Packets view"
     },
@@ -939,10 +932,10 @@
       "previewOnly": "Preview only — Start to launch",
       "selectedPrefix": "Selected:"
     },
-    "recentRunStats": "{{time}} · duration {{duration}} · RX {{rx}} · TX {{tx}}",
     "recentRunsDescription": "Past simulation runs the daemon recorded.",
     "recentRunsFailed": "Run history could not be read: {{error}}",
     "recentRunsTag": "History",
+    "recentRunStats": "{{time}} · duration {{duration}} · RX {{rx}} · TX {{tx}}",
     "recentRunsTitle": "Run history",
     "reviewConnectionLabel": "Review connection",
     "rollup": {
@@ -976,7 +969,6 @@
       "viewDevices": "View Devices"
     },
     "sessions": {
-      "actions": "Actions",
       "degraded": "Degraded",
       "degradedHelp": "This scenario is running but its shared trunk capture has stopped, so it cannot send or receive.",
       "devices": "Devices",
@@ -1003,12 +995,10 @@
     "title": "Simulation"
   },
   "segments": {
-    "description": "Read-only view of the devices in each VLAN segment the active config describes.",
     "deviceNoun_one": "device",
     "deviceNoun_other": "devices",
     "empty": "No segments defined in the loaded configuration.",
     "emptySegmentDevices": "No devices in this segment.",
-    "eyebrow": "Library",
     "label": "Segments",
     "title": "Segments",
     "untaggedHeader": "Untagged",
@@ -1113,9 +1103,6 @@
       "emptyFiltered": "No neighbors match the current filters.",
       "emptyNoData": "No neighbors discovered yet. Start a simulation that has CDP/LLDP/EDP/FDP enabled to populate this table.",
       "filterAllLabel": "All",
-      "filterByProtocolTitle_one": "Filter to {{protocol}} entries only ({{count}} now)",
-      "filterByProtocolTitle_other": "Filter to {{protocol}} entries only ({{count}} now)",
-      "filterShowAllTitle": "Show all discovery protocols",
       "headerChassisId": "Chassis ID",
       "headerLastSeen": "Last Seen",
       "headerLocalDevice": "Local Device",
@@ -1130,7 +1117,6 @@
       "pollingStatus_other": "Polling every {{seconds}}s · {{count}} entries",
       "searchAriaLabel": "Filter neighbors",
       "searchPlaceholder": "Filter by device or chassis ID…",
-      "searchTitle": "Substring match on local device, remote device, chassis ID, or remote port (case-insensitive).",
       "tableCaption": "Discovered neighbors",
       "ttlMinutes": "{{value}}m"
     },
