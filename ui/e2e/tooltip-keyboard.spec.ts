@@ -56,9 +56,7 @@ test('walk controls keep their labels and expose instructions by keyboard', asyn
   await page.goto('/walk-analyzer');
   const path = page.getByTestId('walk-analyzer-path-input');
   await expect(path).toBeVisible();
-  const originalName = await path.evaluate((element) =>
-    element.closest('label')?.textContent.trim(),
-  );
+  const originalName = await path.evaluate((element) => element.closest('label')?.innerText.trim());
   expect(originalName).toBeTruthy();
   await checkTooltip(page, path);
   await expect(path).toHaveAccessibleName(originalName);

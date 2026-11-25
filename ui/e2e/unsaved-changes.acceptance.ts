@@ -36,7 +36,7 @@ test('device switching and wizard navigation preserve edits until explicitly res
   const editor = page.getByRole('textbox', { name: 'YAML editor', exact: true });
   await expect(editor).toContainText('name: e2e-rtr-01');
   await expect(editor).not.toContainText('networks:');
-  const edited = `${await editor.textContent()}\n# preserved router edit`;
+  const edited = `${await editor.innerText()}\n# preserved router edit`;
   await editor.fill(edited);
   await page.getByTestId('device-select-e2e-sw-01').click();
   await expect(page.getByRole('dialog', { name: 'Unsaved changes' })).toBeVisible();
@@ -65,14 +65,14 @@ test('device switching and wizard navigation preserve edits until explicitly res
   const savedConfig = await request.get('/api/v1/config');
   expect((await savedConfig.json()).content).toContain('preserved router edit');
 
-  await editor.fill(`${await editor.textContent()}\n# discard this edit`);
+  await editor.fill(`${await editor.innerText()}\n# discard this edit`);
   await page.getByTestId('device-select-e2e-rtr-01').click();
   await page.getByTestId('unsaved-discard').click();
   await expect(editor).toContainText('name: e2e-rtr-01');
   expect((await (await request.get('/api/v1/config')).json()).content).not.toContain(
     'discard this edit',
   );
-  await editor.fill(`${await editor.textContent()}\n# history edit`);
+  await editor.fill(`${await editor.innerText()}\n# history edit`);
   await page.goBack();
   await expect(page.getByRole('dialog', { name: 'Unsaved changes' })).toBeVisible();
   await page.getByTestId('unsaved-cancel').click();
@@ -89,7 +89,7 @@ test('device switching and wizard navigation preserve edits until explicitly res
   await page.getByTestId('device-select-e2e-rtr-01').click();
   await expect(editor).toContainText('name: e2e-rtr-01');
   await expect(editor).not.toContainText('networks:');
-  await editor.fill(`${await editor.textContent()}\n# forward edit`);
+  await editor.fill(`${await editor.innerText()}\n# forward edit`);
   await page.goForward();
   await expect(page.getByRole('dialog', { name: 'Unsaved changes' })).toBeVisible();
   await page.getByTestId('unsaved-cancel').click();
