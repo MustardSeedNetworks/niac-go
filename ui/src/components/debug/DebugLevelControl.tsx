@@ -5,7 +5,7 @@ import { fetchDebugLevel, updateDebugLevel } from '../../api/client';
 import type { DebugLevel } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
 import { useActionPermission } from '../../contexts/ScopeContext';
-import { Tooltip } from '../../ui/Tooltip';
+import { Tooltip } from '../../shared/Tooltip';
 import { H2, SmallText } from '../../ui/Typography';
 import { getErrorMessage } from '../../utils/format';
 

@@ -7,7 +7,7 @@ import type { LibraryNetwork } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
 import { useActionPermission } from '../../contexts/ScopeContext';
 import { useFavorites } from '../../hooks/useFavorites';
-import { Tooltip } from '../../ui/Tooltip';
+import { Tooltip } from '../../shared/Tooltip';
 import { SmallText } from '../../ui/Typography';
 import {
   type ConfigItem,

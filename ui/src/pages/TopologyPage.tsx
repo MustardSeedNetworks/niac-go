@@ -25,9 +25,9 @@ import { useTopologyResource } from '../hooks/usePageResources';
 import { useResourceError } from '../hooks/useResourceError';
 import { useTopologyLayoutPersistence } from '../hooks/useTopologyLayoutPersistence';
 import { Button } from '../shared/Button';
+import { Tooltip } from '../shared/Tooltip';
 import { ActionButton } from '../ui/ActionButton';
 import { Card, CardContent } from '../ui/Card';
-import { Tooltip } from '../ui/Tooltip';
 import { H2, SmallText } from '../ui/Typography';
 import {
   ActionsMenu,

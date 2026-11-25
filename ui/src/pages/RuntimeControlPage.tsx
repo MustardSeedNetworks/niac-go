@@ -16,11 +16,11 @@ import { useAppContext } from '../contexts/AppContext';
 import { useSimulationStatus } from '../hooks/useSimulationStatus';
 import { useToast } from '../hooks/useToast';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
+import { Tooltip } from '../shared/Tooltip';
 import { useUIStore } from '../stores/ui-store';
 import { ActionButton } from '../ui/ActionButton';
 import { Card, CardContent } from '../ui/Card';
 import { useDialogLabels } from '../ui/dialogLabels';
-import { Tooltip } from '../ui/Tooltip';
 import { H2, SmallText } from '../ui/Typography';
 import { fileToText } from '../utils/file';
 import { AdvancedSection } from './runtime/AdvancedSection';
@@ -306,7 +306,7 @@ export function RuntimeControlPage() {
                     <Network
                       className={`absolute left-3 top-1/2 -translate-y-1/2 ${iconSizes.md} text-text-muted`}
                     />
-                    <Tooltip text={t('runtime.interfaceTitle')} className="w-full">
+                    <Tooltip text={t('runtime.interfaceTitle')}>
                       <select
                         id="rc-interface"
                         data-testid="runtime-interface"

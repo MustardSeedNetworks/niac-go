@@ -5,7 +5,6 @@ import { Button } from '../../shared/Button';
 import { DataTable, type DataTableColumn } from '../../shared/DataTable';
 import { StatusPill } from '../../shared/StatusPill';
 import { ActionButton } from '../../ui/ActionButton';
-import { ContainedTable } from '../../ui/ContainedTable';
 import { SmallText } from '../../ui/Typography';
 import { useTableLabels } from '../../ui/tableLabels';
 import { formatNumber } from '../../utils/format';
@@ -92,40 +91,38 @@ export function ConcurrentSessionsPanel({
 
   return (
     <TableSection title={t('runtime.sessions.title')} description={t('runtime.sessions.help')}>
-      <ContainedTable label={t('runtime.sessions.title')}>
-        <DataTable
-          rows={sessions}
-          columns={columns}
-          getRowKey={(session) => String(session.sessionId)}
-          caption={t('runtime.sessions.title')}
-          labels={labels}
-          empty={null}
-          rowActions={(session) => (
-            <>
-              {session.sessionId !== selectedSessionId && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  data-testid={`session-select-${session.sessionId}`}
-                  onClick={() => onSelect(session)}
-                >
-                  {t('runtime.sessions.select')}
-                </Button>
-              )}
-              <ActionButton
-                action="stop"
-                variant="destructive"
+      <DataTable
+        rows={sessions}
+        columns={columns}
+        getRowKey={(session) => String(session.sessionId)}
+        caption={t('runtime.sessions.title')}
+        labels={labels}
+        empty={null}
+        rowActions={(session) => (
+          <>
+            {session.sessionId !== selectedSessionId && (
+              <Button
+                variant="secondary"
                 size="sm"
-                data-testid={`session-stop-${session.sessionId}`}
-                loading={stoppingSessionId === session.sessionId}
-                onClick={() => onStop(session)}
+                data-testid={`session-select-${session.sessionId}`}
+                onClick={() => onSelect(session)}
               >
-                {t('runtime.running.stopButton')}
-              </ActionButton>
-            </>
-          )}
-        />
-      </ContainedTable>
+                {t('runtime.sessions.select')}
+              </Button>
+            )}
+            <ActionButton
+              action="stop"
+              variant="destructive"
+              size="sm"
+              data-testid={`session-stop-${session.sessionId}`}
+              loading={stoppingSessionId === session.sessionId}
+              onClick={() => onStop(session)}
+            >
+              {t('runtime.running.stopButton')}
+            </ActionButton>
+          </>
+        )}
+      />
     </TableSection>
   );
 }

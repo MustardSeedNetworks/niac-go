@@ -1,7 +1,7 @@
 import type { Action } from '../contexts/permissions';
 import { useActionPermission } from '../contexts/ScopeContext';
 import { Button, type ButtonProps } from '../shared/Button';
-import { Tooltip } from './Tooltip';
+import { Tooltip } from '../shared/Tooltip';
 
 type ActionButtonProps = ButtonProps & { action?: Action | undefined };
 

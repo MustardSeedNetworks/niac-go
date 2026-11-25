@@ -9,10 +9,9 @@ import { CategoryChip } from '../shared/CategoryChip';
 import { DataTable, type DataTableColumn } from '../shared/DataTable';
 import { EmptyState } from '../shared/EmptyState';
 import { StatusPill } from '../shared/StatusPill';
+import { Tooltip } from '../shared/Tooltip';
 import { ActionButton } from '../ui/ActionButton';
 import { Card, CardContent, CardRow, CardValue } from '../ui/Card';
-import { ContainedTable } from '../ui/ContainedTable';
-import { Tooltip } from '../ui/Tooltip';
 import { useTableLabels } from '../ui/tableLabels';
 import { formatBitsPerSecond } from '../utils/format';
 
@@ -187,7 +186,7 @@ export function WalkAnalyzerPage() {
           <div className="grid gap-comfortable md:grid-cols-2">
             <label className="block text-sm">
               <span className="text-text-secondary">{t('walkAnalyzer.fromWalksDir')}</span>
-              <Tooltip text={t('walkAnalyzer.fromWalksDirHelp')} className="w-full">
+              <Tooltip text={t('walkAnalyzer.fromWalksDirHelp')}>
                 <select
                   value={selectedFile}
                   onChange={(e) => setSelectedFile(e.target.value)}
@@ -213,7 +212,7 @@ export function WalkAnalyzerPage() {
 
             <label className="block text-sm">
               <span className="text-text-secondary">{t('walkAnalyzer.pastePathLabel')}</span>
-              <Tooltip text={t('walkAnalyzer.pastePathHelp')} className="w-full">
+              <Tooltip text={t('walkAnalyzer.pastePathHelp')}>
                 <input
                   type="text"
                   value={customPath}
@@ -297,16 +296,14 @@ export function WalkAnalyzerPage() {
             {interfaces.length === 0 ? (
               <EmptyState title={t('walkAnalyzer.noInterfacesFound')} />
             ) : (
-              <ContainedTable label={t('walkAnalyzer.interfacesHeading')}>
-                <DataTable
-                  rows={interfaces}
-                  columns={interfaceColumns}
-                  getRowKey={(iface) => `${iface.index}-${iface.name}`}
-                  caption={t('walkAnalyzer.interfacesHeading')}
-                  labels={labels}
-                  empty={null}
-                />
-              </ContainedTable>
+              <DataTable
+                rows={interfaces}
+                columns={interfaceColumns}
+                getRowKey={(iface) => `${iface.index}-${iface.name}`}
+                caption={t('walkAnalyzer.interfacesHeading')}
+                labels={labels}
+                empty={null}
+              />
             )}
           </TableSection>
 
@@ -317,18 +314,16 @@ export function WalkAnalyzerPage() {
             {neighbors.length === 0 ? (
               <EmptyState title={t('walkAnalyzer.noNeighborsFound')} />
             ) : (
-              <ContainedTable label={t('walkAnalyzer.neighborsHeading')}>
-                <DataTable
-                  rows={neighbors}
-                  columns={neighborColumns}
-                  getRowKey={(neighbor) =>
-                    `${neighbor.localInterface}-${neighbor.remoteDevice}-${neighbor.remoteInterface}`
-                  }
-                  caption={t('walkAnalyzer.neighborsHeading')}
-                  labels={labels}
-                  empty={null}
-                />
-              </ContainedTable>
+              <DataTable
+                rows={neighbors}
+                columns={neighborColumns}
+                getRowKey={(neighbor) =>
+                  `${neighbor.localInterface}-${neighbor.remoteDevice}-${neighbor.remoteInterface}`
+                }
+                caption={t('walkAnalyzer.neighborsHeading')}
+                labels={labels}
+                empty={null}
+              />
             )}
           </TableSection>
         </div>

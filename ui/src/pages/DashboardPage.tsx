@@ -16,9 +16,10 @@ import type { ErrorType } from '../api/types';
 import { iconSizes } from '../constants/sizes';
 import { useAppState } from '../contexts/AppContext';
 import { useSimulationStatus } from '../hooks/useSimulationStatus';
+import { ButtonLink } from '../shared/Button';
 import { CategoryChip } from '../shared/CategoryChip';
 import { Card, CardContent } from '../ui/Card';
-import { LinkButton } from '../ui/LinkButton';
+import { linkTo } from '../ui/linkTo';
 import { type RollupState, StatusRollup } from '../ui/StatusRollup';
 import { AccentLink, H2 } from '../ui/Typography';
 import { formatNumber, formatTime, formatUptime } from '../utils/format';
@@ -135,9 +136,13 @@ export function DashboardPage() {
            the quick-action tile of the same name: the same label twice on
            one page, once as a shortcut among equals, is not a primary. */
         actions={
-          <LinkButton to="/runtime" icon={<Play className={iconSizes.md} />}>
+          <ButtonLink
+            variant="primary"
+            renderLink={linkTo('/runtime')}
+            icon={<Play className={iconSizes.md} />}
+          >
             {t('dashboard.quickActions.startSimulationLabel')}
-          </LinkButton>
+          </ButtonLink>
         }
       />
 

@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { StatusPill } from '../../shared/StatusPill';
-import { Tooltip } from '../../ui/Tooltip';
+import { Tooltip } from '../../shared/Tooltip';
 import { SmallText } from '../../ui/Typography';
 import { DiffBlockComponent } from './diff-viewer/DiffBlock';
 import { DiffBlockOverlayComponent } from './diff-viewer/DiffBlockOverlay';

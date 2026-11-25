@@ -2,7 +2,7 @@ import { Check, FolderOpen, HardDrive, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { CategoryChip } from '../../shared/CategoryChip';
-import { Tooltip } from '../../ui/Tooltip';
+import { Tooltip } from '../../shared/Tooltip';
 import { SmallText } from '../../ui/Typography';
 import type { ConfigItem, ViewMode } from './ConfigPicker.types';
 
@@ -273,7 +273,7 @@ function ConfigCard({
             <span>{t('configPicker.selectedLabel')}</span>
           </div>
         ) : (
-          <Tooltip text={t('configPicker.selectNetworkTitle')} className="flex-1">
+          <Tooltip text={t('configPicker.selectNetworkTitle')}>
             <button
               type="button"
               onClick={() => onSelect(item)}
@@ -334,7 +334,7 @@ function ConfigRow({
           compact
         />
       )}
-      <Tooltip text={t('configPicker.selectItemTitle', { name: item.name })} className="flex-1">
+      <Tooltip text={t('configPicker.selectItemTitle', { name: item.name })}>
         <button type="button" onClick={() => onSelect(item)} className="flex-1 text-left">
           <div className="flex items-center gap-compact">
             <span className="font-medium text-text-primary">{item.name}</span>

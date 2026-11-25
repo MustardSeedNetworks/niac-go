@@ -57,7 +57,7 @@ for (const viewport of [
         expect(text, `${path} crumb "${text}" is a URL slug`).not.toContain('-');
       }
 
-      await expect(page).toHaveTitle(`${label} | ${enPages.app?.name ?? 'NIAC'}`);
+      await expect(page).toHaveTitle(`${label} · ${enPages.app?.name ?? 'NIAC'}`);
       await expectPageFirst(page);
     });
   }
@@ -65,7 +65,7 @@ for (const viewport of [
 
 test('the dashboard is a trail of one, and the tab names the page', async ({ page }) => {
   await page.goto('/');
-  await expect(page).toHaveTitle(`${enPages.dashboard.label} | ${enPages.app?.name ?? 'NIAC'}`);
+  await expect(page).toHaveTitle(`${enPages.dashboard.label} · ${enPages.app?.name ?? 'NIAC'}`);
   await expect(page.locator('nav[aria-label="Breadcrumb"] li')).toHaveText([
     enPages.dashboard.label,
   ]);

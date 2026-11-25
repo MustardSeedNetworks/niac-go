@@ -24,11 +24,11 @@ import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router';
 import { iconSizes } from '../constants/sizes';
 import { accessibleNameIncluding } from '../lib/accessibleName';
+import { Tooltip } from '../shared/Tooltip';
 import { prefetchRoute } from '../utils/prefetch';
 import { safeGetItem, safeSetItem } from '../utils/storage';
 import { MsnMark } from './MsnMark';
 import { ProductMark } from './ProductMark';
-import { Tooltip } from './Tooltip';
 
 export interface SidebarNavItem {
   path: string;
@@ -73,7 +73,7 @@ function badgeClass(badge: string): string {
 
 function NavItemButton({ item, active, collapsed, onNavigate }: NavItemButtonProps) {
   return (
-    <Tooltip text={collapsed ? item.label : undefined} className="w-full">
+    <Tooltip text={collapsed ? item.label : undefined}>
       <button
         type="button"
         onClick={() => onNavigate(item.path)}
@@ -147,7 +147,7 @@ function FooterIconButton({
   'data-testid': dataTestId,
 }: FooterIconButtonProps) {
   return (
-    <Tooltip text={title} className="w-full flex-1">
+    <Tooltip text={title}>
       <button
         type="button"
         onClick={onClick}

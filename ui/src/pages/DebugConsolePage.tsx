@@ -12,9 +12,9 @@ import { Button } from '../shared/Button';
 import { CategoryChip } from '../shared/CategoryChip';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { StatusPill } from '../shared/StatusPill';
+import { Tooltip } from '../shared/Tooltip';
 import { Card, CardContent } from '../ui/Card';
 import { useDialogLabels } from '../ui/dialogLabels';
-import { Tooltip } from '../ui/Tooltip';
 
 // Maximum number of logs to buffer
 const MAX_LOG_BUFFER = 1000;

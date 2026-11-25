@@ -13,11 +13,10 @@ import { useToast } from '../hooks/useToast';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { DataTable, type DataTableColumn } from '../shared/DataTable';
 import { StatusPill } from '../shared/StatusPill';
+import { Tooltip } from '../shared/Tooltip';
 import { ActionButton } from '../ui/ActionButton';
 import { Card, CardContent } from '../ui/Card';
-import { ContainedTable } from '../ui/ContainedTable';
 import { useDialogLabels } from '../ui/dialogLabels';
-import { Tooltip } from '../ui/Tooltip';
 import { useTableLabels } from '../ui/tableLabels';
 
 type Severity = 'error' | 'warning' | 'info';
@@ -229,7 +228,7 @@ export function WalkValidatorPage() {
           <div className="grid gap-comfortable md:grid-cols-2">
             <label className="block text-sm">
               <span className="text-text-secondary">{t('walkValidator.fromWalksDir')}</span>
-              <Tooltip text={t('walkValidator.fromWalksDirHelp')} className="w-full">
+              <Tooltip text={t('walkValidator.fromWalksDirHelp')}>
                 <select
                   data-testid="walk-validator-picker"
                   value={selectedFile}
@@ -255,7 +254,7 @@ export function WalkValidatorPage() {
 
             <label className="block text-sm">
               <span className="text-text-secondary">{t('walkValidator.pastePathLabel')}</span>
-              <Tooltip text={t('walkValidator.pastePathHelp')} className="w-full">
+              <Tooltip text={t('walkValidator.pastePathHelp')}>
                 <input
                   type="text"
                   value={customPath}
@@ -348,7 +347,7 @@ export function WalkValidatorPage() {
             {issues.length > 0 && (
               <label className="block text-sm">
                 <span className="text-text-secondary">{t('walkValidator.oidFilterLabel')}</span>
-                <Tooltip text={t('walkValidator.oidFilterHelp')} className="w-full">
+                <Tooltip text={t('walkValidator.oidFilterHelp')}>
                   <input
                     type="text"
                     value={oidFilter}
@@ -365,16 +364,14 @@ export function WalkValidatorPage() {
             ) : filteredIssues.length === 0 ? (
               <p className="text-sm text-text-muted">{t('walkValidator.noMatchingIssues')}</p>
             ) : (
-              <ContainedTable label={t('walkValidator.resultHeading')}>
-                <DataTable
-                  rows={visibleIssues}
-                  columns={issueColumns}
-                  getRowKey={(issue) => `${issue.line}-${issue.oid ?? ''}-${issue.message}`}
-                  caption={t('walkValidator.resultHeading')}
-                  labels={labels}
-                  empty={null}
-                />
-              </ContainedTable>
+              <DataTable
+                rows={visibleIssues}
+                columns={issueColumns}
+                getRowKey={(issue) => `${issue.line}-${issue.oid ?? ''}-${issue.message}`}
+                caption={t('walkValidator.resultHeading')}
+                labels={labels}
+                empty={null}
+              />
             )}
             {filteredIssues.length > ISSUES_DISPLAY_CAP && (
               <p className="text-xs text-text-muted">
@@ -408,16 +405,14 @@ export function WalkValidatorPage() {
             {batchResults.length === 0 ? (
               <p className="text-sm text-text-muted">{t('walkValidator.batchEmpty')}</p>
             ) : (
-              <ContainedTable label={t('walkValidator.batchHeading')}>
-                <DataTable
-                  rows={batchResults}
-                  columns={batchColumns}
-                  getRowKey={(result) => result.filename}
-                  caption={t('walkValidator.batchHeading')}
-                  labels={labels}
-                  empty={null}
-                />
-              </ContainedTable>
+              <DataTable
+                rows={batchResults}
+                columns={batchColumns}
+                getRowKey={(result) => result.filename}
+                caption={t('walkValidator.batchHeading')}
+                labels={labels}
+                empty={null}
+              />
             )}
           </CardContent>
         </Card>

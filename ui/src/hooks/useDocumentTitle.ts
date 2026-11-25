@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
+import { documentTitle } from '../shared/documentTitle';
 import { usePages } from '../pageRegistry';
 
 /**
@@ -23,7 +24,6 @@ export function useDocumentTitle(): void {
   useEffect(() => {
     const product = t('app.name');
     const page = pages.find((candidate) => candidate.path === pathname);
-    // `page | product`, the format all four products share.
-    document.title = page ? `${page.label} | ${product}` : product;
+    document.title = documentTitle(page?.label ?? '', product);
   }, [pathname, pages, t]);
 }

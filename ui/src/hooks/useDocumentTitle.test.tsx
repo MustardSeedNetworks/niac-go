@@ -31,7 +31,7 @@ describe('useDocumentTitle', () => {
     ['/', 'Dashboard'],
   ])('names %s in the tab', (path, label) => {
     at(path);
-    expect(document.title).toBe(`${label} | NIAC`);
+    expect(document.title).toBe(`${label} · NIAC`);
   });
 
   it('leaves the title alone on a route the registry does not know', () => {
@@ -45,6 +45,6 @@ describe('useDocumentTitle', () => {
   it('follows the language', async () => {
     await i18n.changeLanguage('es');
     at('/segments');
-    expect(document.title).toBe('Segmentos | NIAC');
+    expect(document.title).toBe('Segmentos · NIAC');
   });
 });

@@ -20,12 +20,12 @@ import { iconSizes } from '../constants/sizes';
 import { useAppState } from '../contexts/AppContext';
 import { useConfigResource, useLibraryResource } from '../hooks/usePageResources';
 import { Alert } from '../shared/Alert';
-import { Button } from '../shared/Button';
+import { Button, ButtonLink } from '../shared/Button';
 import { Skeleton } from '../shared/Skeleton';
 import { ActionButton } from '../ui/ActionButton';
 import { BaseCard } from '../ui/BaseCard';
 import { CardRow } from '../ui/Card';
-import { LinkButton } from '../ui/LinkButton';
+import { linkTo } from '../ui/linkTo';
 import { SmallText } from '../ui/Typography';
 import { findDeviceFragment } from '../utils/device-fragment';
 import { copyToClipboard } from '../utils/file';
@@ -97,7 +97,9 @@ function DeviceListCard({
             onSelect={(device) => onSelect(device.name)}
           />
           <div>
-            <LinkButton to="/device-config">{t('devices.editInLibrary')}</LinkButton>
+            <ButtonLink variant="primary" renderLink={linkTo('/device-config')}>
+              {t('devices.editInLibrary')}
+            </ButtonLink>
           </div>
         </>
       )}

@@ -2,8 +2,8 @@ import { LogOut, Moon, Sun } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { disconnectRuntimeAPI } from '../api/requestCore';
 import type { ConnectionState } from '../hooks/useConnectionStatus';
+import { Tooltip } from '../shared/Tooltip';
 import { ConnectionStatus } from '../ui/ConnectionStatus';
-import { Tooltip } from '../ui/Tooltip';
 import { SessionSwitcher } from './SessionSwitcher';
 
 interface RailControlsProps {

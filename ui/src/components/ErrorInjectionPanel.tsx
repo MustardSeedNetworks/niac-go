@@ -12,7 +12,6 @@ import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { DataTable, type DataTableColumn } from '../shared/DataTable';
 import { ActionButton } from '../ui/ActionButton';
 import { Card, CardContent } from '../ui/Card';
-import { ContainedTable } from '../ui/ContainedTable';
 import { useDialogLabels } from '../ui/dialogLabels';
 import { Input } from '../ui/Input';
 import { SmallText } from '../ui/Typography';
@@ -418,16 +417,14 @@ export function ErrorInjectionPanel() {
       {/* Active Errors Table */}
       {Object.keys(activeErrors).length > 0 && (
         <TableSection title={t('injection.activeErrorsTitle')}>
-          <ContainedTable label={t('injection.activeErrorsTitle')}>
-            <DataTable
-              rows={activeRows}
-              columns={activeErrorColumns}
-              getRowKey={(row) => `${row.deviceIp}-${row.iface}-${row.errorType}`}
-              caption={t('injection.activeErrorsTitle')}
-              labels={labels}
-              empty={null}
-            />
-          </ContainedTable>
+          <DataTable
+            rows={activeRows}
+            columns={activeErrorColumns}
+            getRowKey={(row) => `${row.deviceIp}-${row.iface}-${row.errorType}`}
+            caption={t('injection.activeErrorsTitle')}
+            labels={labels}
+            empty={null}
+          />
         </TableSection>
       )}
 

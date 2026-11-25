@@ -2,7 +2,7 @@ import { memo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTimeDisplay } from '../hooks/useTimeDisplay';
 import { CategoryChip } from '../shared/CategoryChip';
-import { Tooltip } from '../ui/Tooltip';
+import { Tooltip } from '../shared/Tooltip';
 import { SmallText } from '../ui/Typography';
 import type { PacketByteRange } from '../utils/protocol-byte-ranges';
 import { formatTimeByMode, getTimeDisplayLabel } from '../utils/time-display';

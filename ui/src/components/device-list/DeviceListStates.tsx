@@ -7,7 +7,6 @@ import { Card } from '../../shared/Card';
 import { DataTable } from '../../shared/DataTable';
 import { EmptyState } from '../../shared/EmptyState';
 import { Skeleton } from '../../shared/Skeleton';
-import { ContainedTable } from '../../ui/ContainedTable';
 import { useTableLabels } from '../../ui/tableLabels';
 
 interface LoadingStateProps {
@@ -23,22 +22,20 @@ export function DeviceListLoadingState({ viewMode }: LoadingStateProps) {
 
   if (viewMode === 'table') {
     return (
-      <ContainedTable label={t('list.listAria')}>
-        <DataTable
-          rows={[]}
-          loading
-          columns={[
-            { key: 'hostname', header: t('list.tableHeaderHostname'), cell: () => null },
-            { key: 'type', header: t('list.tableHeaderType'), cell: () => null },
-            { key: 'ip', header: t('list.tableHeaderIpAddress'), cell: () => null },
-            { key: 'protocols', header: t('list.tableHeaderProtocols'), cell: () => null },
-          ]}
-          getRowKey={() => ''}
-          caption={t('list.listAria')}
-          labels={labels}
-          empty={null}
-        />
-      </ContainedTable>
+      <DataTable
+        rows={[]}
+        loading
+        columns={[
+          { key: 'hostname', header: t('list.tableHeaderHostname'), cell: () => null },
+          { key: 'type', header: t('list.tableHeaderType'), cell: () => null },
+          { key: 'ip', header: t('list.tableHeaderIpAddress'), cell: () => null },
+          { key: 'protocols', header: t('list.tableHeaderProtocols'), cell: () => null },
+        ]}
+        getRowKey={() => ''}
+        caption={t('list.listAria')}
+        labels={labels}
+        empty={null}
+      />
     );
   }
 

@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
+import { ButtonLink } from '../../shared/Button';
 import { Card } from '../../shared/Card';
 import { EmptyState } from '../../shared/EmptyState';
-import { LinkButton } from '../../ui/LinkButton';
+import { linkTo } from '../../ui/linkTo';
 
 export function DeviceConfigurationRequired() {
   const { t } = useTranslation('devices');
@@ -11,9 +12,12 @@ export function DeviceConfigurationRequired() {
         title={t('list.states.configurationRequiredTitle')}
         hint={t('list.states.configurationRequiredDescription')}
         action={
-          <LinkButton to="/new-simulation" data-testid="create-device-draft">
+          <ButtonLink
+            variant="primary"
+            renderLink={linkTo('/new-simulation', 'create-device-draft')}
+          >
             {t('list.states.createDraft')}
-          </LinkButton>
+          </ButtonLink>
         }
       />
     </Card>

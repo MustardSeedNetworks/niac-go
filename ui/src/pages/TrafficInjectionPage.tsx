@@ -6,7 +6,8 @@ import { ErrorInjectionPanel } from '../components/ErrorInjectionPanel';
 import { ReplayControlPanel } from '../components/ReplayControlPanel';
 import { iconSizes } from '../constants/sizes';
 import { useSimulationStatus } from '../hooks/useSimulationStatus';
-import { LinkButton } from '../ui/LinkButton';
+import { ButtonLink } from '../shared/Button';
+import { linkTo } from '../ui/linkTo';
 import { StatusRollup } from '../ui/StatusRollup';
 import { H2, P } from '../ui/Typography';
 
@@ -31,9 +32,13 @@ export function TrafficInjectionPage() {
         headline={t('traffic.idle.headline')}
         body={t('traffic.idle.body')}
         actions={
-          <LinkButton to="/runtime" icon={<Play className={iconSizes.md} />}>
+          <ButtonLink
+            variant="primary"
+            renderLink={linkTo('/runtime')}
+            icon={<Play className={iconSizes.md} />}
+          >
             {t('traffic.idle.startAction')}
-          </LinkButton>
+          </ButtonLink>
         }
       />
     );

@@ -3,7 +3,7 @@
  *
  * The rule is a rendering fact, not a source-code fact: a page's primary
  * action can come from any component it renders, so a grep over the page
- * file proves nothing. Button and LinkButton emit data-variant,
+ * file proves nothing. Button and ButtonLink emit data-variant,
  * so every route is rendered through the real shell and the primaries are
  * counted in the DOM.
  *
