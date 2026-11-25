@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
-import { Modal } from './Modal';
+import { Modal } from '../shared/Modal';
 
 /**
  * Guards #1465.
@@ -27,7 +27,7 @@ describe('Modal Escape handling', () => {
     const onClose = vi.fn();
 
     render(
-      <Modal isOpen onClose={onClose} title="Danger">
+      <Modal open closeLabel="Close" onClose={onClose} title="Danger">
         <button type="button">Inside</button>
       </Modal>,
     );
@@ -43,7 +43,7 @@ describe('Modal Escape handling', () => {
     const onClose = vi.fn();
 
     render(
-      <Modal isOpen onClose={onClose} closeOnEscape={false} title="Danger">
+      <Modal open closeLabel="Close" onClose={onClose} closeOnEscape={false} title="Danger">
         <button type="button">Inside</button>
       </Modal>,
     );

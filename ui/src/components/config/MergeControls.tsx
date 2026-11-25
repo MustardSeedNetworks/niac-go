@@ -14,9 +14,9 @@ import { Button } from '../../shared/Button';
 import { Card } from '../../shared/Card';
 import { CategoryChip } from '../../shared/CategoryChip';
 import { ConfirmDialog } from '../../shared/ConfirmDialog';
+import { Modal } from '../../shared/Modal';
 import { StatusPill } from '../../shared/StatusPill';
-import { useDialogLabels } from '../../ui/dialogLabels';
-import { Modal } from '../../ui/Modal';
+import { useCloseLabel, useDialogLabels } from '../../ui/dialogLabels';
 import { H2, SmallText } from '../../ui/Typography';
 import { copyToClipboard } from '../../utils/file';
 import type { DiffBlock, MergeDecision } from './DiffViewer';
@@ -337,6 +337,7 @@ interface MergePreviewModalProps {
 }
 
 export function MergePreviewModal({ content, onClose, onExport }: MergePreviewModalProps) {
+  const closeLabel = useCloseLabel();
   const { t } = useTranslation('pages');
   const titleId = useId();
   const lineCount = useMemo(() => content.split('\n').length, [content]);
@@ -347,7 +348,8 @@ export function MergePreviewModal({ content, onClose, onExport }: MergePreviewMo
 
   return (
     <Modal
-      isOpen
+      closeLabel={closeLabel}
+      open
       onClose={onClose}
       size="full"
       labelledBy={titleId}

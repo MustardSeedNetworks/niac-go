@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../shared/Button';
+import { Modal } from '../../shared/Modal';
 import { ActionButton } from '../../ui/ActionButton';
-import { Modal } from '../../ui/Modal';
+import { useCloseLabel } from '../../ui/dialogLabels';
 import { SmallText } from '../../ui/Typography';
 
 interface Props {
@@ -14,14 +15,16 @@ interface Props {
 }
 
 export function UnsavedChangesModal({ open, saving, onSave, onDiscard, onCancel, error }: Props) {
+  const closeLabel = useCloseLabel();
   const { t } = useTranslation('common');
   return (
     <Modal
-      isOpen={open}
+      closeLabel={closeLabel}
+      open={open}
       title={t('unsaved.title')}
       onClose={onCancel}
       closeOnEscape={!saving}
-      closeOnBackdropClick={!saving}
+      closeOnBackdrop={!saving}
       showCloseButton={false}
       size="sm"
     >

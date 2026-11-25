@@ -8,3 +8,9 @@ export function useDialogLabels(): { cancelLabel: string; closeLabel: string } {
   const { t } = useTranslation('common');
   return { cancelLabel: t('buttons.cancel'), closeLabel: t('accessibility.closeDialog') };
 }
+
+/** The accessible name of a shared Modal's close button, which the shared set cannot translate. */
+export function useCloseLabel(): string {
+  const { t } = useTranslation('common');
+  return t('accessibility.closeDialog');
+}

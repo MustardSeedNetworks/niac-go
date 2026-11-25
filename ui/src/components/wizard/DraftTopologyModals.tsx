@@ -2,9 +2,10 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ScenarioDeviceProfile } from '../../api/scenario-client';
 import { Button } from '../../shared/Button';
+import { Modal } from '../../shared/Modal';
 import { ActionButton } from '../../ui/ActionButton';
+import { useCloseLabel } from '../../ui/dialogLabels';
 import { Input, Select } from '../../ui/Input';
-import { Modal } from '../../ui/Modal';
 
 export interface LinkEditorState {
   source: string;
@@ -41,6 +42,7 @@ export function DeviceEditorModal({
   onChange,
   onSave,
 }: DeviceEditorModalProps) {
+  const closeLabel = useCloseLabel();
   const { t } = useTranslation('pages');
   const close = useCallback(() => onChange(null), [onChange]);
   const selectedProfile = state
@@ -48,7 +50,8 @@ export function DeviceEditorModal({
     : undefined;
   return (
     <Modal
-      isOpen={state !== null}
+      closeLabel={closeLabel}
+      open={state !== null}
       onClose={close}
       title={t('newSimWizard.topology.addDevice')}
       size="lg"
@@ -140,11 +143,13 @@ export function LinkEditorModal({
   onSave,
   onDisconnect,
 }: LinkEditorModalProps) {
+  const closeLabel = useCloseLabel();
   const { t } = useTranslation('pages');
   const close = useCallback(() => onChange(null), [onChange]);
   return (
     <Modal
-      isOpen={state !== null}
+      closeLabel={closeLabel}
+      open={state !== null}
       onClose={close}
       title={t('newSimWizard.topology.linkTitle')}
       size="lg"

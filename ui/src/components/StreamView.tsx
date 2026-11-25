@@ -2,7 +2,8 @@ import { memo, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PcapPacket } from '../api/types';
 import { Button } from '../shared/Button';
-import { Modal } from '../ui/Modal';
+import { Modal } from '../shared/Modal';
+import { useCloseLabel } from '../ui/dialogLabels';
 import { SmallText } from '../ui/Typography';
 import type { Packet } from './PacketList';
 
@@ -72,6 +73,7 @@ export const StreamView = memo(function StreamView({
   clientEndpoint,
   onClose,
 }: StreamViewProps) {
+  const closeLabel = useCloseLabel();
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const [displayMode, setDisplayMode] = useState<DisplayMode>('ascii');
@@ -99,7 +101,8 @@ export const StreamView = memo(function StreamView({
 
   return (
     <Modal
-      isOpen
+      closeLabel={closeLabel}
+      open
       onClose={onClose}
       size="full"
       labelledBy={titleId}

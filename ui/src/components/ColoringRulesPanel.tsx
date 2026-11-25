@@ -3,9 +3,10 @@ import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../constants/sizes';
 import { Button } from '../shared/Button';
+import { Modal } from '../shared/Modal';
 import { Tooltip } from '../shared/Tooltip';
 import { RULE_SWATCHES } from '../theme/coloringRuleSwatches';
-import { Modal } from '../ui/Modal';
+import { useCloseLabel } from '../ui/dialogLabels';
 import { SmallText } from '../ui/Typography';
 import type { ColoringRule } from '../utils/coloring-rules';
 import { generateRuleId } from '../utils/coloring-rules';
@@ -154,6 +155,7 @@ export const ColoringRulesPanel = memo(function ColoringRulesPanel({
   onReset,
   onClose,
 }: ColoringRulesPanelProps) {
+  const closeLabel = useCloseLabel();
   const { t } = useTranslation('common');
   const [localRules, setLocalRules] = useState<ColoringRule[]>([...rules]);
 
@@ -224,7 +226,8 @@ export const ColoringRulesPanel = memo(function ColoringRulesPanel({
 
   return (
     <Modal
-      isOpen
+      closeLabel={closeLabel}
+      open
       onClose={onClose}
       size="3xl"
       title={t('coloringRules.title')}
