@@ -568,7 +568,8 @@
       "headerMgmtAddr": "Dir. gestión",
       "headerTtl": "TTL",
       "headerLastSeen": "Visto por última vez",
-      "ttlMinutes": "{{value}}m"
+      "ttlMinutes": "{{value}}m",
+      "tableCaption": "Vecinos descubiertos"
     },
     "page": {
       "loadFailed": "No se pudo cargar la topología",
@@ -872,7 +873,9 @@
       "headerLength": "Longitud",
       "headerInfo": "Información",
       "waitingForStream": "Esperando flujo de paquetes...",
-      "modeLabel": "Modo:"
+      "modeLabel": "Modo:",
+      "headerPacket": "Paquetes",
+      "timeColumn": "Hora: {{mode}}"
     },
     "inspector": {
       "standaloneCapture": "Captura de paquetes independiente",

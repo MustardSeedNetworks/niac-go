@@ -161,6 +161,7 @@
   },
   "labels": {
     "config": "Config",
+    "conversations": "Conversations",
     "devices": "Devices",
     "disabled": "Disabled",
     "enabled": "Enabled",

@@ -77,7 +77,8 @@
     "enabled": "Habilitado",
     "none": "Ninguno",
     "required": "Obligatorio",
-    "view": "Vista"
+    "view": "Vista",
+    "conversations": "Conversaciones"
   },
   "accessibility": {
     "openHelp": "Abrir ayuda",

@@ -3,9 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { POLL_INTERVALS } from '../../constants/polling';
 import { useAppState } from '../../contexts/AppContext';
 import type { TFunction } from '../../i18n';
-import { Card, CardContent } from '../../ui/Card';
-import { DataTable, type DataTableColumn } from '../../ui/DataTable';
-import { Tooltip } from '../../ui/Tooltip';
+import { Alert } from '../../shared/Alert';
+import { CategoryChip } from '../../shared/CategoryChip';
+import { DataTable, type DataTableColumn } from '../../shared/DataTable';
+import { EmptyState } from '../../shared/EmptyState';
+import { SearchInput } from '../../shared/SearchInput';
+import { SegmentedControl } from '../../shared/SegmentedControl';
+import { Skeleton } from '../../shared/Skeleton';
+import { useTableLabels } from '../../ui/tableLabels';
 
 /**
  * NeighborsView renders the live CDP / LLDP / EDP / FDP discovery table —
@@ -125,140 +130,129 @@ export function NeighborsView() {
     return counts;
   }, [neighbors]);
 
+  const labels = useTableLabels<(typeof filtered)[number]>(t('topology.neighbors.tableCaption'));
   const columns: DataTableColumn<(typeof filtered)[number]>[] = [
     {
       key: 'protocol',
       header: t('topology.neighbors.headerProtocol'),
-      cellClassName: 'font-mono text-xs text-status-info',
-      cell: (n) => n.protocols.join(', '),
+      cell: (n) => (
+        <span className="inline-flex gap-1">
+          {n.protocols.map((protocol) => (
+            <CategoryChip key={protocol} label={protocol} />
+          ))}
+        </span>
+      ),
     },
     {
       key: 'localDevice',
       header: t('topology.neighbors.headerLocalDevice'),
-      cell: (n) => n.localDevice,
+      sortValue: (n) => n.localDevice,
+      cell: (n) => <span className="text-text-primary">{n.localDevice}</span>,
     },
     {
       key: 'remoteDevice',
       header: t('topology.neighbors.headerRemoteDevice'),
-      cell: (n) => n.remoteDevice,
+      sortValue: (n) => n.remoteDevice,
+      cell: (n) => <span className="text-text-primary">{n.remoteDevice}</span>,
     },
     {
       key: 'remotePort',
       header: t('topology.neighbors.headerRemotePort'),
-      cellClassName: 'text-text-muted',
-      cell: (n) => n.remotePort || tCommon('format.dash'),
+      cell: (n) => (
+        <span className="text-text-muted">{n.remotePort || tCommon('format.dash')}</span>
+      ),
     },
     {
       key: 'chassisId',
       header: t('topology.neighbors.headerChassisId'),
-      cellClassName: 'font-mono text-xs text-text-muted',
-      cell: (n) => n.remoteChassisId || tCommon('format.dash'),
+      cell: (n) => (
+        <span className="font-mono text-xs text-text-muted">
+          {n.remoteChassisId || tCommon('format.dash')}
+        </span>
+      ),
     },
     {
       key: 'mgmtAddr',
       header: t('topology.neighbors.headerMgmtAddr'),
-      cellClassName: 'font-mono text-xs text-text-muted',
-      cell: (n) => n.managementAddress || tCommon('format.dash'),
+      cell: (n) => (
+        <span className="font-mono text-xs text-text-muted">
+          {n.managementAddress || tCommon('format.dash')}
+        </span>
+      ),
     },
     {
       key: 'ttl',
       header: t('topology.neighbors.headerTtl'),
-      cellClassName: 'text-text-muted',
-      cell: (n) => formatTtl(n.ttl, tCommon, t),
+      cell: (n) => <span className="text-text-muted">{formatTtl(n.ttl, tCommon, t)}</span>,
     },
     {
       key: 'lastSeen',
       header: t('topology.neighbors.headerLastSeen'),
-      cellClassName: 'text-text-muted',
-      cell: (n) => formatRelative(n.lastSeen, tCommon),
+      cell: (n) => <span className="text-text-muted">{formatRelative(n.lastSeen, tCommon)}</span>,
     },
   ];
 
   return (
-    <div className="stack-lg">
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="stack">
-          <div className="flex flex-wrap items-center gap-default">
-            <div className="flex items-center gap-compact">
-              {PROTOCOL_FILTERS.map((p) => {
-                const count = p === 'all' ? (neighbors?.length ?? 0) : (protocolCounts[p] ?? 0);
-                const active = protocolFilter === p;
-                return (
-                  <Tooltip
-                    text={
-                      p === 'all'
-                        ? t('topology.neighbors.filterShowAllTitle')
-                        : t('topology.neighbors.filterByProtocolTitle', {
-                            protocol: p,
-                            count: protocolCounts[p] ?? 0,
-                          })
-                    }
-                    key={p}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setProtocolFilter(p)}
-                      className={`rounded px-3 py-compact text-xs font-medium ${
-                        active
-                          ? 'bg-status-info/20 text-status-info-strong ring-1 ring-status-info/40'
-                          : 'bg-bg-elevated/60 text-text-secondary hover:bg-bg-elevated'
-                      }`}
-                    >
-                      {p === 'all' ? t('topology.neighbors.filterAllLabel') : p}
-                      <span className="ml-1.5 text-[10px] text-text-muted">{count}</span>
-                    </button>
-                  </Tooltip>
-                );
-              })}
-            </div>
-            <Tooltip text={t('topology.neighbors.searchTitle')}>
-              <input
-                type="search"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={t('topology.neighbors.searchPlaceholder')}
-                className="ml-auto w-64 rounded border border-surface-border bg-bg-base/60 px-3 py-compact-md text-sm text-text-primary placeholder:text-text-muted focus:border-status-info focus:outline-none"
-                aria-label={t('topology.neighbors.searchAriaLabel')}
-              />
-            </Tooltip>
-            <span className="text-xs text-text-muted">
-              {t('topology.neighbors.pollingStatus', {
-                seconds: POLL_INTERVALS.medium / 1000,
-                count: neighbors?.length ?? 0,
-              })}
-            </span>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="stack">
+      <div className="flex flex-wrap items-center gap-3">
+        <SegmentedControl
+          label={t('topology.neighbors.filterAllLabel')}
+          value={protocolFilter}
+          onChange={(value) => {
+            const next = PROTOCOL_FILTERS.find((candidate) => candidate === value);
+            if (next) setProtocolFilter(next);
+          }}
+          options={PROTOCOL_FILTERS.map((p) => {
+            const count = p === 'all' ? (neighbors?.length ?? 0) : (protocolCounts[p] ?? 0);
+            return {
+              value: p,
+              label: `${p === 'all' ? t('topology.neighbors.filterAllLabel') : p} ${count}`,
+            };
+          })}
+        />
+        <SearchInput
+          value={search}
+          onValueChange={setSearch}
+          label={t('topology.neighbors.searchAriaLabel')}
+          clearLabel={tCommon('accessibility.clearSearch')}
+          placeholder={t('topology.neighbors.searchPlaceholder')}
+          className="min-w-48 flex-1"
+        />
+        <span className="text-xs text-text-muted">
+          {t('topology.neighbors.pollingStatus', {
+            seconds: POLL_INTERVALS.medium / 1000,
+            count: neighbors?.length ?? 0,
+          })}
+        </span>
+      </div>
 
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="p-0">
-          {loading && !neighbors && (
-            <div className="pad-lg text-sm text-text-muted">{t('topology.neighbors.loading')}</div>
-          )}
-          {error && (
-            <div className="pad-lg text-sm text-status-error" role="alert">
-              {t('topology.neighbors.loadError', { error: error.message })}
-            </div>
-          )}
-          {neighbors && filtered.length === 0 && (
-            <div className="pad-lg text-sm text-text-muted">
-              {neighbors.length === 0
-                ? t('topology.neighbors.emptyNoData')
-                : t('topology.neighbors.emptyFiltered')}
-            </div>
-          )}
-          {filtered.length > 0 && (
-            <DataTable
-              rows={filtered}
-              columns={columns}
-              getRowKey={(n) => `${n.localDevice}-${n.remoteDevice}-${n.remotePort}`}
-              emptyMessage={null}
-              rowClassName={() => 'text-text-primary hover:bg-bg-base/40'}
-            />
-          )}
-        </CardContent>
-      </Card>
+      {loading && !neighbors && (
+        <div role="status" aria-label={t('topology.neighbors.loading')}>
+          <Skeleton className="h-32 w-full" />
+        </div>
+      )}
+      {error && (
+        <Alert tone="error">{t('topology.neighbors.loadError', { error: error.message })}</Alert>
+      )}
+      {neighbors && filtered.length === 0 && (
+        <EmptyState
+          title={
+            neighbors.length === 0
+              ? t('topology.neighbors.emptyNoData')
+              : t('topology.neighbors.emptyFiltered')
+          }
+        />
+      )}
+      {filtered.length > 0 && (
+        <DataTable
+          rows={filtered}
+          columns={columns}
+          getRowKey={(n) => `${n.localDevice}-${n.remoteDevice}-${n.remotePort}`}
+          caption={t('topology.neighbors.tableCaption')}
+          labels={labels}
+          empty={null}
+        />
+      )}
     </div>
   );
 }

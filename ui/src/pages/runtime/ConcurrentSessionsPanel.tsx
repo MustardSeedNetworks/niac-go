@@ -1,11 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import type { SimulationStatus } from '../../api/types';
+import { TableSection } from '../../components/TableSection';
 import { Button } from '../../shared/Button';
+import { DataTable, type DataTableColumn } from '../../shared/DataTable';
 import { StatusPill } from '../../shared/StatusPill';
 import { ActionButton } from '../../ui/ActionButton';
-import { Card, CardContent } from '../../ui/Card';
-import { DataTable, type DataTableColumn } from '../../ui/DataTable';
-import { H2, SmallText } from '../../ui/Typography';
+import { SmallText } from '../../ui/Typography';
+import { useTableLabels } from '../../ui/tableLabels';
 import { formatNumber } from '../../utils/format';
 
 interface ConcurrentSessionsPanelProps {
@@ -25,13 +26,21 @@ export function ConcurrentSessionsPanel({
   onStop,
 }: ConcurrentSessionsPanelProps) {
   const { t } = useTranslation('pages');
+  const labels = useTableLabels<SimulationStatus>(t('runtime.sessions.title').toLowerCase());
 
   const columns: DataTableColumn<SimulationStatus>[] = [
     {
       key: 'scenario',
       header: t('runtime.sessions.scenario'),
-      cellClassName: 'font-medium text-text-primary',
-      cell: (session) => session.sessionId,
+      sortValue: (session) => session.sessionId ?? '',
+      cell: (session) => (
+        <span
+          className="font-medium text-text-primary"
+          data-testid={`session-row-${session.sessionId}`}
+        >
+          {session.sessionId}
+        </span>
+      ),
     },
     {
       key: 'vlan',
@@ -78,52 +87,42 @@ export function ConcurrentSessionsPanel({
           />
         ),
     },
-    {
-      key: 'actions',
-      header: t('runtime.sessions.actions'),
-      cellClassName: 'flex gap-compact',
-      cell: (session) => (
-        <>
-          {session.sessionId !== selectedSessionId && (
-            <Button
-              variant="secondary"
-              size="sm"
-              data-testid={`session-select-${session.sessionId}`}
-              onClick={() => onSelect(session)}
-            >
-              {t('runtime.sessions.select')}
-            </Button>
-          )}
-          <ActionButton
-            action="stop"
-            variant="destructive"
-            size="sm"
-            data-testid={`session-stop-${session.sessionId}`}
-            loading={stoppingSessionId === session.sessionId}
-            onClick={() => onStop(session)}
-          >
-            {t('runtime.running.stopButton')}
-          </ActionButton>
-        </>
-      ),
-    },
   ];
 
   return (
-    <Card>
-      <CardContent className="stack-lg">
-        <div>
-          <H2>{t('runtime.sessions.title')}</H2>
-          <SmallText>{t('runtime.sessions.help')}</SmallText>
-        </div>
-        <DataTable
-          rows={sessions}
-          columns={columns}
-          getRowKey={(session) => String(session.sessionId)}
-          rowTestId={(session) => `session-row-${session.sessionId}`}
-          emptyMessage={null}
-        />
-      </CardContent>
-    </Card>
+    <TableSection title={t('runtime.sessions.title')} description={t('runtime.sessions.help')}>
+      <DataTable
+        rows={sessions}
+        columns={columns}
+        getRowKey={(session) => String(session.sessionId)}
+        caption={t('runtime.sessions.title')}
+        labels={labels}
+        empty={null}
+        rowActions={(session) => (
+          <>
+            {session.sessionId !== selectedSessionId && (
+              <Button
+                variant="secondary"
+                size="sm"
+                data-testid={`session-select-${session.sessionId}`}
+                onClick={() => onSelect(session)}
+              >
+                {t('runtime.sessions.select')}
+              </Button>
+            )}
+            <ActionButton
+              action="stop"
+              variant="destructive"
+              size="sm"
+              data-testid={`session-stop-${session.sessionId}`}
+              loading={stoppingSessionId === session.sessionId}
+              onClick={() => onStop(session)}
+            >
+              {t('runtime.running.stopButton')}
+            </ActionButton>
+          </>
+        )}
+      />
+    </TableSection>
   );
 }

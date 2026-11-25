@@ -9,13 +9,15 @@ import type { ErrorType } from '../api/types';
 import { useAppState } from '../contexts/AppContext';
 import { type ErrorInjectionFormFields, ErrorInjectionSchema } from '../schemas/forms';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
+import { DataTable, type DataTableColumn } from '../shared/DataTable';
 import { ActionButton } from '../ui/ActionButton';
 import { Card, CardContent } from '../ui/Card';
-import { DataTable, type DataTableColumn } from '../ui/DataTable';
 import { useDialogLabels } from '../ui/dialogLabels';
 import { Input } from '../ui/Input';
 import { SmallText } from '../ui/Typography';
+import { useTableLabels } from '../ui/tableLabels';
 import { getErrorMessage } from '../utils/format';
+import { TableSection } from './TableSection';
 
 export function ErrorInjectionPanel() {
   const dialogLabels = useDialogLabels();
@@ -167,6 +169,7 @@ export function ErrorInjectionPanel() {
 
   const busy = isSubmitting || clearingBusy;
 
+  const labels = useTableLabels(t('injection.activeErrorsTitle').toLowerCase());
   const activeErrorColumns: DataTableColumn<(typeof activeRows)[number]>[] = [
     {
       key: 'deviceIp',
@@ -412,17 +415,16 @@ export function ErrorInjectionPanel() {
 
       {/* Active Errors Table */}
       {Object.keys(activeErrors).length > 0 && (
-        <Card>
-          <CardContent>
-            <h3 className="heading-3 mb-content">{t('injection.activeErrorsTitle')}</h3>
-            <DataTable
-              rows={activeRows}
-              columns={activeErrorColumns}
-              getRowKey={(row) => `${row.deviceIp}-${row.iface}-${row.errorType}`}
-              emptyMessage={null}
-            />
-          </CardContent>
-        </Card>
+        <TableSection title={t('injection.activeErrorsTitle')}>
+          <DataTable
+            rows={activeRows}
+            columns={activeErrorColumns}
+            getRowKey={(row) => `${row.deviceIp}-${row.iface}-${row.errorType}`}
+            caption={t('injection.activeErrorsTitle')}
+            labels={labels}
+            empty={null}
+          />
+        </TableSection>
       )}
 
       {/* Clear All Confirmation Modal */}

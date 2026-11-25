@@ -1,10 +1,12 @@
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PcapPacket } from '../api/types';
+import { Card } from '../shared/Card';
 import { CategoryChip } from '../shared/CategoryChip';
-import { Card, CardContent } from '../ui/Card';
-import { DataTable, type DataTableColumn } from '../ui/DataTable';
+import { DataTable, type DataTableColumn } from '../shared/DataTable';
+import { EmptyState } from '../shared/EmptyState';
 import { SmallText } from '../ui/Typography';
+import { useTableLabels } from '../ui/tableLabels';
 import {
   type Conversation,
   extractConversations,
@@ -31,92 +33,91 @@ export const ConversationList = memo(function ConversationList({
 }: ConversationListProps) {
   const { t } = useTranslation('common');
   const { t: tPages } = useTranslation('pages');
+  const labels = useTableLabels<Conversation>(t('labels.conversations'));
   const conversations = useMemo(() => extractConversations(packets), [packets]);
 
   const columns: DataTableColumn<Conversation>[] = [
     {
       key: 'endpointA',
       header: tPages('packets.conversations.headerEndpointA'),
-      cellClassName: 'text-text-primary text-sm font-mono',
-      cell: (conv) => conv.endpointA,
+      sortValue: (conv) => conv.endpointA,
+      cell: (conv) => <span className="font-mono text-text-primary">{conv.endpointA}</span>,
     },
     {
       key: 'endpointB',
       header: tPages('packets.conversations.headerEndpointB'),
-      cellClassName: 'text-text-primary text-sm font-mono',
-      cell: (conv) => conv.endpointB,
+      sortValue: (conv) => conv.endpointB,
+      cell: (conv) => <span className="font-mono text-text-primary">{conv.endpointB}</span>,
     },
     {
       key: 'protocol',
       header: tPages('packets.list.headerProtocol'),
-      sortAccessor: (conv) => conv.protocol,
+      sortValue: (conv) => conv.protocol,
       cell: (conv) => <CategoryChip label={conv.protocol} />,
     },
     {
       key: 'packets',
       header: tPages('packets.conversations.headerPackets'),
       align: 'right',
-      sortAccessor: (conv) => conv.packets,
-      cellClassName: 'text-text-secondary text-sm font-mono',
-      cell: (conv) => conv.packets,
+      sortValue: (conv) => conv.packets,
+      cell: (conv) => <span className="font-mono">{conv.packets}</span>,
     },
     {
       key: 'bytes',
       header: tPages('packets.conversations.headerBytes'),
       align: 'right',
-      sortAccessor: (conv) => conv.bytes,
-      cellClassName: 'text-text-secondary text-sm font-mono',
-      cell: (conv) => formatBytes(conv.bytes),
+      sortValue: (conv) => conv.bytes,
+      cell: (conv) => <span className="font-mono">{formatBytes(conv.bytes)}</span>,
     },
     {
       key: 'duration',
       header: tPages('packets.stats.duration'),
       align: 'right',
-      sortAccessor: (conv) => getConversationDuration(conv),
-      cellClassName: 'text-text-muted text-sm font-mono',
-      cell: (conv) => formatDurationSeconds(getConversationDuration(conv)),
+      sortValue: (conv) => getConversationDuration(conv),
+      cell: (conv) => (
+        <span className="font-mono text-text-muted">
+          {formatDurationSeconds(getConversationDuration(conv))}
+        </span>
+      ),
     },
   ];
 
   if (conversations.length === 0) {
     return (
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent>
-          <div className="text-center py-8 text-text-muted">
-            <p className="text-sm">{tPages('packets.conversations.emptyTitle')}</p>
-            <SmallText>{tPages('packets.conversations.emptyDescription')}</SmallText>
-          </div>
-        </CardContent>
+      <Card>
+        <EmptyState
+          title={tPages('packets.conversations.emptyTitle')}
+          hint={tPages('packets.conversations.emptyDescription')}
+        />
       </Card>
     );
   }
 
   return (
-    <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent>
-        <div className="mb-heading flex-between">
-          <SmallText className="text-text-muted flex items-center gap-1">
-            {t('plurals.conversationCount', { count: conversations.length })}
-            <span>{t('jargon.groupedByTerm', { term: '5-tuple' })}</span>
-            <GlossaryPopover term="fiveTuple" />
-          </SmallText>
-          <SmallText className="text-text-muted">
-            {tPages('packets.conversations.clickToFilterHint')}
-          </SmallText>
-        </div>
+    <Card>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <SmallText className="flex items-center gap-1 text-text-muted">
+          {t('plurals.conversationCount', { count: conversations.length })}
+          <span>{t('jargon.groupedByTerm', { term: '5-tuple' })}</span>
+          <GlossaryPopover term="fiveTuple" />
+        </SmallText>
+        <SmallText className="text-text-muted">
+          {tPages('packets.conversations.clickToFilterHint')}
+        </SmallText>
+      </div>
 
-        <DataTable
-          rows={conversations}
-          columns={columns}
-          getRowKey={(conv) => conv.id}
-          defaultSort={{ key: 'packets', direction: 'desc' }}
-          onRowClick={(conv) => onSelectConversation(conv.filterExpression)}
-          rowClassName={() => 'hover:bg-bg-surface/50 transition-colors'}
-          stickyHeader
-          containerClassName="max-h-[500px] overflow-y-auto"
-          emptyMessage={null}
-        />
-      </CardContent>
+      <DataTable
+        rows={conversations}
+        columns={columns}
+        getRowKey={(conv) => conv.id}
+        caption={t('labels.conversations')}
+        labels={labels}
+        defaultSort={{ key: 'packets', direction: 'desc' }}
+        onRowClick={(conv) => onSelectConversation(conv.filterExpression)}
+        virtualize={{ rowHeight: 44 }}
+        maxHeight={500}
+        empty={null}
+      />
     </Card>
   );
 });

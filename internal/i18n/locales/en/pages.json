@@ -825,6 +825,7 @@
       "headerDestination": "Destination",
       "headerInfo": "Info",
       "headerLength": "Length",
+      "headerPacket": "Packets",
       "headerProtocol": "Protocol",
       "headerSource": "Source",
       "modeLabel": "Mode:",
@@ -833,6 +834,7 @@
       "noPacketsDescription": "Upload a PCAP file to analyze",
       "noPacketsTitle": "No packets to display",
       "showingCount": "Showing {{shown}} of {{total}} packets",
+      "timeColumn": "Time: {{mode}}",
       "waitingForStream": "Waiting for packet stream..."
     },
     "stats": {
@@ -1129,6 +1131,7 @@
       "searchAriaLabel": "Filter neighbors",
       "searchPlaceholder": "Filter by device or chassis ID…",
       "searchTitle": "Substring match on local device, remote device, chassis ID, or remote port (case-insensitive).",
+      "tableCaption": "Discovered neighbors",
       "ttlMinutes": "{{value}}m"
     },
     "page": {

@@ -1,4 +1,4 @@
-import { Database, FileBox, RefreshCw, RotateCcw, Search, Sparkles } from 'lucide-react';
+import { RefreshCw, RotateCcw, Sparkles } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type LibraryFileEntry, revertWalk, type WalkProvenance } from '../api/library-client';
@@ -8,14 +8,18 @@ import { RequireScope } from '../components/ui/RequireScope';
 import { useLibraryResource } from '../hooks/usePageResources';
 import { useToast } from '../hooks/useToast';
 import { useWalkSanitize } from '../hooks/useWalkSanitize';
+import { Alert } from '../shared/Alert';
 import { Button } from '../shared/Button';
+import { CategoryChip } from '../shared/CategoryChip';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
+import { DataTable, type DataTableColumn } from '../shared/DataTable';
+import { EmptyState } from '../shared/EmptyState';
+import { SearchInput } from '../shared/SearchInput';
+import { Skeleton } from '../shared/Skeleton';
 import { StatusPill } from '../shared/StatusPill';
 import { ActionButton } from '../ui/ActionButton';
-import { Card, CardContent } from '../ui/Card';
-import { DataTable, type DataTableColumn, type DataTableSelection } from '../ui/DataTable';
 import { useDialogLabels } from '../ui/dialogLabels';
-import { H2, SmallText } from '../ui/Typography';
+import { useTableLabels } from '../ui/tableLabels';
 
 /**
  * LibraryFilesPage is the shared browser for the read-only library
@@ -41,6 +45,7 @@ interface Props {
 function LibraryFilesView({ kind }: Props) {
   const dialogLabels = useDialogLabels();
   const { t: tPages } = useTranslation('pages');
+  const { t: tCommon } = useTranslation('common');
   const { data, loading, refetch, error } = useLibraryResource(kind, {
     intervalMs: 30000,
     errorToast: true,
@@ -74,23 +79,25 @@ function LibraryFilesView({ kind }: Props) {
     }
   };
 
-  const KindIcon = kind === 'walks' ? Database : FileBox;
-  const title =
-    kind === 'walks' ? tPages('libraryFiles.walksTitle') : tPages('libraryFiles.pcapsTitle');
   const kindLabel =
     kind === 'walks' ? tPages('libraryFiles.walksKind') : tPages('libraryFiles.pcapsKind');
+  const title =
+    kind === 'walks' ? tPages('libraryFiles.walksTitle') : tPages('libraryFiles.pcapsTitle');
   const emptyHint =
     kind === 'walks'
       ? tPages('libraryFiles.walksEmptyHint')
       : tPages('libraryFiles.pcapsEmptyHint');
+  const labels = useTableLabels<LibraryFileEntry>(kindLabel, (entry) =>
+    tPages('libraryFiles.selectRowAriaLabel', { name: entry.name }),
+  );
 
   const columns: DataTableColumn<LibraryFileEntry>[] = [
     {
       key: 'name',
       header: tPages('libraryFiles.nameHeader'),
-      cellClassName: 'font-mono text-xs',
+      sortValue: (entry) => entry.name,
       cell: (entry) => (
-        <span className="inline-flex items-center gap-compact">
+        <span className="inline-flex items-center gap-2 font-mono text-xs">
           {entry.name}
           {kind === 'walks' && entry.edited && (
             <StatusPill tone="warning" label={tPages('libraryFiles.editedTag')} />
@@ -102,29 +109,19 @@ function LibraryFilesView({ kind }: Props) {
       key: 'size',
       header: tPages('libraryFiles.sizeHeader'),
       align: 'right',
-      cellClassName: 'tabular-nums',
-      cell: (entry) => humanBytes(entry.sizeBytes),
+      sortValue: (entry) => entry.sizeBytes,
+      cell: (entry) => <span className="tabular-nums">{humanBytes(entry.sizeBytes)}</span>,
     },
     {
       key: 'source',
-      header: (
-        <span className="inline-flex items-center gap-1">
-          {tPages('libraryFiles.sourceHeader')}
-          <GlossaryPopover term="librarySource" />
-        </span>
-      ),
+      header: tPages('libraryFiles.sourceHeader'),
       cell: (entry) => <SourceBadge source={entry.source} />,
     },
     ...(kind === 'walks'
       ? [
           {
             key: 'content',
-            header: (
-              <span className="inline-flex items-center gap-1">
-                {tPages('libraryFiles.contentHeader')}
-                <GlossaryPopover term="walkProvenance" />
-              </span>
-            ),
+            header: tPages('libraryFiles.contentHeader'),
             cell: (entry: LibraryFileEntry) => <ProvenanceBadge provenance={entry.provenance} />,
           },
         ]
@@ -132,58 +129,45 @@ function LibraryFilesView({ kind }: Props) {
     {
       key: 'modified',
       header: tPages('libraryFiles.modifiedHeader'),
-      cellClassName: 'text-xs text-text-muted',
-      cell: (entry) => new Date(entry.modifiedAt).toLocaleString(),
+      sortValue: (entry) => entry.modifiedAt,
+      cell: (entry) => (
+        <span className="whitespace-nowrap text-xs text-text-muted">
+          {new Date(entry.modifiedAt).toLocaleString()}
+        </span>
+      ),
     },
-    ...(kind === 'walks'
-      ? [
-          {
-            key: 'actions',
-            header: tPages('libraryFiles.actionsHeader'),
-            align: 'right' as const,
-            cell: (entry: LibraryFileEntry) => (
-              <span className="inline-flex items-center gap-compact">
-                <ActionButton
-                  action="edit"
-                  variant="ghost"
-                  size="sm"
-                  icon={<Sparkles className="w-3.5 h-3.5" />}
-                  onClick={() => sanitizeState.setSanitizeTarget(entry.name)}
-                  aria-label={tPages('libraryFiles.sanitizeLabel', { name: entry.name })}
-                  data-testid={`sanitize-walk-${entry.name}`}
-                >
-                  {tPages('libraryFiles.sanitizeButton')}
-                </ActionButton>
-                {entry.edited && (
-                  <ActionButton
-                    action="edit"
-                    variant="ghost"
-                    size="sm"
-                    icon={<RotateCcw className="w-3.5 h-3.5" />}
-                    onClick={() => setRevertTarget(entry.name)}
-                    aria-label={tPages('libraryFiles.revertLabel', { name: entry.name })}
-                    data-testid={`revert-walk-${entry.name}`}
-                  >
-                    {tPages('libraryFiles.revertButton')}
-                  </ActionButton>
-                )}
-              </span>
-            ),
-          },
-        ]
-      : []),
   ];
 
-  const selection: DataTableSelection<LibraryFileEntry> | undefined =
+  const rowActions =
     kind === 'walks'
-      ? {
-          selectedKeys: sanitizeState.selected,
-          onToggleRow: sanitizeState.toggleRow,
-          onToggleAll: () => sanitizeState.toggleAll(filtered.map((e) => e.name)),
-          selectAllAriaLabel: tPages('libraryFiles.selectAllAriaLabel'),
-          selectRowAriaLabel: (entry) =>
-            tPages('libraryFiles.selectRowAriaLabel', { name: entry.name }),
-        }
+      ? (entry: LibraryFileEntry) => (
+          <>
+            <ActionButton
+              action="edit"
+              variant="ghost"
+              size="sm"
+              icon={<Sparkles className="h-3.5 w-3.5" />}
+              onClick={() => sanitizeState.setSanitizeTarget(entry.name)}
+              aria-label={tPages('libraryFiles.sanitizeLabel', { name: entry.name })}
+              data-testid={`sanitize-walk-${entry.name}`}
+            >
+              {tPages('libraryFiles.sanitizeButton')}
+            </ActionButton>
+            {entry.edited && (
+              <ActionButton
+                action="edit"
+                variant="ghost"
+                size="sm"
+                icon={<RotateCcw className="h-3.5 w-3.5" />}
+                onClick={() => setRevertTarget(entry.name)}
+                aria-label={tPages('libraryFiles.revertLabel', { name: entry.name })}
+                data-testid={`revert-walk-${entry.name}`}
+              >
+                {tPages('libraryFiles.revertButton')}
+              </ActionButton>
+            )}
+          </>
+        )
       : undefined;
 
   return (
@@ -192,102 +176,83 @@ function LibraryFilesView({ kind }: Props) {
         <ContentBundleUploader />
       </RequireScope>
 
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-comfortable">
-            <div className="flex items-center gap-default">
-              <div className="pad-xs rounded-lg bg-status-info/20">
-                <KindIcon className="w-6 h-6 text-status-info" />
-              </div>
-              <div>
-                <H2>{title}</H2>
-                <SmallText className="text-text-muted">
-                  {tPages('libraryFiles.fileCount', { count: entries.length })} ·{' '}
-                  {humanBytes(totalBytes)}
-                </SmallText>
-              </div>
-            </div>
-
-            <div className="flex min-w-0 items-center gap-compact">
-              {kind === 'walks' && sanitizeState.selected.size > 0 && (
-                <>
-                  <SmallText className="text-text-muted">
-                    {tPages('libraryFiles.selectedCount', { count: sanitizeState.selected.size })}
-                  </SmallText>
-                  <ActionButton
-                    action="edit"
-                    variant="ghost"
-                    size="sm"
-                    icon={<Sparkles className="w-4 h-4" />}
-                    onClick={() => sanitizeState.setBatchConfirmOpen(true)}
-                    data-testid="sanitize-selected-walks"
-                  >
-                    {tPages('libraryFiles.sanitizeSelectedButton')}
-                  </ActionButton>
-                </>
-              )}
-              <div className="relative min-w-0 flex-1 sm:flex-none">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={tPages('libraryFiles.searchPlaceholder')}
-                  aria-label={tPages('libraryFiles.filterAriaLabel')}
-                  className="w-full sm:w-64 rounded-md border border-surface-border bg-bg-base/40 pl-7 pr-3 py-compact-md text-xs text-text-primary placeholder:text-text-muted focus:border-status-info/40 focus:outline-none focus:ring-1 focus:ring-status-info/30"
-                />
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={refetch}
-                icon={<RefreshCw className="w-4 h-4" />}
-                disabled={loading}
-                title={tPages('libraryFiles.refreshTitle')}
-              >
-                {tPages('libraryFiles.refreshButton')}
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent>
-          {loading && entries.length === 0 ? (
-            <div className="py-10 text-center">
-              <SmallText className="text-text-muted">
-                {tPages('libraryFiles.loadingKind', { kind: kindLabel })}
-              </SmallText>
-            </div>
-          ) : error ? (
-            <SmallText className="text-status-error">
-              {tPages('libraryFiles.loadFailed', { error: error.message })}
-            </SmallText>
-          ) : entries.length === 0 ? (
-            <div className="py-10 text-center">
-              <SmallText className="text-text-muted">
-                {tPages('libraryFiles.noneInstalled', { kind: kindLabel })}
-              </SmallText>
-              <p className="mt-inline text-xs text-text-muted">{emptyHint}</p>
-            </div>
-          ) : (
-            <DataTable
-              rows={filtered}
-              columns={columns}
-              getRowKey={(entry) => entry.name}
-              rowClassName={() => 'border-b border-surface-border last:border-0'}
-              data-testid={`library-${kind}-table`}
-              selection={selection}
-              emptyMessage={
-                <div className="py-6 text-center text-xs text-text-muted">
-                  {tPages('libraryFiles.noMatchEntries', { query: search })}
-                </div>
-              }
+      <div className="stack">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="flex items-center gap-1 text-sm text-text-muted">
+            {tPages('libraryFiles.fileCount', { count: entries.length })} · {humanBytes(totalBytes)}
+            <GlossaryPopover term="librarySource" />
+          </p>
+          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
+            {kind === 'walks' && sanitizeState.selected.size > 0 && (
+              <>
+                <span className="text-sm text-text-muted">
+                  {tPages('libraryFiles.selectedCount', { count: sanitizeState.selected.size })}
+                </span>
+                <ActionButton
+                  action="edit"
+                  variant="secondary"
+                  size="sm"
+                  icon={<Sparkles className="h-4 w-4" />}
+                  onClick={() => sanitizeState.setBatchConfirmOpen(true)}
+                  data-testid="sanitize-selected-walks"
+                >
+                  {tPages('libraryFiles.sanitizeSelectedButton')}
+                </ActionButton>
+              </>
+            )}
+            <SearchInput
+              value={search}
+              onValueChange={setSearch}
+              label={tPages('libraryFiles.filterAriaLabel')}
+              clearLabel={tCommon('accessibility.clearSearch')}
+              placeholder={tPages('libraryFiles.searchPlaceholder')}
+              className="min-w-48 flex-1 sm:max-w-64"
             />
-          )}
-        </CardContent>
-      </Card>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={refetch}
+              icon={<RefreshCw className="h-4 w-4" />}
+              disabled={loading}
+              title={tPages('libraryFiles.refreshTitle')}
+            >
+              {tPages('libraryFiles.refreshButton')}
+            </Button>
+          </div>
+        </div>
+
+        {loading && entries.length === 0 ? (
+          <div role="status" aria-label={tPages('libraryFiles.loadingKind', { kind: kindLabel })}>
+            <Skeleton className="h-40 w-full" />
+          </div>
+        ) : error ? (
+          <Alert tone="error">{tPages('libraryFiles.loadFailed', { error: error.message })}</Alert>
+        ) : entries.length === 0 ? (
+          <EmptyState
+            title={tPages('libraryFiles.noneInstalled', { kind: kindLabel })}
+            hint={emptyHint}
+          />
+        ) : (
+          <DataTable
+            rows={filtered}
+            columns={columns}
+            getRowKey={(entry) => entry.name}
+            caption={title}
+            labels={labels}
+            data-testid={`library-${kind}-table`}
+            {...(kind === 'walks'
+              ? {
+                  selection: {
+                    selectedKeys: sanitizeState.selected,
+                    onChange: sanitizeState.setSelected,
+                  },
+                }
+              : {})}
+            {...(rowActions ? { rowActions } : {})}
+            empty={<EmptyState title={tPages('libraryFiles.noMatchEntries', { query: search })} />}
+          />
+        )}
+      </div>
 
       {kind === 'walks' && (
         <ConfirmDialog
@@ -350,23 +315,12 @@ function LibraryFilesView({ kind }: Props) {
 
 function SourceBadge({ source }: { source: LibraryFileEntry['source'] }) {
   const { t } = useTranslation('pages');
-  const styles: Record<LibraryFileEntry['source'], string> = {
-    starter: 'border-brand-primary/40 bg-brand-primary/10 text-brand-primary-strong',
-    bundle: 'border-status-info/40 bg-status-info/10 text-status-info-strong',
-    user: 'border-status-success/40 bg-status-success/10 text-status-success-strong',
-  };
   const labels: Record<LibraryFileEntry['source'], string> = {
     starter: t('libraryFiles.sourceStarter'),
     bundle: t('libraryFiles.sourceBundle'),
     user: t('libraryFiles.sourceUser'),
   };
-  return (
-    <span
-      className={`inline-block rounded-full border px-cell py-0.5 text-[10px] font-medium capitalize ${styles[source]}`}
-    >
-      {labels[source]}
-    </span>
-  );
+  return <CategoryChip label={labels[source]} />;
 }
 
 /**
@@ -379,21 +333,15 @@ function ProvenanceBadge({ provenance }: { provenance: LibraryFileEntry['provena
   if (!provenance) {
     return <span className="text-xs text-text-muted">{t('libraryFiles.contentUnknown')}</span>;
   }
-  const styles: Record<WalkProvenance, string> = {
-    captured: 'border-status-success/40 bg-status-success/10 text-status-success-strong',
-    generated: 'border-status-warning/40 bg-status-warning/10 text-status-warning-strong',
+  const tones: Record<WalkProvenance, 'success' | 'warning'> = {
+    captured: 'success',
+    generated: 'warning',
   };
   const labels: Record<WalkProvenance, string> = {
     captured: t('libraryFiles.contentCaptured'),
     generated: t('libraryFiles.contentGenerated'),
   };
-  return (
-    <span
-      className={`inline-block rounded-full border px-cell py-0.5 text-[10px] font-medium capitalize ${styles[provenance]}`}
-    >
-      {labels[provenance]}
-    </span>
-  );
+  return <StatusPill tone={tones[provenance]} label={labels[provenance]} />;
 }
 
 function humanBytes(n: number): string {

@@ -2,11 +2,13 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PcapPacket } from '../../api/types';
 import { useTimeDisplay } from '../../hooks/useTimeDisplay';
+import { Button } from '../../shared/Button';
+import { Card } from '../../shared/Card';
 import { CategoryChip } from '../../shared/CategoryChip';
-import { Card, CardContent } from '../../ui/Card';
-import { DataTable, type DataTableColumn } from '../../ui/DataTable';
-import { Tooltip } from '../../ui/Tooltip';
+import { DataTable, type DataTableColumn } from '../../shared/DataTable';
+import { EmptyState } from '../../shared/EmptyState';
 import { SmallText } from '../../ui/Typography';
+import { useTableLabels } from '../../ui/tableLabels';
 import { formatTimeByMode, getTimeDisplayLabel } from '../../utils/time-display';
 
 interface PcapPacketListProps {
@@ -14,13 +16,14 @@ interface PcapPacketListProps {
   totalPackets: number;
   selectedPacketId: string | null;
   onSelectPacket: (packet: PcapPacket) => void;
+  /** The coloring rule matching a packet. Shown as a swatch on its number. */
   getRowStyle?: (packet: PcapPacket) => React.CSSProperties | undefined;
 }
 
 /**
  * PCAP Packet List Component
  *
- * Displays a table of pre-filtered packets with time mode cycling.
+ * Displays a table of pre-filtered packets, windowed once there are hundreds.
  * Filtering is handled externally via the FilterBar + useDisplayFilter hook.
  */
 export const PcapPacketList = memo(function PcapPacketList({
@@ -37,48 +40,50 @@ export const PcapPacketList = memo(function PcapPacketList({
   // preceding row, so the column needs the row's position, not just the row.
   const positionById = new Map(packets.map((packet, idx) => [packet.id, idx]));
 
+  const labels = useTableLabels<PcapPacket>(t('packets.list.headerPacket').toLowerCase());
+
   const columns: DataTableColumn<PcapPacket>[] = [
     {
       key: 'number',
       header: '#',
-      cellClassName: 'text-text-muted text-xs font-mono',
-      cell: (packet) => packet.number,
+      cell: (packet) => (
+        // The coloring rule has no row to paint (rows are one height so the
+        // list can be windowed), so it colours the number.
+        <span
+          data-testid={`pcap-packet-${packet.number}`}
+          className="inline-block rounded px-1.5 font-mono text-xs text-text-muted"
+          style={getRowStyle?.(packet)}
+        >
+          {packet.number}
+        </span>
+      ),
     },
     {
       key: 'time',
-      header: (
-        <Tooltip text={t('packets.list.cycleTimeModeTitle')}>
-          <button
-            type="button"
-            onClick={cycleTimeMode}
-            className="uppercase tracking-wide hover:text-brand-accent"
-          >
-            {getTimeDisplayLabel(timeMode)}
-          </button>
-        </Tooltip>
-      ),
-      cellClassName: 'text-text-secondary text-xs font-mono',
+      header: getTimeDisplayLabel(timeMode),
       cell: (packet) => {
         const idx = positionById.get(packet.id) ?? 0;
-        return formatTimeByMode(
-          packet.timestamp,
-          timeMode,
-          packets[0]?.timestamp ?? null,
-          packets[idx - 1]?.timestamp ?? null,
+        return (
+          <span className="whitespace-nowrap font-mono text-xs">
+            {formatTimeByMode(
+              packet.timestamp,
+              timeMode,
+              packets[0]?.timestamp ?? null,
+              packets[idx - 1]?.timestamp ?? null,
+            )}
+          </span>
         );
       },
     },
     {
       key: 'source',
       header: t('packets.list.headerSource'),
-      cellClassName: 'text-text-primary text-sm font-mono',
-      cell: (packet) => packet.sourceIp,
+      cell: (packet) => <span className="font-mono text-text-primary">{packet.sourceIp}</span>,
     },
     {
       key: 'destination',
       header: t('packets.list.headerDestination'),
-      cellClassName: 'text-text-primary text-sm font-mono',
-      cell: (packet) => packet.destIp,
+      cell: (packet) => <span className="font-mono text-text-primary">{packet.destIp}</span>,
     },
     {
       key: 'protocol',
@@ -89,63 +94,63 @@ export const PcapPacketList = memo(function PcapPacketList({
       key: 'length',
       header: t('packets.list.headerLength'),
       align: 'right',
-      cellClassName: 'text-text-muted text-xs',
-      cell: (packet) => packet.length,
+      cell: (packet) => <span className="font-mono text-xs">{packet.length}</span>,
     },
     {
       key: 'info',
       header: t('packets.list.headerInfo'),
-      cellClassName: 'text-text-muted text-xs truncate max-w-xs',
-      cell: (packet) => packet.info,
+      cell: (packet) => (
+        <span className="block max-w-xs truncate text-xs text-text-muted" title={packet.info}>
+          {packet.info}
+        </span>
+      ),
     },
   ];
 
   if (totalPackets === 0) {
     return (
-      <Card className="border-surface-border bg-bg-surface/70 h-full">
-        <CardContent className="h-full flex-center text-text-muted">
-          <div className="text-center">
-            <p className="text-sm">{t('packets.list.noPacketsTitle')}</p>
-            <SmallText>{t('packets.list.noPacketsDescription')}</SmallText>
-          </div>
-        </CardContent>
+      <Card className="h-full">
+        <EmptyState
+          title={t('packets.list.noPacketsTitle')}
+          hint={t('packets.list.noPacketsDescription')}
+        />
       </Card>
     );
   }
 
   return (
-    <Card className="border-surface-border bg-bg-surface/70 h-full flex flex-col">
-      <CardContent className="h-full flex flex-col">
-        <div className="mb-heading flex-between">
-          <SmallText className="text-text-muted">
-            {t('packets.list.showingCount', { shown: packets.length, total: totalPackets })}
-          </SmallText>
-        </div>
+    <Card className="flex h-full flex-col">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <SmallText className="text-text-muted">
+          {t('packets.list.showingCount', { shown: packets.length, total: totalPackets })}
+        </SmallText>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={cycleTimeMode}
+          title={t('packets.list.cycleTimeModeTitle')}
+        >
+          {t('packets.list.timeColumn', { mode: getTimeDisplayLabel(timeMode) })}
+        </Button>
+      </div>
 
-        <DataTable
-          rows={packets}
-          columns={columns}
-          getRowKey={(packet) => packet.id}
-          rowTestId={(packet) => `pcap-packet-${packet.number}`}
-          onRowClick={onSelectPacket}
-          rowStyle={getRowStyle}
-          rowClassName={(packet) =>
-            `transition-colors ${
-              selectedPacketId === packet.id ? 'bg-brand-primary/30' : 'hover:bg-bg-surface/50'
-            }`
-          }
-          stickyHeader
-          containerClassName="flex-1 min-h-0 overflow-y-auto"
-          emptyMessage={
-            <div className="flex-1 min-h-0 flex-center rounded-xl border border-surface-border text-text-muted">
-              <div className="text-center">
-                <p className="text-sm">{t('packets.list.noMatchTitle')}</p>
-                <SmallText>{t('packets.list.noMatchDescription')}</SmallText>
-              </div>
-            </div>
-          }
-        />
-      </CardContent>
+      <DataTable
+        rows={packets}
+        columns={columns}
+        getRowKey={(packet) => packet.id}
+        caption={t('packets.list.headerPacket')}
+        labels={labels}
+        onRowClick={onSelectPacket}
+        {...(selectedPacketId ? { selectedRowKey: selectedPacketId } : {})}
+        virtualize={{ rowHeight: 44 }}
+        maxHeight={560}
+        empty={
+          <EmptyState
+            title={t('packets.list.noMatchTitle')}
+            hint={t('packets.list.noMatchDescription')}
+          />
+        }
+      />
     </Card>
   );
 });

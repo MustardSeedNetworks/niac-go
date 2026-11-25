@@ -11,18 +11,20 @@ import type {
 import { GlossaryPopover } from '../components/GlossaryPopover';
 import { useToast } from '../hooks/useToast';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
+import { DataTable, type DataTableColumn } from '../shared/DataTable';
+import { StatusPill } from '../shared/StatusPill';
 import { ActionButton } from '../ui/ActionButton';
 import { Card, CardContent } from '../ui/Card';
-import { DataTable, type DataTableColumn } from '../ui/DataTable';
 import { useDialogLabels } from '../ui/dialogLabels';
 import { Tooltip } from '../ui/Tooltip';
+import { useTableLabels } from '../ui/tableLabels';
 
 type Severity = 'error' | 'warning' | 'info';
 
-const SEVERITY_BADGE: Record<Severity, string> = {
-  error: 'bg-status-error/20 text-status-error-strong ring-status-error/40',
-  warning: 'bg-status-warning/20 text-status-warning-strong ring-status-warning/40',
-  info: 'bg-status-info/20 text-status-info-strong ring-status-info/40',
+const SEVERITY_TONE: Record<Severity, 'error' | 'warning' | 'info'> = {
+  error: 'error',
+  warning: 'warning',
+  info: 'info',
 };
 
 const SEVERITY_ORDER: Severity[] = ['error', 'warning', 'info'];
@@ -139,24 +141,21 @@ export function WalkValidatorPage() {
     [batchResponse],
   );
 
+  const labels = useTableLabels(t('walkValidator.issuesTable.message').toLowerCase());
   const issueColumns: DataTableColumn<WalkValidationIssue>[] = [
     {
       key: 'line',
       header: t('walkValidator.issuesTable.line'),
-      headerClassName: 'w-16',
-      cellClassName: 'font-mono text-xs text-text-muted',
-      cell: (issue) => issue.line,
+      cell: (issue) => <span className="font-mono text-xs text-text-muted">{issue.line}</span>,
     },
     {
       key: 'severity',
       header: t('walkValidator.issuesTable.severity'),
-      headerClassName: 'w-24',
       cell: (issue) => (
-        <span
-          className={`rounded px-cell py-0.5 text-[10px] font-medium ring-1 ${SEVERITY_BADGE[issue.severity as Severity] ?? ''}`}
-        >
-          {issue.severity}
-        </span>
+        <StatusPill
+          tone={SEVERITY_TONE[issue.severity as Severity] ?? 'unknown'}
+          label={issue.severity}
+        />
       ),
     },
     {
@@ -167,14 +166,14 @@ export function WalkValidatorPage() {
     {
       key: 'oid',
       header: t('walkValidator.issuesTable.oid'),
-      cellClassName: 'font-mono text-xs text-text-muted',
-      cell: (issue) => issue.oid ?? '',
+      cell: (issue) => <span className="font-mono text-xs text-text-muted">{issue.oid ?? ''}</span>,
     },
     {
       key: 'original',
       header: t('walkValidator.issuesTable.original'),
-      cellClassName: 'truncate font-mono text-xs text-text-muted',
-      cell: (issue) => issue.original,
+      cell: (issue) => (
+        <span className="truncate font-mono text-xs text-text-muted">{issue.original}</span>
+      ),
     },
   ];
 
@@ -182,33 +181,26 @@ export function WalkValidatorPage() {
     {
       key: 'filename',
       header: t('walkValidator.batchTable.filename'),
-      cellClassName: 'font-mono text-xs',
-      cell: (result) => result.filename,
+      cell: (result) => <span className="font-mono text-xs">{result.filename}</span>,
     },
     {
       key: 'status',
       header: t('walkValidator.batchTable.status'),
-      headerClassName: 'w-24',
       cell: (result) => (
-        <span
-          className={`rounded px-cell py-0.5 text-[10px] font-medium ring-1 ${
+        <StatusPill
+          tone={result.valid ? 'success' : 'error'}
+          label={
             result.valid
-              ? 'bg-status-success/20 text-status-success-strong ring-status-success/40'
-              : 'bg-status-error/20 text-status-error-strong ring-status-error/40'
-          }`}
-        >
-          {result.valid
-            ? t('walkValidator.batchStatusValid')
-            : t('walkValidator.batchStatusInvalid')}
-        </span>
+              ? t('walkValidator.batchStatusValid')
+              : t('walkValidator.batchStatusInvalid')
+          }
+        />
       ),
     },
     {
       key: 'issues',
       header: t('walkValidator.batchTable.issues'),
-      headerClassName: 'w-24',
-      cellClassName: 'text-text-muted',
-      cell: (result) => result.issues.length,
+      cell: (result) => <span className="text-text-muted">{result.issues.length}</span>,
     },
   ];
 
@@ -332,29 +324,22 @@ export function WalkValidatorPage() {
                   valid: response.result.validLines,
                 })}
               </span>
-              <span
-                className={`rounded px-cell py-0.5 text-xs font-medium ring-1 ${
+              <StatusPill
+                tone={response.result.valid ? 'success' : 'error'}
+                label={
                   response.result.valid
-                    ? 'bg-status-success/20 text-status-success-strong ring-status-success/40'
-                    : 'bg-status-error/20 text-status-error-strong ring-status-error/40'
-                }`}
-              >
-                {response.result.valid
-                  ? t('walkValidator.resultValid')
-                  : t('walkValidator.resultInvalid')}
-              </span>
+                    ? t('walkValidator.resultValid')
+                    : t('walkValidator.resultInvalid')
+                }
+              />
               {SEVERITY_ORDER.map((sev) => (
-                <span
-                  key={sev}
-                  className={`rounded px-cell py-0.5 text-xs font-medium ring-1 ${SEVERITY_BADGE[sev]}`}
-                >
-                  {sev}: {counts[sev]}
-                </span>
+                <StatusPill key={sev} tone={SEVERITY_TONE[sev]} label={`${sev}: ${counts[sev]}`} />
               ))}
               {typeof response.result.fixedCount === 'number' && (
-                <span className="rounded bg-status-success/20 px-cell py-0.5 text-xs font-medium text-status-success-strong ring-1 ring-status-success/40">
-                  {t('walkValidator.fixedCount', { fixed: response.result.fixedCount })}
-                </span>
+                <StatusPill
+                  tone="success"
+                  label={t('walkValidator.fixedCount', { fixed: response.result.fixedCount })}
+                />
               )}
             </header>
 
@@ -382,8 +367,9 @@ export function WalkValidatorPage() {
                 rows={visibleIssues}
                 columns={issueColumns}
                 getRowKey={(issue) => `${issue.line}-${issue.oid ?? ''}-${issue.message}`}
-                emptyMessage={null}
-                rowClassName={() => 'text-text-primary hover:bg-bg-base/40'}
+                caption={t('walkValidator.resultHeading')}
+                labels={labels}
+                empty={null}
               />
             )}
             {filteredIssues.length > ISSUES_DISPLAY_CAP && (
@@ -405,17 +391,14 @@ export function WalkValidatorPage() {
             <header className="flex flex-wrap items-baseline gap-comfortable">
               <h2 className="heading-3 text-text-primary">{t('walkValidator.batchHeading')}</h2>
               <span className="text-sm text-text-muted">{batchResponse.message}</span>
-              <span
-                className={`rounded px-cell py-0.5 text-xs font-medium ring-1 ${
+              <StatusPill
+                tone={batchResponse.success ? 'success' : 'error'}
+                label={
                   batchResponse.success
-                    ? 'bg-status-success/20 text-status-success-strong ring-status-success/40'
-                    : 'bg-status-error/20 text-status-error-strong ring-status-error/40'
-                }`}
-              >
-                {batchResponse.success
-                  ? t('walkValidator.batchStatusValid')
-                  : t('walkValidator.batchStatusInvalid')}
-              </span>
+                    ? t('walkValidator.batchStatusValid')
+                    : t('walkValidator.batchStatusInvalid')
+                }
+              />
             </header>
 
             {batchResults.length === 0 ? (
@@ -425,8 +408,9 @@ export function WalkValidatorPage() {
                 rows={batchResults}
                 columns={batchColumns}
                 getRowKey={(result) => result.filename}
-                emptyMessage={null}
-                rowClassName={() => 'text-text-primary hover:bg-bg-base/40'}
+                caption={t('walkValidator.batchHeading')}
+                labels={labels}
+                empty={null}
               />
             )}
           </CardContent>
