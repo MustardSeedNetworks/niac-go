@@ -5,6 +5,23 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.129.5](https://github.com/MustardSeedNetworks/niac-go/compare/v0.129.4...v0.129.5) (2026-11-25)
+
+
+### Bug Fixes
+
+* **deps:** update dependency lucide-react to v1.75.0 ([#3115](https://github.com/MustardSeedNetworks/niac-go/issues/3115)) ([c105b79](https://github.com/MustardSeedNetworks/niac-go/commit/c105b79e176a0e7b56cdd69717edf377aab7feab))
+
+
+### Continuous Integration
+
+* shard the race detector and run e2e in the merge queue only ([#3103](https://github.com/MustardSeedNetworks/niac-go/issues/3103)) ([dfbfe78](https://github.com/MustardSeedNetworks/niac-go/commit/dfbfe78a1f3936341770cd7c65082b23541de052)), closes [#3098](https://github.com/MustardSeedNetworks/niac-go/issues/3098)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#3025](https://github.com/MustardSeedNetworks/niac-go/issues/3025)) ([8a721cc](https://github.com/MustardSeedNetworks/niac-go/commit/8a721cc1b854490e945a9a977c90dfc817c72c22))
+
 ## [0.129.4](https://github.com/MustardSeedNetworks/niac-go/compare/v0.129.3...v0.129.4) (2026-11-24)
 
 
