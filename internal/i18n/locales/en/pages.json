@@ -995,10 +995,12 @@
     "title": "Simulation"
   },
   "segments": {
+    "description": "Read-only view of the devices in each VLAN segment the active config describes.",
     "deviceNoun_one": "device",
     "deviceNoun_other": "devices",
     "empty": "No segments defined in the loaded configuration.",
     "emptySegmentDevices": "No devices in this segment.",
+    "eyebrow": "Library",
     "label": "Segments",
     "title": "Segments",
     "untaggedHeader": "Untagged",

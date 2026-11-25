@@ -513,7 +513,9 @@
     "vlanHeader": "VLAN {{tag}}",
     "untaggedHeader": "Untagged",
     "emptySegmentDevices": "No hay dispositivos en este segmento.",
-    "empty": "No hay segmentos definidos en la configuración cargada."
+    "empty": "No hay segmentos definidos en la configuración cargada.",
+    "eyebrow": "Biblioteca",
+    "description": "Vista de solo lectura de los dispositivos de cada segmento VLAN que describe la configuración activa."
   },
   "deviceLibrary": {
     "label": "Biblioteca de dispositivos",
