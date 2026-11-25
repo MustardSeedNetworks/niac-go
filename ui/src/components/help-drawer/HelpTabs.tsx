@@ -20,8 +20,12 @@ interface HelpTabsProps {
  * sideways, which is right for Settings' five tabs and wrong for Help's eight:
  * the strip is about 850px inside a drawer of about 455px, so Glossary,
  * Shortcuts and FAQ sit off-screen where nobody finds them (D1,
- * e2e/reachability.spec.ts). Same roles, same keyboard model as SettingsTabs;
- * only the overflow differs. Goes if the shared tabs gain a wrapping mode.
+ * e2e/reachability.spec.ts). Same roles and arrow keys as SettingsTabs, with two
+ * differences: it wraps, and every tab is a Tab stop rather than only the active
+ * one. The roving tabindex is what lets Tab leave a modal drawer from a section
+ * with nothing tabbable (the shared dialog trap counts `tabindex="-1"` buttons
+ * as focusable, so its last stop is a tab it can never land on); all tabs
+ * tabbable keeps the last tab stop real. Goes with the shared fixes.
  */
 export function HelpTabs({ tabs, value, onChange, label, children }: HelpTabsProps) {
   const prefix = useId();
@@ -65,7 +69,6 @@ export function HelpTabs({ tabs, value, onChange, label, children }: HelpTabsPro
                 role="tab"
                 aria-selected={selected}
                 aria-controls={`${prefix}-panel`}
-                tabIndex={selected ? 0 : -1}
                 onClick={() => onChange(tab.id)}
                 className={cn(
                   '-mb-px inline-flex min-h-11 items-center gap-2 border-b-2 px-3 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-primary',
@@ -81,16 +84,7 @@ export function HelpTabs({ tabs, value, onChange, label, children }: HelpTabsPro
           })}
         </div>
       </div>
-      {/* tabIndex 0 (WAI-ARIA tabs pattern): a section with nothing tabbable, like
-          Overview, still ends the dialog's tab order on something the focus trap
-          can wrap from. Without it Tab leaves the modal drawer. */}
-      <div
-        id={`${prefix}-panel`}
-        role="tabpanel"
-        tabIndex={0}
-        aria-labelledby={tabId(value)}
-        className="pt-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
-      >
+      <div id={`${prefix}-panel`} role="tabpanel" aria-labelledby={tabId(value)} className="pt-4">
         {children}
       </div>
     </div>
