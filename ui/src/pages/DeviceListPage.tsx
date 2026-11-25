@@ -17,7 +17,6 @@ import { DeviceTableView } from '../components/device-list/DeviceTableView';
 import { useDeviceListState } from '../components/device-list/useDeviceListState';
 import { DeviceListProvider } from '../contexts/DeviceListContext';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
-import { Card, CardContent } from '../ui/Card';
 import { useDialogLabels } from '../ui/dialogLabels';
 
 export function DeviceListPage() {
@@ -44,7 +43,7 @@ export function DeviceListPage() {
     handleViewModeChange,
     selectedDevices,
     toggleDeviceSelection,
-    handleSelectAll,
+    setSelection,
     clearSelection,
     message,
     setMessage,
@@ -67,38 +66,35 @@ export function DeviceListPage() {
 
   return (
     <div className="stack-xl">
-      {/* Header section */}
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="stack-lg">
-          <DeviceListHeader
-            deviceCount={devices.length}
-            filteredDevices={filteredDevices}
-            loading={loading}
-            onRefresh={refetch}
-          />
+      <div className="stack">
+        <DeviceListHeader
+          deviceCount={devices.length}
+          filteredDevices={filteredDevices}
+          loading={loading}
+          onRefresh={refetch}
+        />
 
-          <DeviceSearchFilters
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            typeFilter={typeFilter}
-            onTypeFilterChange={setTypeFilter}
-            protocolFilter={protocolFilter}
-            onProtocolFilterChange={setProtocolFilter}
-            viewMode={viewMode}
-            onViewModeChange={handleViewModeChange}
-            deviceTypes={deviceTypes}
-            protocols={protocols}
-          />
+        <DeviceSearchFilters
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          typeFilter={typeFilter}
+          onTypeFilterChange={setTypeFilter}
+          protocolFilter={protocolFilter}
+          onProtocolFilterChange={setProtocolFilter}
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
+          deviceTypes={deviceTypes}
+          protocols={protocols}
+        />
 
-          <DeviceBulkActions
-            selectedCount={selectedDevices.size}
-            onDeleteSelected={() => setShowBulkDeleteConfirm(true)}
-            onClearSelection={clearSelection}
-          />
+        <DeviceBulkActions
+          selectedCount={selectedDevices.size}
+          onDeleteSelected={() => setShowBulkDeleteConfirm(true)}
+          onClearSelection={clearSelection}
+        />
 
-          <DeviceStatusMessage message={message} onDismiss={() => setMessage(null)} />
-        </CardContent>
-      </Card>
+        <DeviceStatusMessage message={message} onDismiss={() => setMessage(null)} />
+      </div>
 
       {/* Loading state */}
       {loading && !deviceList && <DeviceListLoadingState viewMode={viewMode} />}
@@ -120,7 +116,7 @@ export function DeviceListPage() {
           devices={filteredDevices}
           selectedDevices={selectedDevices}
           onSelectDevice={toggleDeviceSelection}
-          onSelectAll={handleSelectAll}
+          onSelectionChange={setSelection}
           onEdit={(hostname) => navigate(`/device-config/${encodeURIComponent(hostname)}`)}
           onClone={(hostname) => setShowCloneModal(hostname)}
           onDelete={(hostname) => setShowDeleteConfirm(hostname)}

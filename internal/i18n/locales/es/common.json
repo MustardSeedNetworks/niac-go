@@ -76,7 +76,8 @@
     "disabled": "Deshabilitado",
     "enabled": "Habilitado",
     "none": "Ninguno",
-    "required": "Obligatorio"
+    "required": "Obligatorio",
+    "view": "Vista"
   },
   "accessibility": {
     "openHelp": "Abrir ayuda",
@@ -126,7 +127,13 @@
   "table": {
     "showingResults": "Mostrando {{shown}} de {{total}} resultados",
     "selectAll": "Seleccionar todo",
-    "selected": "{{count}} seleccionados"
+    "selected": "{{count}} seleccionados",
+    "actions": "Acciones de la fila",
+    "loading": "Cargando {{subject}}",
+    "nextPage": "Página siguiente",
+    "pageStatus": "Página {{page}} de {{pages}} ({{total}} filas)",
+    "pagination": "Paginación de la tabla",
+    "previousPage": "Página anterior"
   },
   "errorBoundary": {
     "title": "Algo salió mal",

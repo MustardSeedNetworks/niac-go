@@ -6,7 +6,6 @@ import type { Device } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../shared/Button';
 import { ActionButton } from '../../ui/ActionButton';
-import { H2, P } from '../../ui/Typography';
 import { exportDevicesAsCSV, exportDevicesAsJSON, exportDevicesAsYAML } from '../../utils/export';
 
 interface DeviceListHeaderProps {
@@ -42,22 +41,15 @@ export function DeviceListHeader({
   }, [exportMenuOpen]);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-comfortable">
-      <div>
-        <H2 className="flex items-center gap-compact">
-          <Server className={`${iconSizes.lg} text-brand-accent`} />
-          {t('list.deviceConfigTitle')}
-        </H2>
-        <P className="text-text-muted mt-tight">
-          {t('list.deviceConfigDescription')}
-          {deviceCount > 0 && (
-            <output className="ml-inline text-brand-accent">
-              {tCommon('plurals.deviceCount', { count: deviceCount })}
-            </output>
-          )}
-        </P>
-      </div>
-      <div className="flex gap-compact">
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <p className="text-sm text-text-muted">
+        {deviceCount > 0 ? (
+          <output className="figure">
+            {tCommon('plurals.deviceCount', { count: deviceCount })}
+          </output>
+        ) : null}
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
         <Button
           variant="secondary"
           icon={<Server className={iconSizes.md} />}
@@ -98,7 +90,7 @@ export function DeviceListHeader({
             <ChevronDown className={iconSizes.sm} aria-hidden="true" />
           </Button>
           {exportMenuOpen && (
-            <div className="absolute right-0 z-10 mt-tight w-44 rounded-lg border border-surface-border bg-bg-surface shadow-lg">
+            <div className="absolute right-0 z-10 mt-1 w-44 rounded-lg border border-surface-border bg-surface-raised shadow-lg">
               <button
                 type="button"
                 onClick={() => {

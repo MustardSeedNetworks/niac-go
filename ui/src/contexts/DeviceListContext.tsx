@@ -5,7 +5,7 @@ interface DeviceListContextValue {
   devices: Device[];
   selectedDevices: Set<string>;
   onSelectDevice: (hostname: string) => void;
-  onSelectAll: () => void;
+  onSelectionChange: (hostnames: ReadonlySet<string>) => void;
   onEdit: (hostname: string) => void;
   onClone: (hostname: string) => void;
   onDelete: (hostname: string) => void;
@@ -26,7 +26,7 @@ interface DeviceListProviderProps {
   devices: Device[];
   selectedDevices: Set<string>;
   onSelectDevice: (hostname: string) => void;
-  onSelectAll: () => void;
+  onSelectionChange: (hostnames: ReadonlySet<string>) => void;
   onEdit: (hostname: string) => void;
   onClone: (hostname: string) => void;
   onDelete: (hostname: string) => void;
@@ -38,7 +38,7 @@ export function DeviceListProvider({
   devices,
   selectedDevices,
   onSelectDevice,
-  onSelectAll,
+  onSelectionChange,
   onEdit,
   onClone,
   onDelete,
@@ -50,7 +50,7 @@ export function DeviceListProvider({
       devices,
       selectedDevices,
       onSelectDevice,
-      onSelectAll,
+      onSelectionChange,
       onEdit,
       onClone,
       onDelete,
@@ -60,7 +60,7 @@ export function DeviceListProvider({
       devices,
       selectedDevices,
       onSelectDevice,
-      onSelectAll,
+      onSelectionChange,
       onEdit,
       onClone,
       onDelete,

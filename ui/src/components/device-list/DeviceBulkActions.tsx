@@ -21,17 +21,16 @@ export function DeviceBulkActions({
   }
 
   return (
-    <div className="flex items-center gap-comfortable pad-sm rounded-lg bg-brand-primary/10 border border-brand-primary/30">
-      <span className="text-sm text-brand-primary-strong">
+    <div className="flex flex-wrap items-center gap-2" data-testid="device-bulk-actions">
+      <span className="text-sm font-medium text-text-primary">
         {tCommon('plurals.deviceCountSelected', { count: selectedCount })}
       </span>
       <ActionButton
         action="delete"
-        variant="ghost"
+        variant="destructive"
         size="sm"
         icon={<Trash2 className="h-4 w-4" />}
         onClick={onDeleteSelected}
-        className="text-status-error-strong hover:text-status-error-strong hover:bg-status-error/20"
       >
         {tDevices('list.bulkActions.deleteSelectedButton')}
       </ActionButton>

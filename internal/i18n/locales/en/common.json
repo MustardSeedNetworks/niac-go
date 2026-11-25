@@ -173,7 +173,8 @@
     "size": "Size",
     "status": "Status",
     "type": "Type",
-    "updatedAt": "Updated"
+    "updatedAt": "Updated",
+    "view": "View"
   },
   "permissions": {
     "checking": "Checking permissions…",
@@ -218,6 +219,12 @@
     "warning": "Status: warning"
   },
   "table": {
+    "actions": "Row actions",
+    "loading": "Loading {{subject}}",
+    "nextPage": "Next page",
+    "pageStatus": "Page {{page}} of {{pages}} ({{total}} rows)",
+    "pagination": "Table pagination",
+    "previousPage": "Previous page",
     "selectAll": "Select all",
     "selected": "{{count}} selected",
     "showingResults": "Showing {{shown}} of {{total}} results"

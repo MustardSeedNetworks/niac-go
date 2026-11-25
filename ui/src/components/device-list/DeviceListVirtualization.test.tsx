@@ -24,7 +24,7 @@ function renderView(view: 'table' | 'cards', selected: string[] = []) {
       devices={devices}
       selectedDevices={new Set(selected)}
       onSelectDevice={vi.fn()}
-      onSelectAll={vi.fn()}
+      onSelectionChange={vi.fn()}
       onEdit={vi.fn()}
       onClone={vi.fn()}
       onDelete={vi.fn()}
@@ -36,16 +36,16 @@ function renderView(view: 'table' | 'cards', selected: string[] = []) {
 }
 
 describe('device list at 543 devices', () => {
-  it('table view mounts a window of rows, starting at the first device', () => {
+  it('table view mounts one page of rows, starting at the first device', () => {
     renderView('table');
 
-    const rows = screen.getAllByTestId('device-list-row');
-    expect(rows.length).toBeLessThan(40);
+    // Header row plus a page of 50; selection is page-wide, so the table pages.
+    expect(screen.getAllByRole('row').length).toBeLessThanOrEqual(51);
     expect(screen.getByText('host-000')).toBeInTheDocument();
     expect(screen.queryByText('host-542')).not.toBeInTheDocument();
   });
 
-  it('table view keeps the select-all checkbox bound to the whole list', () => {
+  it('table view checks select-all when every row on the page is selected', () => {
     renderView(
       'table',
       devices.map((d) => d.hostname),

@@ -1,6 +1,5 @@
-import { AlertCircle, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { iconSizes } from '../../constants/sizes';
+import { Alert } from '../../shared/Alert';
 
 export interface StatusMessage {
   type: 'success' | 'error';
@@ -17,26 +16,13 @@ export function DeviceStatusMessage({ message, onDismiss }: DeviceStatusMessageP
   if (!message) {
     return null;
   }
-
   return (
-    <div
-      className={`flex items-center gap-compact rounded-lg pad-sm ${
-        message.type === 'success'
-          ? 'border border-status-success/30 bg-status-success/10 text-status-success-strong'
-          : 'border border-status-error/30 bg-status-error/10 text-status-error-strong'
-      }`}
-      role="alert"
+    <Alert
+      tone={message.type}
+      onDismiss={onDismiss}
+      dismissLabel={t('accessibility.dismissMessage')}
     >
-      {message.type === 'error' && <AlertCircle className={iconSizes.md} />}
-      <span>{message.text}</span>
-      <button
-        type="button"
-        onClick={onDismiss}
-        className="ml-auto text-current hover:opacity-70"
-        aria-label={t('accessibility.dismissMessage')}
-      >
-        <X className="h-4 w-4" />
-      </button>
-    </div>
+      {message.text}
+    </Alert>
   );
 }

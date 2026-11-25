@@ -504,7 +504,10 @@
     "deviceFragmentInvalid": "El YAML del dispositivo no se puede analizar, por lo que no se guardó.",
     "deviceFragmentNameMissing": "Un dispositivo necesita un nombre, por lo que no se guardó.",
     "actionsHeader": "Acciones",
-    "eyebrow": "Vista en vivo"
+    "eyebrow": "Vista en vivo",
+    "deviceHeader": "Dispositivo",
+    "protocolsHeader": "Protocolos",
+    "tableCaption": "Dispositivos en ejecución"
   },
   "segments": {
     "deviceNoun_one": "dispositivo",

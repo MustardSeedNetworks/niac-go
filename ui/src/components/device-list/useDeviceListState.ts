@@ -43,7 +43,7 @@ export interface UseDeviceListStateReturn {
   // Selection
   selectedDevices: Set<string>;
   toggleDeviceSelection: (hostname: string) => void;
-  handleSelectAll: () => void;
+  setSelection: (hostnames: ReadonlySet<string>) => void;
   clearSelection: () => void;
 
   // Messages
@@ -166,14 +166,9 @@ export const useDeviceListState = (): UseDeviceListStateReturn => {
     });
   }, []);
 
-  // Handle select all
-  const handleSelectAll = useCallback(() => {
-    if (selectedDevices.size === filteredDevices.length) {
-      setSelectedDevices(new Set());
-    } else {
-      setSelectedDevices(new Set(filteredDevices.map((d) => d.hostname)));
-    }
-  }, [selectedDevices.size, filteredDevices]);
+  const setSelection = useCallback((hostnames: ReadonlySet<string>) => {
+    setSelectedDevices(new Set(hostnames));
+  }, []);
 
   // Clear selection
   const clearSelection = useCallback(() => {
@@ -308,7 +303,7 @@ export const useDeviceListState = (): UseDeviceListStateReturn => {
     handleViewModeChange,
     selectedDevices,
     toggleDeviceSelection,
-    handleSelectAll,
+    setSelection,
     clearSelection,
     message,
     setMessage,
