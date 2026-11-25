@@ -15,6 +15,7 @@ import { DataTable, type DataTableColumn } from '../shared/DataTable';
 import { StatusPill } from '../shared/StatusPill';
 import { ActionButton } from '../ui/ActionButton';
 import { Card, CardContent } from '../ui/Card';
+import { ContainedTable } from '../ui/ContainedTable';
 import { useDialogLabels } from '../ui/dialogLabels';
 import { Tooltip } from '../ui/Tooltip';
 import { useTableLabels } from '../ui/tableLabels';
@@ -281,7 +282,7 @@ export function WalkValidatorPage() {
             </ActionButton>
             <ActionButton
               action="edit"
-              variant="destructive"
+              variant="secondary"
               type="button"
               onClick={() => setShowAutoFixConfirm(true)}
               disabled={busy !== 'idle' || !targetPath}
@@ -364,14 +365,16 @@ export function WalkValidatorPage() {
             ) : filteredIssues.length === 0 ? (
               <p className="text-sm text-text-muted">{t('walkValidator.noMatchingIssues')}</p>
             ) : (
-              <DataTable
-                rows={visibleIssues}
-                columns={issueColumns}
-                getRowKey={(issue) => `${issue.line}-${issue.oid ?? ''}-${issue.message}`}
-                caption={t('walkValidator.resultHeading')}
-                labels={labels}
-                empty={null}
-              />
+              <ContainedTable label={t('walkValidator.resultHeading')}>
+                <DataTable
+                  rows={visibleIssues}
+                  columns={issueColumns}
+                  getRowKey={(issue) => `${issue.line}-${issue.oid ?? ''}-${issue.message}`}
+                  caption={t('walkValidator.resultHeading')}
+                  labels={labels}
+                  empty={null}
+                />
+              </ContainedTable>
             )}
             {filteredIssues.length > ISSUES_DISPLAY_CAP && (
               <p className="text-xs text-text-muted">
@@ -405,14 +408,16 @@ export function WalkValidatorPage() {
             {batchResults.length === 0 ? (
               <p className="text-sm text-text-muted">{t('walkValidator.batchEmpty')}</p>
             ) : (
-              <DataTable
-                rows={batchResults}
-                columns={batchColumns}
-                getRowKey={(result) => result.filename}
-                caption={t('walkValidator.batchHeading')}
-                labels={labels}
-                empty={null}
-              />
+              <ContainedTable label={t('walkValidator.batchHeading')}>
+                <DataTable
+                  rows={batchResults}
+                  columns={batchColumns}
+                  getRowKey={(result) => result.filename}
+                  caption={t('walkValidator.batchHeading')}
+                  labels={labels}
+                  empty={null}
+                />
+              </ContainedTable>
             )}
           </CardContent>
         </Card>

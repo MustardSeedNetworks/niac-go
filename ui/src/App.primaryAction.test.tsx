@@ -93,7 +93,7 @@ vi.mock('./api/capture', async (importOriginal) =>
  * /runtime's primary while a simulation runs is Stop, and a destructive
  * primary is red — filled weight is what makes it the primary, not hue.
  */
-const PRIMARY = '[data-variant="primary"]';
+const PRIMARY = '[data-variant="primary"], [data-variant="destructive"]';
 
 /**
  * Every route in pageRegistry, and the accessible name of the one primary
@@ -133,26 +133,35 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+// Vitest's own 5 s per-test limit sits on top of findBy's 5 s above, so the bound
+// the comment at the top sizes was never the one in force. A route that first
+// resolves a whole lazy page (/runtime, with the shared tables) can need most of it.
+const PER_ROUTE_TIMEOUT_MS = 20_000;
+
 describe('one primary action per page', () => {
-  it.each(Object.entries(primaries))('%s has one primary action', async (path, primary) => {
-    const { container } = render(
-      <MemoryDataRouter initialEntries={[path]}>
-        <ScopeProvider>
-          <App />
-        </ScopeProvider>
-      </MemoryDataRouter>,
-    );
-    // The routed page is lazy; wait for its header before counting.
-    await screen.findByTestId('page-header-title');
-    const expected = primary === none ? 0 : 1;
-    await waitFor(() => {
-      expect(
-        [...container.querySelectorAll(PRIMARY)].map((el) => el.textContent),
-        `${path} primaries`,
-      ).toHaveLength(expected);
-    });
-    if (primary !== none) {
-      expect(container.querySelector(PRIMARY)).toHaveAccessibleName(primary);
-    }
-  });
+  it.each(Object.entries(primaries))(
+    '%s has one primary action',
+    async (path, primary) => {
+      const { container } = render(
+        <MemoryDataRouter initialEntries={[path]}>
+          <ScopeProvider>
+            <App />
+          </ScopeProvider>
+        </MemoryDataRouter>,
+      );
+      // The routed page is lazy; wait for its header before counting.
+      await screen.findByTestId('page-header-title');
+      const expected = primary === none ? 0 : 1;
+      await waitFor(() => {
+        expect(
+          [...container.querySelectorAll(PRIMARY)].map((el) => el.textContent),
+          `${path} primaries`,
+        ).toHaveLength(expected);
+      });
+      if (primary !== none) {
+        expect(container.querySelector(PRIMARY)).toHaveAccessibleName(primary);
+      }
+    },
+    PER_ROUTE_TIMEOUT_MS,
+  );
 });

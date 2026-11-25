@@ -233,7 +233,7 @@ function LibraryFilesView({ kind }: Props) {
             hint={emptyHint}
           />
         ) : (
-          <ContainedTable>
+          <ContainedTable label={title}>
             <DataTable
               rows={filtered}
               columns={columns}

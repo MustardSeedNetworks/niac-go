@@ -7,6 +7,7 @@ import { useApiResource } from '../../hooks/useApiResource';
 import { Alert } from '../../shared/Alert';
 import { DataTable, type DataTableColumn } from '../../shared/DataTable';
 import { EmptyState } from '../../shared/EmptyState';
+import { ContainedTable } from '../../ui/ContainedTable';
 import { useTableLabels } from '../../ui/tableLabels';
 import { useFormatRelativeTime } from '../../utils/format';
 import { AttachedClientMove } from './AttachedClientMove';
@@ -92,15 +93,17 @@ export function AttachedClientsCard({ sessionId, fabric }: AttachedClientsCardPr
         <Alert tone="error">{t('runtime.clients.loadError', { error: error.message })}</Alert>
       ) : (
         <>
-          <DataTable
-            rows={clients ?? []}
-            columns={columns}
-            getRowKey={(client) => client.mac}
-            caption={t('runtime.clients.title')}
-            labels={labels}
-            loading={clients === null}
-            empty={<EmptyState title={t('runtime.clients.empty')} />}
-          />
+          <ContainedTable label={t('runtime.clients.title')}>
+            <DataTable
+              rows={clients ?? []}
+              columns={columns}
+              getRowKey={(client) => client.mac}
+              caption={t('runtime.clients.title')}
+              labels={labels}
+              loading={clients === null}
+              empty={<EmptyState title={t('runtime.clients.empty')} />}
+            />
+          </ContainedTable>
           {pool && clients && clients.length > 0 && (
             <AttachedClientMove
               sessionId={sessionId}

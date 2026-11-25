@@ -362,7 +362,7 @@ export function DraftTopologyComposer({
             {t('newSimWizard.topology.profileLoadError')}
           </SmallText>
           <Button
-            variant="destructive"
+            variant="secondary"
             size="sm"
             loading={profilesLoading}
             onClick={() => void refetchProfiles()}

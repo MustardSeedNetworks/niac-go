@@ -10,6 +10,7 @@ import { EmptyState } from '../../shared/EmptyState';
 import { SearchInput } from '../../shared/SearchInput';
 import { SegmentedControl } from '../../shared/SegmentedControl';
 import { Skeleton } from '../../shared/Skeleton';
+import { ContainedTable } from '../../ui/ContainedTable';
 import { useTableLabels } from '../../ui/tableLabels';
 
 /**
@@ -244,14 +245,16 @@ export function NeighborsView() {
         />
       )}
       {filtered.length > 0 && (
-        <DataTable
-          rows={filtered}
-          columns={columns}
-          getRowKey={(n) => `${n.localDevice}-${n.remoteDevice}-${n.remotePort}`}
-          caption={t('topology.neighbors.tableCaption')}
-          labels={labels}
-          empty={null}
-        />
+        <ContainedTable label={t('topology.neighbors.tableCaption')}>
+          <DataTable
+            rows={filtered}
+            columns={columns}
+            getRowKey={(n) => `${n.localDevice}-${n.remoteDevice}-${n.remotePort}`}
+            caption={t('topology.neighbors.tableCaption')}
+            labels={labels}
+            empty={null}
+          />
+        </ContainedTable>
       )}
     </div>
   );

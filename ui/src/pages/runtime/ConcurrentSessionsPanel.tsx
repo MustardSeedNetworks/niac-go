@@ -92,7 +92,7 @@ export function ConcurrentSessionsPanel({
 
   return (
     <TableSection title={t('runtime.sessions.title')} description={t('runtime.sessions.help')}>
-      <ContainedTable>
+      <ContainedTable label={t('runtime.sessions.title')}>
         <DataTable
           rows={sessions}
           columns={columns}

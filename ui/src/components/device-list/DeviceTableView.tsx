@@ -76,7 +76,7 @@ export function DeviceTableView() {
   ];
 
   return (
-    <ContainedTable>
+    <ContainedTable label={t('list.listAria')}>
       <DataTable
         rows={devices}
         columns={columns}

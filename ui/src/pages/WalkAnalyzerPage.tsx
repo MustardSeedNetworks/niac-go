@@ -11,6 +11,7 @@ import { EmptyState } from '../shared/EmptyState';
 import { StatusPill } from '../shared/StatusPill';
 import { ActionButton } from '../ui/ActionButton';
 import { Card, CardContent, CardRow, CardValue } from '../ui/Card';
+import { ContainedTable } from '../ui/ContainedTable';
 import { Tooltip } from '../ui/Tooltip';
 import { useTableLabels } from '../ui/tableLabels';
 import { formatBitsPerSecond } from '../utils/format';
@@ -296,14 +297,16 @@ export function WalkAnalyzerPage() {
             {interfaces.length === 0 ? (
               <EmptyState title={t('walkAnalyzer.noInterfacesFound')} />
             ) : (
-              <DataTable
-                rows={interfaces}
-                columns={interfaceColumns}
-                getRowKey={(iface) => `${iface.index}-${iface.name}`}
-                caption={t('walkAnalyzer.interfacesHeading')}
-                labels={labels}
-                empty={null}
-              />
+              <ContainedTable label={t('walkAnalyzer.interfacesHeading')}>
+                <DataTable
+                  rows={interfaces}
+                  columns={interfaceColumns}
+                  getRowKey={(iface) => `${iface.index}-${iface.name}`}
+                  caption={t('walkAnalyzer.interfacesHeading')}
+                  labels={labels}
+                  empty={null}
+                />
+              </ContainedTable>
             )}
           </TableSection>
 
@@ -314,16 +317,18 @@ export function WalkAnalyzerPage() {
             {neighbors.length === 0 ? (
               <EmptyState title={t('walkAnalyzer.noNeighborsFound')} />
             ) : (
-              <DataTable
-                rows={neighbors}
-                columns={neighborColumns}
-                getRowKey={(neighbor) =>
-                  `${neighbor.localInterface}-${neighbor.remoteDevice}-${neighbor.remoteInterface}`
-                }
-                caption={t('walkAnalyzer.neighborsHeading')}
-                labels={labels}
-                empty={null}
-              />
+              <ContainedTable label={t('walkAnalyzer.neighborsHeading')}>
+                <DataTable
+                  rows={neighbors}
+                  columns={neighborColumns}
+                  getRowKey={(neighbor) =>
+                    `${neighbor.localInterface}-${neighbor.remoteDevice}-${neighbor.remoteInterface}`
+                  }
+                  caption={t('walkAnalyzer.neighborsHeading')}
+                  labels={labels}
+                  empty={null}
+                />
+              </ContainedTable>
             )}
           </TableSection>
         </div>

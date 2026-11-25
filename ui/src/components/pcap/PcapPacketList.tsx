@@ -7,6 +7,7 @@ import { CategoryChip } from '../../shared/CategoryChip';
 import { DataTable, type DataTableColumn } from '../../shared/DataTable';
 import { EmptyState } from '../../shared/EmptyState';
 import { ActionButton } from '../../ui/ActionButton';
+import { ContainedTable } from '../../ui/ContainedTable';
 import { SmallText } from '../../ui/Typography';
 import { useTableLabels } from '../../ui/tableLabels';
 import { formatTimeByMode, getTimeDisplayLabel } from '../../utils/time-display';
@@ -134,23 +135,25 @@ export const PcapPacketList = memo(function PcapPacketList({
         </ActionButton>
       </div>
 
-      <DataTable
-        rows={packets}
-        columns={columns}
-        getRowKey={(packet) => packet.id}
-        caption={t('packets.list.headerPacket')}
-        labels={labels}
-        onRowClick={onSelectPacket}
-        {...(selectedPacketId ? { selectedRowKey: selectedPacketId } : {})}
-        virtualize={{ rowHeight: 44 }}
-        maxHeight={560}
-        empty={
-          <EmptyState
-            title={t('packets.list.noMatchTitle')}
-            hint={t('packets.list.noMatchDescription')}
-          />
-        }
-      />
+      <ContainedTable label={t('packets.list.headerPacket')}>
+        <DataTable
+          rows={packets}
+          columns={columns}
+          getRowKey={(packet) => packet.id}
+          caption={t('packets.list.headerPacket')}
+          labels={labels}
+          onRowClick={onSelectPacket}
+          {...(selectedPacketId ? { selectedRowKey: selectedPacketId } : {})}
+          virtualize={{ rowHeight: 44 }}
+          maxHeight={560}
+          empty={
+            <EmptyState
+              title={t('packets.list.noMatchTitle')}
+              hint={t('packets.list.noMatchDescription')}
+            />
+          }
+        />
+      </ContainedTable>
     </Card>
   );
 });

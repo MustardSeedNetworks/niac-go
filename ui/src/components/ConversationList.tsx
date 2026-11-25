@@ -5,6 +5,7 @@ import { Card } from '../shared/Card';
 import { CategoryChip } from '../shared/CategoryChip';
 import { DataTable, type DataTableColumn } from '../shared/DataTable';
 import { EmptyState } from '../shared/EmptyState';
+import { ContainedTable } from '../ui/ContainedTable';
 import { SmallText } from '../ui/Typography';
 import { useTableLabels } from '../ui/tableLabels';
 import {
@@ -106,18 +107,20 @@ export const ConversationList = memo(function ConversationList({
         </SmallText>
       </div>
 
-      <DataTable
-        rows={conversations}
-        columns={columns}
-        getRowKey={(conv) => conv.id}
-        caption={t('labels.conversations')}
-        labels={labels}
-        defaultSort={{ key: 'packets', direction: 'desc' }}
-        onRowClick={(conv) => onSelectConversation(conv.filterExpression)}
-        virtualize={{ rowHeight: 44 }}
-        maxHeight={500}
-        empty={null}
-      />
+      <ContainedTable label={t('labels.conversations')}>
+        <DataTable
+          rows={conversations}
+          columns={columns}
+          getRowKey={(conv) => conv.id}
+          caption={t('labels.conversations')}
+          labels={labels}
+          defaultSort={{ key: 'packets', direction: 'desc' }}
+          onRowClick={(conv) => onSelectConversation(conv.filterExpression)}
+          virtualize={{ rowHeight: 44 }}
+          maxHeight={500}
+          empty={null}
+        />
+      </ContainedTable>
     </Card>
   );
 });

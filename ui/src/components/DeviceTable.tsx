@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { DeviceSummary } from '../api/types';
 import { DataTable, type DataTableColumn } from '../shared/DataTable';
 import { EmptyState } from '../shared/EmptyState';
+import { ContainedTable } from '../ui/ContainedTable';
 import { useTableLabels } from '../ui/tableLabels';
 import { DeviceTypeChip } from './DeviceTypeChip';
 import { ProtocolChips } from './ProtocolChips';
@@ -78,22 +79,24 @@ export const DeviceTable = memo(({ devices, selectedName, onSelect }: DeviceTabl
   ];
 
   return (
-    <DataTable
-      rows={devices}
-      columns={columns}
-      getRowKey={(device) => device.name}
-      caption={t('devices.tableCaption')}
-      labels={labels}
-      {...(selectedName ? { selectedRowKey: selectedName } : {})}
-      virtualize={{ rowHeight: ROW_HEIGHT }}
-      maxHeight={VIRTUAL_HEIGHT}
-      data-testid="device-table"
-      empty={
-        <div data-testid="device-table-empty">
-          <EmptyState title={tCommon('emptyState.noDevicesConfigured')} />
-        </div>
-      }
-    />
+    <ContainedTable label={t('devices.tableCaption')}>
+      <DataTable
+        rows={devices}
+        columns={columns}
+        getRowKey={(device) => device.name}
+        caption={t('devices.tableCaption')}
+        labels={labels}
+        {...(selectedName ? { selectedRowKey: selectedName } : {})}
+        virtualize={{ rowHeight: ROW_HEIGHT }}
+        maxHeight={VIRTUAL_HEIGHT}
+        data-testid="device-table"
+        empty={
+          <div data-testid="device-table-empty">
+            <EmptyState title={tCommon('emptyState.noDevicesConfigured')} />
+          </div>
+        }
+      />
+    </ContainedTable>
   );
 });
 
