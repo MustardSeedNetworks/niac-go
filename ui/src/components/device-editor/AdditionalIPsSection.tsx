@@ -2,8 +2,8 @@ import { Plus, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../shared/Button';
+import { CollapsibleSection } from '../../shared/CollapsibleSection';
 import { SmallText } from '../../ui/Typography';
-import { CollapsibleSection } from '../form/CollapsibleSection';
 import type { AuthoredDevice, AuthoredValue } from './generated/authored-device.generated';
 import { smallInputClassName } from './types';
 import type { DeviceFieldErrors } from './useDeviceEditor';
@@ -37,8 +37,8 @@ export function AdditionalIPsSection({
   return (
     <CollapsibleSection
       title={t('editor.sections.additionalIps.title')}
-      isExpanded={isExpanded}
-      onToggle={onToggle}
+      open={isExpanded}
+      onOpenChange={onToggle}
     >
       <div className="stack-lg">
         <SmallText className="text-text-muted">

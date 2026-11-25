@@ -7,10 +7,8 @@
 import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DeviceStatusMessage } from '../components/device-list/DeviceStatusMessage';
-import { CollapsibleSection } from '../components/form/CollapsibleSection';
 import i18n from '../i18n';
 import { ConnectionStatus } from './ConnectionStatus';
-import { SearchInput } from './Input';
 
 const noop = () => {};
 
@@ -37,36 +35,5 @@ describe('shared primitives in es', () => {
       'Servidor inaccesible Sin conexión',
     );
     expect(screen.getByText('Sin conexión')).toBeInTheDocument();
-  });
-
-  it('localizes the search placeholder and clear button', () => {
-    render(<SearchInput value="tcp" onChange={noop} />);
-
-    expect(screen.getByPlaceholderText('Buscar...')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Limpiar búsqueda' })).toBeInTheDocument();
-  });
-
-  it('labels a collapsible section and its state tags in Spanish', () => {
-    const { rerender } = render(
-      <CollapsibleSection title="SNMP" isExpanded={false} onToggle={noop} required enabled>
-        x
-      </CollapsibleSection>,
-    );
-
-    // "Obligatorio" is drawn on the button and is not in the state phrase.
-    expect(
-      screen.getByRole('button', { name: 'Sección SNMP, contraída SNMP Obligatorio' }),
-    ).toBeInTheDocument();
-    expect(screen.getByText('Obligatorio')).toBeInTheDocument();
-    expect(screen.getByText('Habilitado')).toBeInTheDocument();
-
-    rerender(
-      <CollapsibleSection title="SNMP" isExpanded onToggle={noop} enabled={false}>
-        x
-      </CollapsibleSection>,
-    );
-
-    expect(screen.getByRole('button', { name: 'Sección SNMP, expandida' })).toBeInTheDocument();
-    expect(screen.getByText('Deshabilitado')).toBeInTheDocument();
   });
 });

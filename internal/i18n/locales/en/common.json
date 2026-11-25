@@ -12,6 +12,7 @@
     "dismissMessage": "Dismiss message",
     "dismissNotification": "Dismiss notification",
     "expandSidebar": "Expand sidebar",
+    "fieldHelp": "Help: {{field}}",
     "home": "Home",
     "notifications": "Notifications",
     "openDrawer": "Open drawer",

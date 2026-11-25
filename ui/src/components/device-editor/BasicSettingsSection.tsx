@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { CollapsibleSection } from '../form/CollapsibleSection';
-import { FormField } from '../form/FormField';
+import { CollapsibleSection } from '../../shared/CollapsibleSection';
+import { FormField } from '../../shared/FormField';
+import { StatusPill } from '../../shared/StatusPill';
+import { FieldHelp } from '../../ui/FieldHelp';
 import type { AuthoredDevice, AuthoredValue } from './generated/authored-device.generated';
 import { DEVICE_TYPES } from './generated/sections.generated';
 import { inputClassName, monoInputClassName, selectClassName } from './types';
@@ -33,6 +35,7 @@ export function BasicSettingsSection({
   errors,
 }: BasicSettingsSectionProps) {
   const { t } = useTranslation('devices');
+  const { t: tCommon } = useTranslation('common');
   const identity = device.vendor === undefined ? 'mac' : 'vendor';
 
   const selectIdentity = (next: 'mac' | 'vendor') => {
@@ -50,10 +53,14 @@ export function BasicSettingsSection({
 
   return (
     <CollapsibleSection
-      title={t('editor.sections.basic.title')}
-      isExpanded={isExpanded}
-      onToggle={onToggle}
-      required={true}
+      title={
+        <>
+          {t('editor.sections.basic.title')}{' '}
+          <StatusPill tone="error" label={tCommon('labels.required')} />
+        </>
+      }
+      open={isExpanded}
+      onOpenChange={onToggle}
     >
       <div className="grid gap-comfortable md:grid-cols-2">
         <FormField
@@ -62,12 +69,17 @@ export function BasicSettingsSection({
           // A rename is not an edit: the daemon takes the device's name from
           // the URL, so a changed `name` on an existing device would be
           // accepted and ignored. Clone carries a new name.
-          helpText={
-            isNewDevice
-              ? t('editor.sections.basic.hostnameHelp')
-              : t('editor.sections.basic.hostnameFixedHelp')
+          labelAccessory={
+            <FieldHelp
+              field={t('editor.sections.basic.hostnameLabel')}
+              text={
+                isNewDevice
+                  ? t('editor.sections.basic.hostnameHelp')
+                  : t('editor.sections.basic.hostnameFixedHelp')
+              }
+            />
           }
-          htmlFor="device-hostname"
+          id="device-hostname"
           error={errors?.name}
         >
           <input
@@ -83,8 +95,13 @@ export function BasicSettingsSection({
 
         <FormField
           label={t('editor.sections.basic.typeLabel')}
-          helpText={t('editor.sections.basic.typeHelp')}
-          htmlFor="device-type"
+          labelAccessory={
+            <FieldHelp
+              field={t('editor.sections.basic.typeLabel')}
+              text={t('editor.sections.basic.typeHelp')}
+            />
+          }
+          id="device-type"
         >
           <select
             id="device-type"
@@ -134,8 +151,13 @@ export function BasicSettingsSection({
           <FormField
             label={t('editor.sections.basic.macLabel')}
             required={true}
-            helpText={t('editor.sections.basic.macHelp')}
-            htmlFor="device-mac"
+            labelAccessory={
+              <FieldHelp
+                field={t('editor.sections.basic.macLabel')}
+                text={t('editor.sections.basic.macHelp')}
+              />
+            }
+            id="device-mac"
             error={errors?.mac}
           >
             <input
@@ -152,8 +174,13 @@ export function BasicSettingsSection({
             <FormField
               label={t('editor.sections.basic.vendorLabel')}
               required={true}
-              helpText={t('editor.sections.basic.vendorHelp')}
-              htmlFor="device-vendor"
+              labelAccessory={
+                <FieldHelp
+                  field={t('editor.sections.basic.vendorLabel')}
+                  text={t('editor.sections.basic.vendorHelp')}
+                />
+              }
+              id="device-vendor"
               error={errors?.vendor ?? errors?.mac}
             >
               <input
@@ -171,8 +198,13 @@ export function BasicSettingsSection({
               // allocated the same address, so this is part of the identity
               // choice rather than an advanced option.
               label={t('editor.sections.basic.macSuffixLabel')}
-              helpText={t('editor.sections.basic.macSuffixHelp')}
-              htmlFor="device-mac-suffix"
+              labelAccessory={
+                <FieldHelp
+                  field={t('editor.sections.basic.macSuffixLabel')}
+                  text={t('editor.sections.basic.macSuffixHelp')}
+                />
+              }
+              id="device-mac-suffix"
             >
               <input
                 id="device-mac-suffix"

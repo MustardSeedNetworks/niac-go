@@ -4,8 +4,9 @@ import { executeDeviceAction } from '../api/client';
 import { useAppState } from '../contexts/AppContext';
 import { useActionPermission } from '../contexts/ScopeContext';
 import { Card } from '../shared/Card';
+import { FormField } from '../shared/FormField';
+import { Select } from '../shared/Select';
 import { ActionButton } from '../ui/ActionButton';
-import { Select } from '../ui/Input';
 import { H3, SmallText } from '../ui/Typography';
 import { getErrorMessage } from '../utils/format';
 
@@ -51,34 +52,42 @@ export function DeviceActionPanel() {
     <Card data-testid="device-action-panel">
       <div className="stack">
         <H3>{t('deviceAction.title')}</H3>
-        <Select
-          label={t('deviceAction.target')}
-          value={device}
-          options={[
-            { value: '', label: t('deviceAction.selectTarget') },
-            ...(data?.actionTargets ?? []).map((entry) => ({
-              value: entry.device,
-              label: entry.device,
-            })),
-          ]}
-          onChange={(next) => {
-            setDevice(next);
-            setAction('');
-            setDone('');
-          }}
-        />
-        <Select
-          label={t('deviceAction.action')}
-          value={action}
-          options={[
-            { value: '', label: t('deviceAction.selectAction') },
-            ...actions.map((entry) => ({ value: entry.type, label: entry.type })),
-          ]}
-          onChange={(next) => {
-            setAction(next);
-            setDone('');
-          }}
-        />
+        <FormField label={t('deviceAction.target')}>
+          {(control) => (
+            <Select
+              {...control}
+              value={device}
+              options={[
+                { value: '', label: t('deviceAction.selectTarget') },
+                ...(data?.actionTargets ?? []).map((entry) => ({
+                  value: entry.device,
+                  label: entry.device,
+                })),
+              ]}
+              onValueChange={(next) => {
+                setDevice(next);
+                setAction('');
+                setDone('');
+              }}
+            />
+          )}
+        </FormField>
+        <FormField label={t('deviceAction.action')}>
+          {(control) => (
+            <Select
+              {...control}
+              value={action}
+              options={[
+                { value: '', label: t('deviceAction.selectAction') },
+                ...actions.map((entry) => ({ value: entry.type, label: entry.type })),
+              ]}
+              onValueChange={(next) => {
+                setAction(next);
+                setDone('');
+              }}
+            />
+          )}
+        </FormField>
         {selected && <SmallText>{selected.description}</SmallText>}
         {(failure || error) && <p role="alert">{failure || getErrorMessage(error)}</p>}
         {done && <SmallText>{done}</SmallText>}

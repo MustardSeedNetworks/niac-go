@@ -2,10 +2,12 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ScenarioDeviceProfile } from '../../api/scenario-client';
 import { Button } from '../../shared/Button';
+import { FormField } from '../../shared/FormField';
+import { Input } from '../../shared/Input';
 import { Modal } from '../../shared/Modal';
+import { Select } from '../../shared/Select';
 import { ActionButton } from '../../ui/ActionButton';
 import { useCloseLabel } from '../../ui/dialogLabels';
-import { Input, Select } from '../../ui/Input';
 
 export interface LinkEditorState {
   source: string;
@@ -75,48 +77,64 @@ export function DeviceEditorModal({
     >
       {state && (
         <div className="stack-lg">
-          <Input
-            label={t('newSimWizard.topology.deviceName')}
-            value={state.name}
-            onChange={(event) => onChange({ ...state, name: event.target.value })}
-          />
-          <Select
-            label={t('newSimWizard.topology.profile')}
-            value={state.role}
-            options={profiles.map((profile) => ({
-              value: profile.role,
-              label: `${profile.role} · ${profile.model}`,
-            }))}
-            onChange={(role) => {
-              const profile = profiles.find((item) => item.role === role);
-              onChange({
-                ...state,
-                role,
-                interfaceCount: profile?.interfaceCount
-                  ? String(profile.interfaceCount)
-                  : state.interfaceCount,
-              });
-            }}
-          />
+          <FormField label={t('newSimWizard.topology.deviceName')}>
+            {(control) => (
+              <Input
+                {...control}
+                value={state.name}
+                onChange={(event) => onChange({ ...state, name: event.target.value })}
+              />
+            )}
+          </FormField>
+          <FormField label={t('newSimWizard.topology.profile')}>
+            {(control) => (
+              <Select
+                {...control}
+                value={state.role}
+                options={profiles.map((profile) => ({
+                  value: profile.role,
+                  label: `${profile.role} · ${profile.model}`,
+                }))}
+                onValueChange={(role) => {
+                  const profile = profiles.find((item) => item.role === role);
+                  onChange({
+                    ...state,
+                    role,
+                    interfaceCount: profile?.interfaceCount
+                      ? String(profile.interfaceCount)
+                      : state.interfaceCount,
+                  });
+                }}
+              />
+            )}
+          </FormField>
           <div className="grid gap-default sm:grid-cols-2">
-            <Input
-              label={t('newSimWizard.topology.interfaceCount')}
-              type="number"
-              min={1}
-              max={4096}
-              disabled={Boolean(selectedProfile?.interfaces?.length)}
-              value={state.interfaceCount}
-              onChange={(event) => onChange({ ...state, interfaceCount: event.target.value })}
-            />
-            <Input
-              label={t('newSimWizard.topology.speed')}
-              type="number"
-              min={10}
-              max={400000}
-              disabled={Boolean(selectedProfile?.interfaces?.length)}
-              value={state.speed}
-              onChange={(event) => onChange({ ...state, speed: event.target.value })}
-            />
+            <FormField label={t('newSimWizard.topology.interfaceCount')}>
+              {(control) => (
+                <Input
+                  {...control}
+                  type="number"
+                  min={1}
+                  max={4096}
+                  disabled={Boolean(selectedProfile?.interfaces?.length)}
+                  value={state.interfaceCount}
+                  onChange={(event) => onChange({ ...state, interfaceCount: event.target.value })}
+                />
+              )}
+            </FormField>
+            <FormField label={t('newSimWizard.topology.speed')}>
+              {(control) => (
+                <Input
+                  {...control}
+                  type="number"
+                  min={10}
+                  max={400000}
+                  disabled={Boolean(selectedProfile?.interfaces?.length)}
+                  value={state.speed}
+                  onChange={(event) => onChange({ ...state, speed: event.target.value })}
+                />
+              )}
+            </FormField>
           </div>
         </div>
       )}
@@ -184,38 +202,54 @@ export function LinkEditorModal({
       {state && (
         <div className="stack-lg">
           <div className="grid gap-default sm:grid-cols-2">
-            <Select
-              label={`${state.source} ${t('newSimWizard.topology.interface')}`}
-              value={state.sourceInterface}
-              disabled={state.existing}
-              options={interfaceOptions(state.source, state.sourceInterface)}
-              placeholder={t('newSimWizard.topology.selectInterface')}
-              onChange={(sourceInterface) => onChange({ ...state, sourceInterface })}
-            />
-            <Select
-              label={`${state.target} ${t('newSimWizard.topology.interface')}`}
-              value={state.targetInterface}
-              disabled={state.existing}
-              options={interfaceOptions(state.target, state.targetInterface)}
-              placeholder={t('newSimWizard.topology.selectInterface')}
-              onChange={(targetInterface) => onChange({ ...state, targetInterface })}
-            />
+            <FormField label={`${state.source} ${t('newSimWizard.topology.interface')}`}>
+              {(control) => (
+                <Select
+                  {...control}
+                  value={state.sourceInterface}
+                  disabled={state.existing}
+                  options={interfaceOptions(state.source, state.sourceInterface)}
+                  placeholder={t('newSimWizard.topology.selectInterface')}
+                  onValueChange={(sourceInterface) => onChange({ ...state, sourceInterface })}
+                />
+              )}
+            </FormField>
+            <FormField label={`${state.target} ${t('newSimWizard.topology.interface')}`}>
+              {(control) => (
+                <Select
+                  {...control}
+                  value={state.targetInterface}
+                  disabled={state.existing}
+                  options={interfaceOptions(state.target, state.targetInterface)}
+                  placeholder={t('newSimWizard.topology.selectInterface')}
+                  onValueChange={(targetInterface) => onChange({ ...state, targetInterface })}
+                />
+              )}
+            </FormField>
           </div>
           <div className="grid gap-default sm:grid-cols-2">
-            <Input
-              label={t('newSimWizard.topology.vlans')}
-              value={state.vlans}
-              placeholder="200, 210"
-              onChange={(event) => onChange({ ...state, vlans: event.target.value })}
-            />
-            <Input
-              label={t('newSimWizard.topology.nativeVlan')}
-              type="number"
-              min={1}
-              max={4094}
-              value={state.nativeVlan}
-              onChange={(event) => onChange({ ...state, nativeVlan: event.target.value })}
-            />
+            <FormField label={t('newSimWizard.topology.vlans')}>
+              {(control) => (
+                <Input
+                  {...control}
+                  value={state.vlans}
+                  placeholder="200, 210"
+                  onChange={(event) => onChange({ ...state, vlans: event.target.value })}
+                />
+              )}
+            </FormField>
+            <FormField label={t('newSimWizard.topology.nativeVlan')}>
+              {(control) => (
+                <Input
+                  {...control}
+                  type="number"
+                  min={1}
+                  max={4094}
+                  value={state.nativeVlan}
+                  onChange={(event) => onChange({ ...state, nativeVlan: event.target.value })}
+                />
+              )}
+            </FormField>
           </div>
           <label className="flex min-h-11 items-center gap-default text-sm text-text-secondary">
             <input

@@ -11,9 +11,10 @@ import { type ErrorInjectionFormFields, ErrorInjectionSchema } from '../schemas/
 import { Card } from '../shared/Card';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { DataTable, type DataTableColumn } from '../shared/DataTable';
+import { FormField } from '../shared/FormField';
+import { Input } from '../shared/Input';
 import { ActionButton } from '../ui/ActionButton';
 import { useDialogLabels } from '../ui/dialogLabels';
-import { Input } from '../ui/Input';
 import { SmallText } from '../ui/Typography';
 import { useTableLabels } from '../ui/tableLabels';
 import { getErrorMessage } from '../utils/format';
@@ -323,25 +324,35 @@ export function ErrorInjectionPanel() {
 
               {/* Value Slider */}
               {addressed ? (
-                <Input
-                  label={t('deviceFault.conflictAddress')}
-                  value={address}
-                  onChange={(event) => setAddress(event.target.value)}
-                />
+                <FormField label={t('deviceFault.conflictAddress')}>
+                  {(control) => (
+                    <Input
+                      {...control}
+                      value={address}
+                      onChange={(event) => setAddress(event.target.value)}
+                    />
+                  )}
+                </FormField>
               ) : prefixed ? (
-                <Input
-                  data-testid="interface-fault-prefix"
+                <FormField
                   label={t('injection.prefixLabel')}
                   hint={t('injection.prefixHelper')}
                   error={prefix !== '' && !validPrefix ? t('injection.prefixInvalid') : undefined}
-                  type="number"
-                  min={0}
-                  max={32}
-                  step={1}
-                  value={prefix}
-                  onChange={(event) => setPrefix(event.target.value)}
-                  aria-invalid={prefix !== '' && !validPrefix}
-                />
+                >
+                  {(control) => (
+                    <Input
+                      {...control}
+                      data-testid="interface-fault-prefix"
+                      type="number"
+                      min={0}
+                      max={32}
+                      step={1}
+                      value={prefix}
+                      onChange={(event) => setPrefix(event.target.value)}
+                      aria-invalid={prefix !== '' && !validPrefix}
+                    />
+                  )}
+                </FormField>
               ) : (
                 <div>
                   <label htmlFor="error-value" className="block text-sm font-medium mb-2">

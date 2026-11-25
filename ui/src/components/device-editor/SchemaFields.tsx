@@ -2,7 +2,8 @@ import { Plus, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../shared/Button';
-import { FormField } from '../form';
+import { FormField } from '../../shared/FormField';
+import { FieldHelp } from '../../ui/FieldHelp';
 import type { AuthoredValue } from './generated/authored-device.generated';
 import type { FieldDescriptor, SectionDescriptor } from './generated/sections.generated';
 import { checkboxClassName, inputClassName, selectClassName } from './types';
@@ -67,7 +68,11 @@ export function SchemaField({ field, path, value, onChange, suggestions }: Schem
 
   if (field.kind === 'enum') {
     return (
-      <FormField label={label} helpText={help} htmlFor={id}>
+      <FormField
+        label={label}
+        labelAccessory={help ? <FieldHelp field={label} text={help} /> : undefined}
+        id={id}
+      >
         <select
           id={id}
           value={typeof value === 'string' ? value : ''}
@@ -87,7 +92,11 @@ export function SchemaField({ field, path, value, onChange, suggestions }: Schem
 
   if (field.kind === 'integer' || field.kind === 'number') {
     return (
-      <FormField label={label} helpText={help} htmlFor={id}>
+      <FormField
+        label={label}
+        labelAccessory={help ? <FieldHelp field={label} text={help} /> : undefined}
+        id={id}
+      >
         <input
           id={id}
           type="number"
@@ -107,7 +116,11 @@ export function SchemaField({ field, path, value, onChange, suggestions }: Schem
   if (field.kind === 'string') {
     const suggested = suggestions?.[path];
     return (
-      <FormField label={label} helpText={help} htmlFor={id}>
+      <FormField
+        label={label}
+        labelAccessory={help ? <FieldHelp field={label} text={help} /> : undefined}
+        id={id}
+      >
         <input
           id={id}
           type="text"

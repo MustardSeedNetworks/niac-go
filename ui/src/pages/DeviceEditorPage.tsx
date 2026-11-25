@@ -17,8 +17,8 @@ import {
   DeviceListErrorState,
   DeviceListLoadingState,
 } from '../components/device-list/DeviceListStates';
-import { CollapsibleSection } from '../components/form/CollapsibleSection';
 import { useApiResource } from '../hooks/useApiResource';
+import { CollapsibleSection } from '../shared/CollapsibleSection';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { useDialogLabels } from '../ui/dialogLabels';
 
@@ -139,8 +139,8 @@ export function DeviceEditorPage() {
             key={section.key}
             id={`${section.key}-section`}
             title={t(`editor.sections.${section.key}.title`, { defaultValue: section.title })}
-            isExpanded={expandedSections.has(section.key)}
-            onToggle={() => toggleSection(section.key)}
+            open={expandedSections.has(section.key)}
+            onOpenChange={() => toggleSection(section.key)}
           >
             <div className="stack-lg">
               <SchemaSectionBody

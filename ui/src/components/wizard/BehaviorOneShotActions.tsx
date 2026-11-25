@@ -7,7 +7,8 @@ import {
 } from '../../api/behavior-timeline-types';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../shared/Button';
-import { Select } from '../../ui/Input';
+import { FormField } from '../../shared/FormField';
+import { Select } from '../../shared/Select';
 import { SmallText } from '../../ui/Typography';
 import type { DraftTopologyModel } from './draft-topology';
 
@@ -47,36 +48,45 @@ export function BehaviorOneShotActions({
           data-testid="behavior-device-action"
           className="grid gap-default md:grid-cols-[1fr_1fr_auto] md:items-end"
         >
-          <Select
-            label={t('newSimWizard.behaviors.device')}
-            value={action.device}
-            options={optionsFor(action)}
-            onChange={(device) => update(index, { device, type: action.type })}
-          />
-          <Select
-            label={t('newSimWizard.behaviors.operation')}
-            value={action.type}
-            options={[
-              { value: 'reboot', label: t('newSimWizard.behaviors.operations.reboot') },
-              {
-                value: 'stp_topology_change',
-                label: t('newSimWizard.behaviors.operations.stp_topology_change'),
-              },
-            ].map((option) => ({
-              ...option,
-              disabled:
-                isBehaviorActionType(option.value) && eligibleOptions(option.value).length === 0,
-            }))}
-            onChange={(type) => {
-              if (isBehaviorActionType(type))
-                update(index, {
-                  device: deviceActions[action.device]?.includes(type)
-                    ? action.device
-                    : (eligibleOptions(type)[0]?.value ?? ''),
-                  type,
-                });
-            }}
-          />
+          <FormField label={t('newSimWizard.behaviors.device')}>
+            {(control) => (
+              <Select
+                {...control}
+                value={action.device}
+                options={optionsFor(action)}
+                onValueChange={(device) => update(index, { device, type: action.type })}
+              />
+            )}
+          </FormField>
+          <FormField label={t('newSimWizard.behaviors.operation')}>
+            {(control) => (
+              <Select
+                {...control}
+                value={action.type}
+                options={[
+                  { value: 'reboot', label: t('newSimWizard.behaviors.operations.reboot') },
+                  {
+                    value: 'stp_topology_change',
+                    label: t('newSimWizard.behaviors.operations.stp_topology_change'),
+                  },
+                ].map((option) => ({
+                  ...option,
+                  disabled:
+                    isBehaviorActionType(option.value) &&
+                    eligibleOptions(option.value).length === 0,
+                }))}
+                onValueChange={(type) => {
+                  if (isBehaviorActionType(type))
+                    update(index, {
+                      device: deviceActions[action.device]?.includes(type)
+                        ? action.device
+                        : (eligibleOptions(type)[0]?.value ?? ''),
+                      type,
+                    });
+                }}
+              />
+            )}
+          </FormField>
           <Button
             variant="destructive"
             aria-label={t('newSimWizard.behaviors.removeDeviceAction')}

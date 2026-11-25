@@ -103,7 +103,8 @@
     "home": "Inicio",
     "sectionCollapsed": "Sección {{title}}, contraída",
     "sectionExpanded": "Sección {{title}}, expandida",
-    "notifications": "Notificaciones"
+    "notifications": "Notificaciones",
+    "fieldHelp": "Ayuda: {{field}}"
   },
   "footer": {
     "version": "Versión",

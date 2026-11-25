@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 import type { DraftBehaviorPhase, DraftBehaviorTraffic } from '../../api/library-client';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../shared/Button';
-import { Input, Select } from '../../ui/Input';
+import { FormField } from '../../shared/FormField';
+import { Input } from '../../shared/Input';
+import { Select } from '../../shared/Select';
 import { BehaviorFaultAction } from './BehaviorFaultAction';
 import { BehaviorOneShotActions } from './BehaviorOneShotActions';
 import type { DraftTopologyModel } from './draft-topology';
@@ -57,39 +59,51 @@ export function BehaviorPhaseActions({
           key={`traffic-${actionIndex}`}
           className="grid gap-default md:grid-cols-[1fr_1fr_1fr_auto] md:items-end"
         >
-          <Select
-            label={t('newSimWizard.behaviors.device')}
-            value={action.device}
-            options={deviceOptions}
-            onChange={(device) =>
-              updateTraffic(actionIndex, (item) => ({
-                ...item,
-                device,
-                interface: interfaceOptions(device)[0]?.value ?? '',
-              }))
-            }
-          />
-          <Select
-            label={t('newSimWizard.behaviors.interface')}
-            value={action.interface}
-            options={interfaceOptions(action.device)}
-            onChange={(interfaceName) =>
-              updateTraffic(actionIndex, (item) => ({ ...item, interface: interfaceName }))
-            }
-          />
-          <Input
-            label={t('newSimWizard.behaviors.utilization')}
-            type="number"
-            min={1}
-            max={100}
-            value={action.utilization}
-            onChange={(event) =>
-              updateTraffic(actionIndex, (item) => ({
-                ...item,
-                utilization: Number(event.target.value),
-              }))
-            }
-          />
+          <FormField label={t('newSimWizard.behaviors.device')}>
+            {(control) => (
+              <Select
+                {...control}
+                value={action.device}
+                options={deviceOptions}
+                onValueChange={(device) =>
+                  updateTraffic(actionIndex, (item) => ({
+                    ...item,
+                    device,
+                    interface: interfaceOptions(device)[0]?.value ?? '',
+                  }))
+                }
+              />
+            )}
+          </FormField>
+          <FormField label={t('newSimWizard.behaviors.interface')}>
+            {(control) => (
+              <Select
+                {...control}
+                value={action.interface}
+                options={interfaceOptions(action.device)}
+                onValueChange={(interfaceName) =>
+                  updateTraffic(actionIndex, (item) => ({ ...item, interface: interfaceName }))
+                }
+              />
+            )}
+          </FormField>
+          <FormField label={t('newSimWizard.behaviors.utilization')}>
+            {(control) => (
+              <Input
+                {...control}
+                type="number"
+                min={1}
+                max={100}
+                value={action.utilization}
+                onChange={(event) =>
+                  updateTraffic(actionIndex, (item) => ({
+                    ...item,
+                    utilization: Number(event.target.value),
+                  }))
+                }
+              />
+            )}
+          </FormField>
           <Button
             variant="destructive"
             aria-label={t('newSimWizard.behaviors.removeTraffic')}

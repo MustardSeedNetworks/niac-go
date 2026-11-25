@@ -4,9 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../shared/Button';
 import { Card } from '../../shared/Card';
+import { FormField } from '../../shared/FormField';
 import { SmallText } from '../../ui/Typography';
 import { spliceConfigSection } from '../../utils/config-section';
-import { FormField } from '../form/FormField';
 import { AttachmentPoolEditor } from './AttachmentPoolEditor';
 import { setDeviceAddress } from './device-addressing';
 import {
@@ -153,10 +153,7 @@ export function NetworksStep({ content, onChange }: NetworksStepProps) {
                   key={`${network.name}-${index}`}
                   className="grid gap-comfortable md:grid-cols-5 items-end"
                 >
-                  <FormField
-                    label={t('newSimWizard.networks.name')}
-                    htmlFor={`network-name-${index}`}
-                  >
+                  <FormField label={t('newSimWizard.networks.name')} id={`network-name-${index}`}>
                     <input
                       id={`network-name-${index}`}
                       className={inputClassName}
@@ -166,7 +163,7 @@ export function NetworksStep({ content, onChange }: NetworksStepProps) {
                   </FormField>
                   <FormField
                     label={t('newSimWizard.networks.subnet')}
-                    htmlFor={`network-subnet-${index}`}
+                    id={`network-subnet-${index}`}
                   >
                     <input
                       id={`network-subnet-${index}`}
@@ -177,7 +174,7 @@ export function NetworksStep({ content, onChange }: NetworksStepProps) {
                   </FormField>
                   <FormField
                     label={t('newSimWizard.networks.subnetV6')}
-                    htmlFor={`network-subnet-v6-${index}`}
+                    id={`network-subnet-v6-${index}`}
                   >
                     <input
                       id={`network-subnet-v6-${index}`}
@@ -190,7 +187,7 @@ export function NetworksStep({ content, onChange }: NetworksStepProps) {
                   </FormField>
                   <FormField
                     label={t('newSimWizard.networks.virtualVlan')}
-                    htmlFor={`network-vlan-${index}`}
+                    id={`network-vlan-${index}`}
                   >
                     <input
                       id={`network-vlan-${index}`}
@@ -252,7 +249,7 @@ export function NetworksStep({ content, onChange }: NetworksStepProps) {
             >
               <FormField
                 label={t('newSimWizard.networks.attachmentName')}
-                htmlFor={`attachment-name-${index}`}
+                id={`attachment-name-${index}`}
               >
                 <input
                   id={`attachment-name-${index}`}
@@ -263,7 +260,7 @@ export function NetworksStep({ content, onChange }: NetworksStepProps) {
               </FormField>
               <FormField
                 label={t('newSimWizard.networks.attachmentForm')}
-                htmlFor={`attachment-form-${index}`}
+                id={`attachment-form-${index}`}
               >
                 <select
                   id={`attachment-form-${index}`}
@@ -281,7 +278,7 @@ export function NetworksStep({ content, onChange }: NetworksStepProps) {
               {poolOf(index, attachment) === undefined && (
                 <FormField
                   label={t('newSimWizard.networks.attachmentConnect')}
-                  htmlFor={`attachment-connect-${index}`}
+                  id={`attachment-connect-${index}`}
                 >
                   <select
                     id={`attachment-connect-${index}`}

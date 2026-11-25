@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAppContext } from '../contexts/AppContext';
-import { Select } from '../ui/Input';
+import { Select } from '../shared/Select';
 
 /**
  * SessionSwitcher — which scenario this browser is reading, in the shell.
@@ -26,15 +26,18 @@ export function SessionSwitcher(): ReactElement {
         aria-hidden="true"
       />
       {sessions.length > 1 ? (
-        <Select
-          value={sessionId ?? ''}
-          onChange={setSessionId}
-          aria-label={t('session.switchLabel')}
-          data-testid="session-switcher-select"
-          containerClassName="min-w-0 flex-1"
-          className="min-h-11 text-xs"
-          options={sessions.flatMap(({ sessionId: id }) => (id ? [{ value: id, label: id }] : []))}
-        />
+        <div className="min-w-0 flex-1">
+          <Select
+            value={sessionId ?? ''}
+            onValueChange={setSessionId}
+            aria-label={t('session.switchLabel')}
+            data-testid="session-switcher-select"
+            className="min-h-11 text-xs"
+            options={sessions.flatMap(({ sessionId: id }) =>
+              id ? [{ value: id, label: id }] : [],
+            )}
+          />
+        </div>
       ) : (
         <span className="text-xs text-text-muted truncate">{sessionId ?? t('session.none')}</span>
       )}
