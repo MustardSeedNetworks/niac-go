@@ -110,7 +110,7 @@ export function HelpDrawer({ isOpen, onClose, section }: HelpDrawerProps): React
       data-testid="help-drawer"
       footer={
         <span className="mr-auto text-xs text-text-muted" data-testid="help-drawer-version">
-          NIAC v{buildVersion.version} · {buildVersion.commit}
+          NIAC v{buildVersion.version.replace(/^v/, '')} · {buildVersion.commit}
         </span>
       }
     >

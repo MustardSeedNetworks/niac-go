@@ -7,10 +7,10 @@ import { StatBlock } from '../../components/StatBlock';
 import { iconSizes } from '../../constants/sizes';
 import { useToast } from '../../hooks/useToast';
 import { Button } from '../../shared/Button';
+import { Card } from '../../shared/Card';
 import { StatusPill } from '../../shared/StatusPill';
 import { ActionButton } from '../../ui/ActionButton';
-import { Card, CardContent } from '../../ui/Card';
-import { H2, SmallText } from '../../ui/Typography';
+import { SmallText } from '../../ui/Typography';
 import { formatTime, formatUptime } from '../../utils/format';
 
 export interface RunningSimulationCardProps {
@@ -31,7 +31,7 @@ export interface RunningSimulationCardProps {
 }
 
 /**
- * RunningSimulationCard — the green "simulation is live" card. Lives
+ * RunningSimulationCard — the "simulation is live" card. Lives
  * alongside RuntimeControlPage in pages/runtime/ so the page-level
  * file reads as a clean Start/Stop flow without 100+ lines of
  * Stat-block markup.
@@ -63,16 +63,12 @@ export function RunningSimulationCard({
   };
 
   return (
-    <Card className="border-status-success/30 bg-gradient-to-br from-status-success/20 to-bg-surface/70">
-      <CardContent className="space-y-5">
-        <div className="flex-between">
-          <div className="flex items-center gap-default">
-            <div className="h-3 w-3 animate-pulse rounded-full bg-status-success" />
-            <H2>{t('runtime.running.title')}</H2>
-          </div>
-          <StatusPill tone="success" label={t('runtime.running.active')} />
-        </div>
-
+    <Card
+      title={t('runtime.running.title')}
+      headerAction={<StatusPill tone="success" label={t('runtime.running.active')} />}
+      data-testid="running-simulation-card"
+    >
+      <div className="stack-lg">
         <div className="grid gap-comfortable md:grid-cols-2 lg:grid-cols-3">
           <StatBlock
             label={tCommon('labels.interface')}
@@ -102,7 +98,7 @@ export function RunningSimulationCard({
         </div>
 
         {simStatus.fabric && (
-          <div className="rounded-lg border border-surface-border bg-bg-base/40 pad-default stack">
+          <div className="stack border-t border-hairline pt-4">
             <div className="flex flex-wrap gap-default text-sm text-text-secondary">
               <span>
                 {t('runtime.fabric.attachment')}: {simStatus.fabric.topology.binding.attachment}
@@ -188,7 +184,7 @@ export function RunningSimulationCard({
             {t('runtime.running.downloadYaml')}
           </Button>
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 }

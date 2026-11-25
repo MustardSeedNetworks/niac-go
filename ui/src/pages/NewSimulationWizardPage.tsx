@@ -410,6 +410,7 @@ export function NewSimulationWizardPage() {
           <div className="flex gap-default">
             {state.step === 0 && canStartAsIs(state) && (
               <ActionButton
+                variant="primary"
                 action="edit"
                 data-testid="wizard-start-as-is-button"
                 disabled={!canProceed}

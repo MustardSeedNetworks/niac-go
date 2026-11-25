@@ -348,6 +348,7 @@ export function DraftTopologyComposer({
       <div className="flex flex-wrap items-center justify-between gap-default">
         <SmallText className="text-text-muted">{t('newSimWizard.topology.help')}</SmallText>
         <Button
+          variant="primary"
           icon={<Plus className={iconSizes.md} />}
           disabled={busy || !profiles || model.segmented}
           onClick={() => setDeviceEditor(emptyDevice)}

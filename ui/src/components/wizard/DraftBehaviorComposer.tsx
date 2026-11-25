@@ -328,6 +328,7 @@ export function DraftBehaviorComposer({
 
       <div>
         <ActionButton
+          variant="primary"
           action="edit"
           icon={<Save className={iconSizes.md} />}
           disabled={busy || !valid || timelines.length === 0}

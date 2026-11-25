@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 interface TableSectionProps {
   title: string;
   description?: string | undefined;
+  /** Right of the heading: a count chip. */
+  aside?: ReactNode;
   children: ReactNode;
   'data-testid'?: string;
 }
@@ -15,14 +17,18 @@ interface TableSectionProps {
 export function TableSection({
   title,
   description,
+  aside,
   children,
   'data-testid': testId,
 }: TableSectionProps) {
   return (
     <section className="stack" data-testid={testId}>
-      <div>
-        <h2 className="text-base font-semibold text-text-primary">{title}</h2>
-        {description ? <p className="text-sm text-text-muted">{description}</p> : null}
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h2 className="text-base font-semibold text-text-primary">{title}</h2>
+          {description ? <p className="text-sm text-text-muted">{description}</p> : null}
+        </div>
+        {aside}
       </div>
       {children}
     </section>

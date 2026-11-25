@@ -37,7 +37,7 @@ export function FinishStep({
 
         <div>
           <Link to="/runtime">
-            <Button data-testid="wizard-goto-runtime">
+            <Button variant="primary" data-testid="wizard-goto-runtime">
               {t('newSimWizard.finish.gotoRuntime')}
             </Button>
           </Link>

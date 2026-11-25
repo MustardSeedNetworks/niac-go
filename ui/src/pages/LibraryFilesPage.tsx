@@ -18,6 +18,7 @@ import { SearchInput } from '../shared/SearchInput';
 import { Skeleton } from '../shared/Skeleton';
 import { StatusPill } from '../shared/StatusPill';
 import { ActionButton } from '../ui/ActionButton';
+import { ContainedTable } from '../ui/ContainedTable';
 import { useDialogLabels } from '../ui/dialogLabels';
 import { useTableLabels } from '../ui/tableLabels';
 
@@ -233,24 +234,28 @@ function LibraryFilesView({ kind }: Props) {
             hint={emptyHint}
           />
         ) : (
-          <DataTable
-            rows={filtered}
-            columns={columns}
-            getRowKey={(entry) => entry.name}
-            caption={title}
-            labels={labels}
-            data-testid={`library-${kind}-table`}
-            {...(kind === 'walks'
-              ? {
-                  selection: {
-                    selectedKeys: sanitizeState.selected,
-                    onChange: sanitizeState.setSelected,
-                  },
-                }
-              : {})}
-            {...(rowActions ? { rowActions } : {})}
-            empty={<EmptyState title={tPages('libraryFiles.noMatchEntries', { query: search })} />}
-          />
+          <ContainedTable>
+            <DataTable
+              rows={filtered}
+              columns={columns}
+              getRowKey={(entry) => entry.name}
+              caption={title}
+              labels={labels}
+              data-testid={`library-${kind}-table`}
+              {...(kind === 'walks'
+                ? {
+                    selection: {
+                      selectedKeys: sanitizeState.selected,
+                      onChange: sanitizeState.setSelected,
+                    },
+                  }
+                : {})}
+              {...(rowActions ? { rowActions } : {})}
+              empty={
+                <EmptyState title={tPages('libraryFiles.noMatchEntries', { query: search })} />
+              }
+            />
+          </ContainedTable>
         )}
       </div>
 

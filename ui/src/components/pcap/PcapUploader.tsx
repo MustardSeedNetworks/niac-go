@@ -299,6 +299,7 @@ export function PcapUploader({
 
         {/* Analyze Button */}
         <ActionButton
+          variant="primary"
           action="upload"
           className="w-full"
           onClick={onAnalyze}

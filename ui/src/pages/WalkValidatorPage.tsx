@@ -268,6 +268,7 @@ export function WalkValidatorPage() {
 
           <div className="flex flex-wrap items-center gap-default">
             <ActionButton
+              variant="primary"
               action="edit"
               type="button"
               onClick={() => void run('validating')}

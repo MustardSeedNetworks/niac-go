@@ -328,6 +328,7 @@ export function PacketInspectorPage() {
                 {/* Control buttons */}
                 <div className="flex flex-wrap items-center gap-compact">
                   <Button
+                    variant="primary"
                     size="sm"
                     onClick={handlePauseToggle}
                     icon={

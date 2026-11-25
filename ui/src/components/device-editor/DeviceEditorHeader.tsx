@@ -95,6 +95,7 @@ export function DeviceEditorHeader({
               {tCommon('buttons.discard')}
             </Button>
             <ActionButton
+              variant="primary"
               action="edit"
               icon={
                 saving ? (

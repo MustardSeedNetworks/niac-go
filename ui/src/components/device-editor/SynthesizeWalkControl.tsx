@@ -141,6 +141,7 @@ export function SynthesizeWalkControl({
             ))}
           </select>
           <ActionButton
+            variant="primary"
             action="edit"
             disabled={disabled || generating || selected === ''}
             onClick={() => void handleGenerate()}

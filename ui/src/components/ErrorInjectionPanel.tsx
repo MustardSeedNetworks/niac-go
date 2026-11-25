@@ -387,6 +387,7 @@ export function ErrorInjectionPanel() {
             {/* Action Buttons */}
             <div className="flex gap-default">
               <ActionButton
+                variant="primary"
                 action="inject"
                 type="submit"
                 data-testid="apply-interface-fault"

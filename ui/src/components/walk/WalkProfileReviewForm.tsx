@@ -82,6 +82,7 @@ export function WalkProfileReviewForm({ review, setReview, creating, createProfi
         />
       </div>
       <ActionButton
+        variant="primary"
         action="edit"
         type="button"
         disabled={!valid || creating}

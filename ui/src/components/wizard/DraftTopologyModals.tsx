@@ -58,7 +58,12 @@ export function DeviceEditorModal({
             <Button variant="secondary" onClick={close}>
               {t('newSimWizard.topology.cancel')}
             </Button>
-            <ActionButton action="edit" disabled={!valid || busy} onClick={onSave}>
+            <ActionButton
+              variant="primary"
+              action="edit"
+              disabled={!valid || busy}
+              onClick={onSave}
+            >
               {t('newSimWizard.topology.addDevice')}
             </ActionButton>
           </>
@@ -159,7 +164,12 @@ export function LinkEditorModal({
             <Button variant="secondary" onClick={close}>
               {t('newSimWizard.topology.cancel')}
             </Button>
-            <ActionButton action="edit" disabled={!valid || busy} onClick={onSave}>
+            <ActionButton
+              variant="primary"
+              action="edit"
+              disabled={!valid || busy}
+              onClick={onSave}
+            >
               {t('newSimWizard.topology.saveLink')}
             </ActionButton>
           </>

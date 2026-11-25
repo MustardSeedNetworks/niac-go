@@ -101,7 +101,7 @@ export function DeviceDetailsPanel({ device, onClose, onEdit }: DeviceDetailsPan
       )}
 
       <div className="flex gap-compact">
-        <Button size="sm" onClick={() => onEdit?.(device)} className="flex-1">
+        <Button variant="primary" size="sm" onClick={() => onEdit?.(device)} className="flex-1">
           {t('deviceEditor.editLabel')}
         </Button>
         <Button variant="secondary" size="sm" onClick={onClose}>

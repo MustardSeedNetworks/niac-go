@@ -114,6 +114,7 @@ export function WalkProfileCaptureForm({
       <p className="text-xs text-text-muted">{t('walkAnalyzer.profile.credentialsNotice')}</p>
       <div className="flex gap-default">
         <ActionButton
+          variant="primary"
           action="start"
           type="button"
           disabled={!capture.target || capturing}

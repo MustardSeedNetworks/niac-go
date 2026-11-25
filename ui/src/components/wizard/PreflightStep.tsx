@@ -368,6 +368,7 @@ export function PreflightStep({ request, onStart, starting = false }: PreflightS
             {t('newSimWizard.preflight.checkLabel')}
           </ActionButton>
           <ActionButton
+            variant="primary"
             action="start"
             data-testid="wizard-preflight-start"
             onClick={() => approvedPayload && onStart(approvedPayload)}

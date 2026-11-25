@@ -253,7 +253,7 @@ export const ColoringRulesPanel = memo(function ColoringRulesPanel({
             <Button variant="ghost" size="sm" onClick={onClose}>
               {t('buttons.cancel')}
             </Button>
-            <Button size="sm" onClick={handleApply}>
+            <Button variant="primary" size="sm" onClick={handleApply}>
               {t('buttons.apply')}
             </Button>
           </div>

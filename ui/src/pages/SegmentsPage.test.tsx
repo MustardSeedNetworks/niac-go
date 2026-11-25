@@ -55,7 +55,7 @@ describe('SegmentsPage', () => {
     expect(within(seg200).getByText('VLAN 200')).toBeInTheDocument();
     expect(within(seg200).getByText('sw-200')).toBeInTheDocument();
     expect(within(seg200).getByTestId('segment-count-200')).toHaveTextContent('1');
-    expect(within(seg200).getByText('device')).toBeInTheDocument();
+    expect(within(seg200).getByText(/^1 device$/)).toBeInTheDocument();
     expect(within(seg200).queryByText('sw-300')).not.toBeInTheDocument();
 
     const seg300 = within(results).getByTestId('segment-300');
@@ -63,7 +63,7 @@ describe('SegmentsPage', () => {
     expect(within(seg300).getByText('sw-300')).toBeInTheDocument();
     expect(within(seg300).getByText('rtr-300')).toBeInTheDocument();
     expect(within(seg300).getByTestId('segment-count-300')).toHaveTextContent('2');
-    expect(within(seg300).getByText('devices')).toBeInTheDocument();
+    expect(within(seg300).getByText(/^2 devices$/)).toBeInTheDocument();
   });
 
   it('labels the native VLAN segment "Untagged" for a flat config', async () => {
@@ -83,7 +83,7 @@ describe('SegmentsPage', () => {
     expect(within(segment).getByText('Untagged')).toBeInTheDocument();
     expect(within(segment).getByText('r1')).toBeInTheDocument();
     expect(within(segment).getByTestId('segment-count-0')).toHaveTextContent('1');
-    expect(within(segment).getByText('device')).toBeInTheDocument();
+    expect(within(segment).getByText(/^1 device$/)).toBeInTheDocument();
   });
 
   // A segment's device count changes as the simulation runs, which makes it a

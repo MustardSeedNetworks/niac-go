@@ -1,18 +1,19 @@
-import { BellRing } from 'lucide-react';
 import { type ReactNode, useEffect, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { updateAlerts } from '../api/client';
 import type { AlertConfig } from '../api/types';
-import { iconSizes } from '../constants/sizes';
 import { useAppState } from '../contexts/AppContext';
 import { useAlertsResource } from '../hooks/usePageResources';
 import { useResourceError } from '../hooks/useResourceError';
 import { useToast } from '../hooks/useToast';
+import { Alert } from '../shared/Alert';
 import { Button } from '../shared/Button';
+import { Card } from '../shared/Card';
+import { FormField } from '../shared/FormField';
+import { Input } from '../shared/Input';
+import { Skeleton } from '../shared/Skeleton';
 import { ActionButton } from '../ui/ActionButton';
-import { Card, CardContent } from '../ui/Card';
-import { Tooltip } from '../ui/Tooltip';
-import { H2, P, SmallText } from '../ui/Typography';
+import { P, SmallText } from '../ui/Typography';
 
 /**
  * Alerts page — configure packet-threshold + webhook alerting for the
@@ -89,12 +90,8 @@ function AlertConfigCard({ recentErrors }: { recentErrors: number }) {
   };
 
   return (
-    <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="stack-lg">
-        <H2 className="flex items-center gap-compact">
-          <BellRing className={`${iconSizes.lg} text-status-warning`} />
-          {t('alerts.alertPolicy')}
-        </H2>
+    <Card title={t('alerts.alertPolicy')}>
+      <div className="stack-lg">
         <P className="text-text-secondary">
           <Trans
             i18nKey="alerts.page.intro"
@@ -108,24 +105,23 @@ function AlertConfigCard({ recentErrors }: { recentErrors: number }) {
         <SmallText className="text-text-muted">
           {t('alerts.recentErrors')} <strong className="text-text-secondary">{recentErrors}</strong>
         </SmallText>
-        {loading && <SmallText className="text-text-muted">{t('alerts.loadingAlerts')}</SmallText>}
-        {error && (
-          <SmallText className="text-status-error">
-            {t('alerts.loadError', { message: error.message })}
-          </SmallText>
+        {loading && (
+          <div role="status" aria-label={t('alerts.loadingAlerts')}>
+            <Skeleton className="h-10 w-full" />
+          </div>
         )}
+        {error && <Alert tone="error">{t('alerts.loadError', { message: error.message })}</Alert>}
         {data && (
           <>
-            <div className="grid gap-comfortable md:grid-cols-2">
-              <div>
-                <label htmlFor="alert-packet-threshold" className="text-sm text-text-muted">
-                  {t('alerts.page.packetThresholdLabel')}
-                </label>
-                <Tooltip text={t('alerts.page.packetThresholdHelp')} className="w-full">
-                  <input
-                    id="alert-packet-threshold"
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField
+                label={t('alerts.page.packetThresholdLabel')}
+                hint={t('alerts.page.packetThresholdHelp')}
+              >
+                {(control) => (
+                  <Input
+                    {...control}
                     data-testid="alert-packet-threshold"
-                    className="mt-tight w-full rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary focus:border-brand-accent focus:outline-none"
                     type="number"
                     min="0"
                     placeholder="100000"
@@ -136,16 +132,15 @@ function AlertConfigCard({ recentErrors }: { recentErrors: number }) {
                       setSavedMessage(null);
                     }}
                   />
-                </Tooltip>
-              </div>
-              <div>
-                <label htmlFor="alert-webhook-url" className="text-sm text-text-muted">
-                  {t('alerts.page.webhookUrlLabel')}
-                </label>
-                <Tooltip text={t('alerts.page.webhookUrlHelp')} className="w-full">
-                  <input
-                    id="alert-webhook-url"
-                    className="mt-tight w-full rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary focus:border-brand-accent focus:outline-none"
+                )}
+              </FormField>
+              <FormField
+                label={t('alerts.page.webhookUrlLabel')}
+                hint={t('alerts.page.webhookUrlHelp')}
+              >
+                {(control) => (
+                  <Input
+                    {...control}
                     placeholder="https://hooks.example.com/niac"
                     value={webhook}
                     onChange={(event) => {
@@ -154,13 +149,14 @@ function AlertConfigCard({ recentErrors }: { recentErrors: number }) {
                       setSavedMessage(null);
                     }}
                   />
-                </Tooltip>
-              </div>
+                )}
+              </FormField>
             </div>
-            {savedMessage && <SmallText className="text-status-success">{savedMessage}</SmallText>}
-            <div className="flex flex-wrap gap-default">
+            {savedMessage && <Alert tone="success">{savedMessage}</Alert>}
+            <div className="flex flex-wrap gap-2">
               <ActionButton
                 action="edit"
+                variant="primary"
                 disabled={!dirty || saving}
                 onClick={commit}
                 title={t('alerts.page.saveHelp')}
@@ -178,7 +174,7 @@ function AlertConfigCard({ recentErrors }: { recentErrors: number }) {
             </div>
           </>
         )}
-      </CardContent>
+      </div>
     </Card>
   );
 }

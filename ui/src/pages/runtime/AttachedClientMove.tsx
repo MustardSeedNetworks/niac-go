@@ -147,6 +147,7 @@ export function AttachedClientMove({
           </select>
         </div>
         <ActionButton
+          variant="primary"
           action="start"
           size="sm"
           type="submit"

@@ -4,6 +4,7 @@ import type { Device } from '../../api/types';
 import { useDeviceList } from '../../contexts/DeviceListContext';
 import { DataTable, type DataTableColumn } from '../../shared/DataTable';
 import { ActionButton } from '../../ui/ActionButton';
+import { ContainedTable } from '../../ui/ContainedTable';
 import { useTableLabels } from '../../ui/tableLabels';
 import { DeviceTypeChip } from '../DeviceTypeChip';
 import { ProtocolChips } from '../ProtocolChips';
@@ -75,50 +76,52 @@ export function DeviceTableView() {
   ];
 
   return (
-    <DataTable
-      rows={devices}
-      columns={columns}
-      getRowKey={(device) => device.hostname}
-      caption={t('list.listAria')}
-      labels={labels}
-      pageSize={PAGE_SIZE}
-      selection={{ selectedKeys: selectedDevices, onChange: onSelectionChange }}
-      data-testid="device-list-rows"
-      empty={null}
-      rowActions={(device) => (
-        <>
-          <ActionButton
-            action="edit"
-            variant="ghost"
-            size="sm"
-            iconOnly
-            icon={<Pencil className="h-4 w-4" />}
-            onClick={() => onEdit(device.hostname)}
-            title={t('list.editDeviceTitle', { hostname: device.hostname })}
-            aria-label={t('list.editDeviceAria', { hostname: device.hostname })}
-          />
-          <ActionButton
-            action="edit"
-            variant="ghost"
-            size="sm"
-            iconOnly
-            icon={<Copy className="h-4 w-4" />}
-            onClick={() => onClone(device.hostname)}
-            title={t('list.cloneDeviceTitle', { hostname: device.hostname })}
-            aria-label={t('list.cloneDeviceAria', { hostname: device.hostname })}
-          />
-          <ActionButton
-            action="delete"
-            variant="destructive"
-            size="sm"
-            iconOnly
-            icon={<Trash2 className="h-4 w-4" />}
-            onClick={() => onDelete(device.hostname)}
-            title={t('list.deleteDeviceTitle', { hostname: device.hostname })}
-            aria-label={t('list.deleteDeviceAria', { hostname: device.hostname })}
-          />
-        </>
-      )}
-    />
+    <ContainedTable>
+      <DataTable
+        rows={devices}
+        columns={columns}
+        getRowKey={(device) => device.hostname}
+        caption={t('list.listAria')}
+        labels={labels}
+        pageSize={PAGE_SIZE}
+        selection={{ selectedKeys: selectedDevices, onChange: onSelectionChange }}
+        data-testid="device-list-rows"
+        empty={null}
+        rowActions={(device) => (
+          <>
+            <ActionButton
+              action="edit"
+              variant="ghost"
+              size="sm"
+              iconOnly
+              icon={<Pencil className="h-4 w-4" />}
+              onClick={() => onEdit(device.hostname)}
+              title={t('list.editDeviceTitle', { hostname: device.hostname })}
+              aria-label={t('list.editDeviceAria', { hostname: device.hostname })}
+            />
+            <ActionButton
+              action="edit"
+              variant="ghost"
+              size="sm"
+              iconOnly
+              icon={<Copy className="h-4 w-4" />}
+              onClick={() => onClone(device.hostname)}
+              title={t('list.cloneDeviceTitle', { hostname: device.hostname })}
+              aria-label={t('list.cloneDeviceAria', { hostname: device.hostname })}
+            />
+            <ActionButton
+              action="delete"
+              variant="destructive"
+              size="sm"
+              iconOnly
+              icon={<Trash2 className="h-4 w-4" />}
+              onClick={() => onDelete(device.hostname)}
+              title={t('list.deleteDeviceTitle', { hostname: device.hostname })}
+              aria-label={t('list.deleteDeviceAria', { hostname: device.hostname })}
+            />
+          </>
+        )}
+      />
+    </ContainedTable>
   );
 }

@@ -232,6 +232,7 @@ export function MergeControls({
         {/* Main actions */}
         <div className="flex flex-wrap gap-default pt-2 border-t border-surface-border">
           <Button
+            variant="primary"
             disabled={disabled || stats.totalChanges === 0 || !stats.isComplete}
             onClick={onPreview}
             icon={<FileCheck className={iconSizes.md} />}
@@ -240,6 +241,7 @@ export function MergeControls({
           </Button>
 
           <Button
+            variant="primary"
             disabled={disabled || !stats.isComplete}
             onClick={onExport}
             icon={<Download className={iconSizes.md} />}
@@ -372,7 +374,7 @@ export function MergePreviewModal({ content, onClose, onExport }: MergePreviewMo
           <Button variant="secondary" onClick={handleCopy}>
             {t('configDiff.copyToClipboardButton')}
           </Button>
-          <Button onClick={onExport} icon={<Download className={iconSizes.md} />}>
+          <Button variant="primary" onClick={onExport} icon={<Download className={iconSizes.md} />}>
             {t('configDiff.downloadYamlButton')}
           </Button>
         </>

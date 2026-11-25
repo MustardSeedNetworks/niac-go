@@ -520,6 +520,7 @@ export function TopologyPage() {
                 </Tooltip>
               </div>
               <Button
+                variant="primary"
                 size="sm"
                 onClick={handleRefresh}
                 icon={<RefreshCw className="w-4 h-4" />}

@@ -181,6 +181,7 @@ export function ContentBundleUploader() {
           )}
 
           <ActionButton
+            variant="primary"
             action="admin"
             size="sm"
             onClick={() => void handleInstall()}

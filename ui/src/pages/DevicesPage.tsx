@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { FileCog, Server } from 'lucide-react';
+import { FileCog } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
@@ -7,7 +7,6 @@ import { parseDocument } from 'yaml';
 import { updateConfig, updateDevice } from '../api/client';
 import { isApiError } from '../api/errors';
 import type { LibraryFileEntry } from '../api/library-client';
-import type { DeviceSummary } from '../api/types';
 import { YamlEditor } from '../components/config/YamlEditor';
 import { DeviceTable } from '../components/DeviceTable';
 import { UnsavedChangesModal } from '../components/device-editor/UnsavedChangesModal';
@@ -15,11 +14,14 @@ import {
   type UnsavedChangesGuard,
   useUnsavedChangesGuard,
 } from '../components/device-editor/useUnsavedChangesGuard';
+import { TableSection } from '../components/TableSection';
 import { POLL_INTERVALS } from '../constants/polling';
 import { iconSizes } from '../constants/sizes';
 import { useAppState } from '../contexts/AppContext';
 import { useConfigResource, useLibraryResource } from '../hooks/usePageResources';
+import { Alert } from '../shared/Alert';
 import { Button } from '../shared/Button';
+import { Skeleton } from '../shared/Skeleton';
 import { ActionButton } from '../ui/ActionButton';
 import { BaseCard } from '../ui/BaseCard';
 import { CardRow } from '../ui/Card';
@@ -76,30 +78,32 @@ function DeviceListCard({
   const { data: devices, loading, error } = useAppState('devices');
 
   return (
-    <BaseCard<DeviceSummary[]>
+    <TableSection
       title={t('devices.title')}
-      subtitle={t('devices.subtitle')}
-      icon={<Server className={`${iconSizes.lg} text-status-info`} />}
-      data={devices}
-      loading={loading && !devices}
-      error={error?.message}
-      getStatus={(d) => (d.length > 0 ? 'success' : 'unknown')}
-      emptyMessage={t('devices.emptyMessage')}
-      testId="devices-card"
+      description={t('devices.subtitle')}
+      data-testid="devices-card"
     >
-      {(data) => (
+      {loading && !devices ? (
+        <div role="status" aria-label={t('devices.title')}>
+          <Skeleton className="h-40 w-full" />
+        </div>
+      ) : error ? (
+        <Alert tone="error">{error.message}</Alert>
+      ) : (
         <>
           <DeviceTable
-            devices={data}
+            devices={devices ?? []}
             selectedName={selected}
             onSelect={(device) => onSelect(device.name)}
           />
-          <LinkButton to="/device-config" className="mt-heading">
-            {t('devices.editInLibrary')}
-          </LinkButton>
+          <div>
+            <LinkButton to="/device-config" variant="secondary">
+              {t('devices.editInLibrary')}
+            </LinkButton>
+          </div>
         </>
       )}
-    </BaseCard>
+    </TableSection>
   );
 }
 
@@ -359,6 +363,7 @@ function ConfigEditorCard({
             )}
             <div className="flex flex-wrap gap-default mt-heading">
               <ActionButton
+                variant="primary"
                 action={fragment ? 'edit' : 'admin'}
                 disabled={!dirty || saving}
                 onClick={handleSave}

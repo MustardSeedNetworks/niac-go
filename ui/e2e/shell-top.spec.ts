@@ -53,7 +53,7 @@ test('appearance settings and the rail toggle share the visible theme', async ({
   await rail.getByTestId('sidebar-settings-button').click();
   const drawer = page.getByTestId('settings-drawer');
   await drawer.getByRole('tab', { name: 'Appearance', exact: true }).click();
-  await drawer.getByRole('button', { name: 'Light', exact: true }).click();
+  await drawer.getByRole('radio', { name: 'Light', exact: true }).check({ force: true });
   await page.getByTestId('settings-drawer-close').click();
   await expect(page.locator('html')).not.toHaveClass(/dark/);
   await expect(page.locator('html')).toHaveCSS('color-scheme', 'light');
@@ -126,3 +126,23 @@ test('phone drawer retains controls after desktop collapse and shares the theme'
   await expect(rail.locator('button')).toHaveCount(0);
   await expect(page.getByRole('main').getByTestId('connection-status')).toHaveCount(0);
 });
+
+for (const scheme of ['light', 'dark'] as const) {
+  test.describe(`OS set to ${scheme}`, () => {
+    test.use({ colorScheme: scheme, viewport: { width: 1440, height: 900 } });
+
+    test('the theme follows the OS until the operator picks a side', async ({ page }) => {
+      await page.goto('/devices');
+      const html = page.locator('html');
+      const opposite = scheme === 'dark' ? /^(?!.*dark)/ : /dark/;
+      const own = scheme === 'dark' ? /dark/ : /^(?!.*dark)/;
+      await expect(html).toHaveClass(own);
+
+      // An explicit choice wins over the OS, and survives a reload.
+      await page.getByTestId('sidebar-desktop').getByTestId('theme-toggle').click();
+      await expect(html).toHaveClass(opposite);
+      await page.reload();
+      await expect(html).toHaveClass(opposite);
+    });
+  });
+}

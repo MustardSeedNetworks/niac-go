@@ -67,6 +67,7 @@ export function WalkProfileSource(props: Props) {
           />
           <div className="flex gap-default">
             <ActionButton
+              variant="primary"
               action="upload"
               type="button"
               disabled={!props.file || props.busy !== 'idle'}

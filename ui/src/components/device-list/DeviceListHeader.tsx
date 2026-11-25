@@ -116,6 +116,7 @@ export function DeviceListHeader({
         </div>
         <ActionButton
           action="edit"
+          variant="primary"
           icon={<Plus className={iconSizes.md} />}
           onClick={() => navigate('/device-config/new')}
           data-testid="device-add"

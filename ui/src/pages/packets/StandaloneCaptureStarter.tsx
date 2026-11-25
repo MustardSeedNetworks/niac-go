@@ -118,7 +118,12 @@ export function StandaloneCaptureStarter({
               className="rounded-lg border border-surface-border bg-bg-base/60 px-3 py-row font-mono text-sm text-text-primary focus:border-brand-accent focus:outline-none"
             />
           </label>
-          <ActionButton action="start" onClick={handleStart} disabled={!selectedIface || busy}>
+          <ActionButton
+            variant="primary"
+            action="start"
+            onClick={handleStart}
+            disabled={!selectedIface || busy}
+          >
             {busy
               ? t('packets.inspector.startingLabel')
               : t('packets.inspector.startCaptureButton')}

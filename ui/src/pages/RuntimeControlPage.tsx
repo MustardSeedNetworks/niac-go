@@ -335,6 +335,7 @@ export function RuntimeControlPage() {
                   </div>
                 </div>
                 <ActionButton
+                  variant="primary"
                   action="edit"
                   disabled={!hasValidConfig || preparing || starting}
                   onClick={handlePrepare}

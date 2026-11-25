@@ -62,8 +62,8 @@ test('lists each attached client at its own device and port and follows a move',
   const card = page.getByTestId('attached-clients');
   await expect(card).toBeVisible();
 
-  const firstRow = card.getByTestId(`attached-client-${first}`);
-  const secondRow = card.getByTestId(`attached-client-${second}`);
+  const firstRow = card.getByRole('row').filter({ hasText: first });
+  const secondRow = card.getByRole('row').filter({ hasText: second });
   await expect(firstRow.getByTestId('attached-client-device')).toHaveText('MED-ACC-SW01');
   await expect(firstRow.getByTestId('attached-client-port')).toHaveText('GigabitEthernet1/0/45');
   await expect(secondRow.getByTestId('attached-client-device')).toHaveText('MED-ACC-SW01');
@@ -181,8 +181,8 @@ test('re-pins one client to a free pool port and leaves the other where it was',
   ]);
 
   const card = page.getByTestId('attached-clients');
-  const firstRow = card.getByTestId(`attached-client-${first}`);
-  const secondRow = card.getByTestId(`attached-client-${second}`);
+  const firstRow = card.getByRole('row').filter({ hasText: first });
+  const secondRow = card.getByRole('row').filter({ hasText: second });
   await expect(firstRow.getByTestId('attached-client-device')).toHaveText('MED-ACC-SW02');
   await expect(firstRow.getByTestId('attached-client-port')).toHaveText('GigabitEthernet1/0/45');
   await expect(secondRow.getByTestId('attached-client-device')).toHaveText('MED-ACC-SW01');

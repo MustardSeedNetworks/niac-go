@@ -303,6 +303,7 @@ export function ConfigDiffPage() {
                   </P>
                 </div>
                 <ActionButton
+                  variant="primary"
                   action="edit"
                   onClick={async () => {
                     if (permission.disabled) return;

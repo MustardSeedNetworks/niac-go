@@ -118,6 +118,7 @@ export function DevicesStep({
             />
             <div>
               <ActionButton
+                variant="primary"
                 action="edit"
                 icon={<Save className={iconSizes.md} />}
                 disabled={!dirty || saving}

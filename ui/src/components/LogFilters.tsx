@@ -167,6 +167,7 @@ export const LogFilters = memo(function LogFilters({
                 running. */}
           {onPauseToggle && (
             <Button
+              variant="primary"
               size="sm"
               onClick={onPauseToggle}
               icon={paused ? <Play className={iconSizes.md} /> : <Pause className={iconSizes.md} />}

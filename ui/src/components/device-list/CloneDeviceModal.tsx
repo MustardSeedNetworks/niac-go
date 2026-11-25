@@ -51,7 +51,13 @@ export function CloneDeviceModal({ hostname, onClone, onCancel }: CloneDeviceMod
           <Button variant="secondary" type="button" onClick={onCancel}>
             {tCommon('buttons.cancel')}
           </Button>
-          <ActionButton action="edit" type="submit" form={formId} disabled={!isValid}>
+          <ActionButton
+            variant="primary"
+            action="edit"
+            type="submit"
+            form={formId}
+            disabled={!isValid}
+          >
             {tCommon('buttons.clone')}
           </ActionButton>
         </>

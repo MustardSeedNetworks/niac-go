@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
  * Config Diff Page (/config-diff) E2E
  *
  * Covers the compare-and-merge surface:
- * - Page renders the "Compare & Merge" heading
+ * - Page renders the "Compare & merge" heading
  * - Original File + Modified File panels are present
  */
 
@@ -14,7 +14,7 @@ test.describe('Config Diff Page', () => {
     await page.waitForLoadState('domcontentloaded');
   });
 
-  test('should render the Compare & Merge heading', async ({ page }) => {
+  test('should render the Compare & merge heading', async ({ page }) => {
     await expect(page.getByTestId('page-header-title')).toBeVisible({
       timeout: 10000,
     });
