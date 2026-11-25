@@ -2,11 +2,11 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PcapPacket } from '../../api/types';
 import { useTimeDisplay } from '../../hooks/useTimeDisplay';
-import { Button } from '../../shared/Button';
 import { Card } from '../../shared/Card';
 import { CategoryChip } from '../../shared/CategoryChip';
 import { DataTable, type DataTableColumn } from '../../shared/DataTable';
 import { EmptyState } from '../../shared/EmptyState';
+import { ActionButton } from '../../ui/ActionButton';
 import { SmallText } from '../../ui/Typography';
 import { useTableLabels } from '../../ui/tableLabels';
 import { formatTimeByMode, getTimeDisplayLabel } from '../../utils/time-display';
@@ -124,14 +124,14 @@ export const PcapPacketList = memo(function PcapPacketList({
         <SmallText className="text-text-muted">
           {t('packets.list.showingCount', { shown: packets.length, total: totalPackets })}
         </SmallText>
-        <Button
+        <ActionButton
           variant="ghost"
           size="sm"
           onClick={cycleTimeMode}
           title={t('packets.list.cycleTimeModeTitle')}
         >
           {t('packets.list.timeColumn', { mode: getTimeDisplayLabel(timeMode) })}
-        </Button>
+        </ActionButton>
       </div>
 
       <DataTable

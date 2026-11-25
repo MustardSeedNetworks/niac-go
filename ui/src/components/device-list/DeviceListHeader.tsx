@@ -66,7 +66,7 @@ export function DeviceListHeader({
         >
           {tCommon('buttons.refresh')}
         </Button>
-        <Button
+        <ActionButton
           variant="secondary"
           icon={<FileCode className={iconSizes.md} />}
           onClick={() => exportDevicesAsYAML(filteredDevices)}
@@ -74,12 +74,12 @@ export function DeviceListHeader({
           title={t('list.downloadYamlTitle')}
         >
           {t('list.downloadYamlButton')}
-        </Button>
+        </ActionButton>
         {/* Data-only exports — kept under a disclosure since JSON/CSV
             can't be re-imported into NIAC; useful for reporting / pipe
             into other tooling only. */}
         <div ref={menuRef} className="relative">
-          <Button
+          <ActionButton
             variant="ghost"
             icon={<Download className={iconSizes.md} />}
             onClick={() => setExportMenuOpen((v) => !v)}
@@ -88,7 +88,7 @@ export function DeviceListHeader({
           >
             {t('list.dataExportButton')}
             <ChevronDown className={iconSizes.sm} aria-hidden="true" />
-          </Button>
+          </ActionButton>
           {exportMenuOpen && (
             <div className="absolute right-0 z-10 mt-1 w-44 rounded-lg border border-surface-border bg-surface-raised shadow-lg">
               <button

@@ -9,7 +9,6 @@ import { useLibraryResource } from '../hooks/usePageResources';
 import { useToast } from '../hooks/useToast';
 import { useWalkSanitize } from '../hooks/useWalkSanitize';
 import { Alert } from '../shared/Alert';
-import { Button } from '../shared/Button';
 import { CategoryChip } from '../shared/CategoryChip';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { DataTable, type DataTableColumn } from '../shared/DataTable';
@@ -209,7 +208,7 @@ function LibraryFilesView({ kind }: Props) {
               placeholder={tPages('libraryFiles.searchPlaceholder')}
               className="min-w-48 flex-1 sm:max-w-64"
             />
-            <Button
+            <ActionButton
               variant="ghost"
               size="sm"
               onClick={refetch}
@@ -218,7 +217,7 @@ function LibraryFilesView({ kind }: Props) {
               title={tPages('libraryFiles.refreshTitle')}
             >
               {tPages('libraryFiles.refreshButton')}
-            </Button>
+            </ActionButton>
           </div>
         </div>
 

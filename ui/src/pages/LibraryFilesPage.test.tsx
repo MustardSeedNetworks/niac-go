@@ -84,13 +84,13 @@ describe('LibraryFilesPage (walks)', () => {
 
     render(<LibraryWalksPage />);
 
-    expect(screen.getByText('Loading walks…')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading walks…' })).toBeInTheDocument();
     expect(screen.queryByText('No walks installed yet.')).not.toBeInTheDocument();
 
     resolveFetch([]);
 
     await waitFor(() => expect(screen.getByText('No walks installed yet.')).toBeInTheDocument());
-    expect(screen.queryByText('Loading walks…')).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading walks…' })).not.toBeInTheDocument();
   });
 
   it('shows a Revert button and edited badge only for edited walks', async () => {

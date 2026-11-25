@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { CategoryChip } from '../shared/CategoryChip';
 
-const VISIBLE = 3;
+const VISIBLE = 4;
 
 /**
  * A device's protocols on one line: the first few as chips, the rest as a
@@ -15,7 +15,7 @@ export function ProtocolChips({ protocols }: { protocols: readonly string[] }) {
   }
   const rest = protocols.length - VISIBLE;
   return (
-    <div className="flex flex-nowrap items-center gap-1" title={protocols.join(', ')}>
+    <div className="flex flex-nowrap items-center gap-1">
       {protocols.slice(0, VISIBLE).map((protocol) => (
         <CategoryChip key={protocol} label={protocol} />
       ))}

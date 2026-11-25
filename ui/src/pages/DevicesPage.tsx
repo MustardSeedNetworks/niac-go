@@ -97,9 +97,7 @@ function DeviceListCard({
             onSelect={(device) => onSelect(device.name)}
           />
           <div>
-            <LinkButton to="/device-config" variant="secondary">
-              {t('devices.editInLibrary')}
-            </LinkButton>
+            <LinkButton to="/device-config">{t('devices.editInLibrary')}</LinkButton>
           </div>
         </>
       )}

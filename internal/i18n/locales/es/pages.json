@@ -1118,8 +1118,8 @@
     "eyebrow": "Herramientas"
   },
   "walkAnalyzer": {
-    "label": "Analizador de walks",
-    "title": "Analizador de walks",
+    "label": "Analizador de walk",
+    "title": "Analizador de walk",
     "description": "Analice un archivo walk de SNMP para extraer la identidad del dispositivo, el inventario de interfaces y las adyacencias de vecinos LLDP/CDP.",
     "pageTitle": "Analizador de Walk",
     "noWalksFound": "No se encontraron walks",
@@ -1192,8 +1192,8 @@
     "eyebrow": "Herramientas"
   },
   "libraryWalks": {
-    "label": "Biblioteca de walks",
-    "title": "Biblioteca de walks",
+    "label": "Biblioteca de walk",
+    "title": "Biblioteca de walk",
     "description": "Navegador de solo lectura para los archivos walk de {{protocol}} en disco que el daemon sirve desde la biblioteca unificada.",
     "eyebrow": "Biblioteca"
   },

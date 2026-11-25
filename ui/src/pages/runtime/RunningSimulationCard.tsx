@@ -174,7 +174,7 @@ export function RunningSimulationCard({
           >
             {t('runtime.running.viewDevices')}
           </Button>
-          <Button
+          <ActionButton
             variant="ghost"
             icon={<Download className={iconSizes.md} />}
             onClick={handleDownload}
@@ -182,7 +182,7 @@ export function RunningSimulationCard({
             title={t('runtime.running.downloadYamlTitle')}
           >
             {t('runtime.running.downloadYaml')}
-          </Button>
+          </ActionButton>
         </div>
       </div>
     </Card>

@@ -78,7 +78,7 @@ const SegmentSection = memo(({ segment }: { segment: SegmentSummary }) => {
       title={heading}
       data-testid={`segment-${segment.vlanTag}`}
       aside={
-        <span data-testid={`segment-count-${segment.vlanTag}`}>
+        <span className="figure" data-testid={`segment-count-${segment.vlanTag}`}>
           <CategoryChip
             label={`${segment.devices.length} ${t('segments.deviceNoun', { count: segment.devices.length })}`}
           />

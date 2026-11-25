@@ -157,7 +157,7 @@ export function DraftBehaviorComposer({
     <div className="stack" data-testid="behavior-composer">
       <div className="flex flex-wrap items-center justify-between gap-default">
         <SmallText className="text-text-muted">{t('newSimWizard.behaviors.help')}</SmallText>
-        <Button
+        <ActionButton
           variant="secondary"
           icon={<Plus className={iconSizes.md} />}
           disabled={busy || !firstDevice}
@@ -166,7 +166,7 @@ export function DraftBehaviorComposer({
           data-testid="add-timeline"
         >
           {t('newSimWizard.behaviors.addTimeline')}
-        </Button>
+        </ActionButton>
       </div>
 
       {timelines.length === 0 && (

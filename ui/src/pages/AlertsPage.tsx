@@ -7,7 +7,6 @@ import { useAlertsResource } from '../hooks/usePageResources';
 import { useResourceError } from '../hooks/useResourceError';
 import { useToast } from '../hooks/useToast';
 import { Alert } from '../shared/Alert';
-import { Button } from '../shared/Button';
 import { Card } from '../shared/Card';
 import { FormField } from '../shared/FormField';
 import { Input } from '../shared/Input';
@@ -163,14 +162,14 @@ function AlertConfigCard({ recentErrors }: { recentErrors: number }) {
               >
                 {saving ? t('alerts.page.savingButton') : t('alerts.page.saveButton')}
               </ActionButton>
-              <Button
+              <ActionButton
                 variant="secondary"
                 disabled={!dirty || saving}
                 onClick={reset}
                 title={t('alerts.page.resetHelp')}
               >
                 {t('alerts.page.resetButton')}
-              </Button>
+              </ActionButton>
             </div>
           </>
         )}

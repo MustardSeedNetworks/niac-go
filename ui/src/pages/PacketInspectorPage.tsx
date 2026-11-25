@@ -363,7 +363,7 @@ export function PacketInspectorPage() {
                     </ActionButton>
                   )}
 
-                  <Button
+                  <ActionButton
                     variant="ghost"
                     size="sm"
                     onClick={handleExport}
@@ -372,9 +372,9 @@ export function PacketInspectorPage() {
                     title={t('packets.inspector.exportButtonTitle')}
                   >
                     {t('packets.inspector.exportButton')}
-                  </Button>
+                  </ActionButton>
 
-                  <Button
+                  <ActionButton
                     variant="ghost"
                     size="sm"
                     onClick={handleExportPcap}
@@ -383,7 +383,7 @@ export function PacketInspectorPage() {
                     title={t('packets.inspector.exportPcapButtonTitle')}
                   >
                     {t('packets.inspector.exportPcapButton')}
-                  </Button>
+                  </ActionButton>
 
                   <Button
                     variant="ghost"
@@ -394,7 +394,7 @@ export function PacketInspectorPage() {
                     {t('packets.inspector.colorsButton')}
                   </Button>
 
-                  <Button
+                  <ActionButton
                     variant="ghost"
                     size="sm"
                     onClick={handleFollowStream}
@@ -405,7 +405,7 @@ export function PacketInspectorPage() {
                     }
                   >
                     {t('packets.inspector.followStreamTitle')}
-                  </Button>
+                  </ActionButton>
 
                   {/* SSE auto-reconnects, but manual reconnect is available */}
                   {!connected && (

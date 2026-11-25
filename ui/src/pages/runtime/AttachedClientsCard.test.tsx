@@ -104,7 +104,7 @@ describe('AttachedClientsCard', () => {
     ]);
     render(<AttachedClientsCard sessionId="hospital" />);
 
-    const first = await screen.findByTestId('attached-client-00:c0:17:00:00:01');
+    const first = await screen.findByRole('row', { name: /00:c0:17:00:00:01/ });
     expect(within(first).getByTestId('attached-client-device')).toHaveTextContent('MED-ACC-SW01');
     expect(within(first).getByTestId('attached-client-port')).toHaveTextContent(
       'GigabitEthernet1/0/45',
@@ -112,7 +112,7 @@ describe('AttachedClientsCard', () => {
     expect(first).toHaveTextContent('10.51.210.20');
     expect(first).toHaveTextContent('untagged');
 
-    const second = screen.getByTestId('attached-client-00:c0:17:00:00:02');
+    const second = screen.getByRole('row', { name: /00:c0:17:00:00:02/ });
     expect(within(second).getByTestId('attached-client-device')).toHaveTextContent('MED-ACC-SW02');
     expect(within(second).getByTestId('attached-client-port')).toHaveTextContent(
       'GigabitEthernet1/0/46',
@@ -124,7 +124,7 @@ describe('AttachedClientsCard', () => {
     fetchSessionClients.mockResolvedValue([client({})]);
     render(<AttachedClientsCard sessionId="hospital" />);
 
-    const row = await screen.findByTestId('attached-client-00:c0:17:00:00:01');
+    const row = await screen.findByRole('row', { name: /00:c0:17:00:00:01/ });
     expect(within(row).getByTestId('attached-client-device')).toHaveTextContent('Not placed');
     expect(within(row).getByTestId('attached-client-port')).toHaveTextContent('Not placed');
   });
@@ -161,7 +161,7 @@ describe('AttachedClientsCard', () => {
       if (fabric) fabric.topology.attachments = [];
       render(<AttachedClientsCard sessionId="hospital" fabric={fabric} />);
 
-      await screen.findByTestId('attached-client-00:c0:17:00:00:01');
+      await screen.findByRole('row', { name: /00:c0:17:00:00:01/ });
       expect(screen.queryByTestId('attached-client-move')).not.toBeInTheDocument();
     });
 

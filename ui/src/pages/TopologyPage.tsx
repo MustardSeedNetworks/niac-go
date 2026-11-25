@@ -25,6 +25,7 @@ import { useTopologyResource } from '../hooks/usePageResources';
 import { useResourceError } from '../hooks/useResourceError';
 import { useTopologyLayoutPersistence } from '../hooks/useTopologyLayoutPersistence';
 import { Button } from '../shared/Button';
+import { ActionButton } from '../ui/ActionButton';
 import { Card, CardContent } from '../ui/Card';
 import { Tooltip } from '../ui/Tooltip';
 import { H2, SmallText } from '../ui/Typography';
@@ -534,7 +535,7 @@ export function TopologyPage() {
                       (snap drags / filters back to defaults) and
                       operators reach for it often enough that hiding
                       it inside a menu got friction reports. */}
-                  <Button
+                  <ActionButton
                     variant="ghost"
                     size="sm"
                     onClick={handleResetLayout}
@@ -543,15 +544,15 @@ export function TopologyPage() {
                     data-testid="topology-reset-layout-button"
                   >
                     {t('topology.header.resetButtonLabel')}
-                  </Button>
-                  <Button
+                  </ActionButton>
+                  <ActionButton
                     variant={showLabels ? 'secondary' : 'ghost'}
                     size="sm"
                     onClick={() => setShowLabels(!showLabels)}
                     title={t('topology.header.labelsButtonTitle')}
                   >
                     {t('topology.header.labelsButtonLabel')}
-                  </Button>
+                  </ActionButton>
                   {/* Export is the only menu — PNG vs JSON is a real
                       two-option choice, but Reset + Labels + Layout
                       are direct buttons / pills for fast iteration. */}

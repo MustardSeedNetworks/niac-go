@@ -3,7 +3,7 @@
  *
  * The rule is a rendering fact, not a source-code fact: a page's primary
  * action can come from any component it renders, so a grep over the page
- * file proves nothing. Button and LinkButton emit data-variant/data-tone,
+ * file proves nothing. Button and LinkButton emit data-variant,
  * so every route is rendered through the real shell and the primaries are
  * counted in the DOM.
  *
@@ -93,7 +93,7 @@ vi.mock('./api/capture', async (importOriginal) =>
  * /runtime's primary while a simulation runs is Stop, and a destructive
  * primary is red — filled weight is what makes it the primary, not hue.
  */
-const PRIMARY = '[data-variant="solid"]';
+const PRIMARY = '[data-variant="primary"]';
 
 /**
  * Every route in pageRegistry, and the accessible name of the one primary
