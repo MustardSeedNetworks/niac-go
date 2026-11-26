@@ -17,7 +17,7 @@ test('authenticates production REST and SSE traffic without persisting the beare
   await page.getByTestId('api-token-input').fill(authToken);
   await page.getByTestId('auth-gate-connect').click();
 
-  await expect(page.getByRole('navigation')).toBeVisible();
+  await expect(page.getByTestId('sidebar-desktop')).toBeVisible();
   await expect(page.getByTestId('page-header-title')).toHaveText('Dashboard');
   await expect
     .poll(() =>
