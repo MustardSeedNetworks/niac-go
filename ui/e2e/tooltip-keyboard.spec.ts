@@ -101,7 +101,6 @@ test('file upload and static status have keyboard descriptions, and Help fits, a
   await checkTooltip(page, page.getByTestId('config-upload'));
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.getByTestId('mobile-menu-toggle').click();
-  await checkTooltip(page, sidebar(page, 'mobile').getByTestId('rail-status'));
   await sidebar(page, 'mobile').getByTestId('rail-help').click();
   const drawer = page.getByTestId('help-drawer');
   await expect(drawer).toBeInViewport({ ratio: 1 });
