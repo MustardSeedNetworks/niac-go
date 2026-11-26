@@ -22,15 +22,3 @@ ui/src/components/config/YamlEditor.tsx literal Liberation Mono
 ui/src/main.tsx literal Root element not found
 ui/src/ui/Sidebar.tsx literal Mustard Seed Networks
 
-# --- Shared set test fixture
-# ui/src/shared/DataTableTestUtils.tsx is a byte-identical copy from
-# MustardSeedNetworks/.github and is only imported by the shared set's own
-# tests, so no operator sees these strings. The copy cannot be edited here;
-# the gate should skip shared test utilities upstream, which would let these
-# entries go.
-ui/src/shared/DataTableTestUtils.tsx copy-prop caption=Devices
-ui/src/shared/DataTableTestUtils.tsx literal Loading devices
-ui/src/shared/DataTableTestUtils.tsx literal Next page
-ui/src/shared/DataTableTestUtils.tsx literal Previous page
-ui/src/shared/DataTableTestUtils.tsx literal Select all
-

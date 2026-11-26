@@ -10,7 +10,7 @@ for (const viewport of [
       await page.setViewportSize(viewport);
       await page.addInitScript((value) => localStorage.setItem('niac-theme', value), theme);
       await page.goto('/');
-      await expect(page).toHaveTitle('NIAC');
+      await expect(page).toHaveTitle('Dashboard · NIAC');
       await expectPageFirst(page);
       await expect(page.locator('html')).toHaveClass(theme === 'dark' ? /dark/ : /^(?!.*dark)/);
       const screenshot = testInfo.outputPath(`dashboard-${theme}-${viewport.width}.png`);
