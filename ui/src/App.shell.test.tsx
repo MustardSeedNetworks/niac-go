@@ -2,7 +2,7 @@
  * App.shell.test.tsx — shell behaviours that live in App itself: the unknown
  * route and where the sidebar's version comes from.
  */
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import { ScopeProvider } from './contexts/ScopeContext';
@@ -77,7 +77,9 @@ describe('App shell', () => {
   it('takes the sidebar version from /__version, like the help drawer', async () => {
     renderApp('/definitely/not/a/page');
 
-    expect(await screen.findByTitle('1.2.3-build')).toBeVisible();
+    await waitFor(() =>
+      expect(screen.getAllByTestId('rail-version')[0]).toHaveTextContent('v1.2.3'),
+    );
     expect(screen.queryByText('9.9.9-api')).not.toBeInTheDocument();
   });
 });
