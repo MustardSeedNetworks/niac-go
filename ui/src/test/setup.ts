@@ -85,6 +85,10 @@ Object.defineProperty(window, 'matchMedia', {
 // consumers (CodeMirror's EditorView) construct it with `new`, which throws
 // "is not a constructor" against an arrow function.
 class MockResizeObserver implements ResizeObserver {
+  readonly callback: ResizeObserverCallback;
+  constructor(callback: ResizeObserverCallback) {
+    this.callback = callback;
+  }
   observe = vi.fn();
   unobserve = vi.fn();
   disconnect = vi.fn();
