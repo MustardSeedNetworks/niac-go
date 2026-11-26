@@ -191,21 +191,25 @@ function SidebarBody({
           </div>
         ))}
       </nav>
-      <RailFooter
-        {...footer}
-        collapsed={collapsed}
-        variant={variant}
-        mark={{
-          src: msnLogo,
-          /* allow-hardcoded: a company name is a proper noun, not copy. */
-          name: 'Mustard Seed Networks',
-        }}
-        collapse={{
-          collapseLabel: t('accessibility.collapseSidebar'),
-          expandLabel: t('accessibility.expandSidebar'),
-          onToggle: onToggleCollapse,
-        }}
-      />
+      {/* The footer never shrinks: the nav above it scrolls instead, so a short
+          window cannot squash the collapsed rail's icon buttons. */}
+      <div className="shrink-0">
+        <RailFooter
+          {...footer}
+          collapsed={collapsed}
+          variant={variant}
+          mark={{
+            src: msnLogo,
+            /* allow-hardcoded: a company name is a proper noun, not copy. */
+            name: 'Mustard Seed Networks',
+          }}
+          collapse={{
+            collapseLabel: t('accessibility.collapseSidebar'),
+            expandLabel: t('accessibility.expandSidebar'),
+            onToggle: onToggleCollapse,
+          }}
+        />
+      </div>
     </>
   );
 }
