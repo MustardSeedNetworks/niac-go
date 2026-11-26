@@ -72,15 +72,13 @@ done < <(find . -name "*_test.go" -not -path "./vendor/*" \
     -print0 2>/dev/null || true)
 
 if [ -d "ui/src" ]; then
-    # ui/src/shared/ is the canonical copy from MustardSeedNetworks/.github, kept
-    # byte-identical by CI; splitting it here would fail that check, so it is
-    # sized upstream. Generated files are excluded: the limit exists to keep hand-maintained
+    # Generated files are excluded: the limit exists to keep hand-maintained
     # code readable, and a generator's output is neither read nor split by
     # hand. `.generated.` is the same marker biome.json already excludes.
     while IFS= read -r -d '' file; do
         file=${file#./}
         check "$file" "$(wc -l < "$file" | tr -d ' ')" "$MAX_TS_LINES"
-    done < <(find ui/src \( -name "*.ts" -o -name "*.tsx" \) -not -name "*.generated.*" -not -path "ui/src/shared/*" -print0 2>/dev/null || true)
+    done < <(find ui/src \( -name "*.ts" -o -name "*.tsx" \) -not -name "*.generated.*" -print0 2>/dev/null || true)
 fi
 
 echo "==========================================================================="

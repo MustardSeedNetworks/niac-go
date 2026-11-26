@@ -7,7 +7,8 @@ import { useApiResource } from '../hooks/useApiResource';
 import { Alert } from '../shared/Alert';
 import { Card } from '../shared/Card';
 import { FormField } from '../shared/FormField';
-import { controlClass, Input } from '../shared/Input';
+import { Input } from '../shared/Input';
+import { Select } from '../shared/Select';
 import { StatusPill } from '../shared/StatusPill';
 import { ActionButton } from '../ui/ActionButton';
 import { SmallText } from '../ui/Typography';
@@ -214,12 +215,11 @@ export function ReplayControlPanel() {
               id="replay-file"
               className="col-span-full"
             >
-              <select
+              <Select
                 id="replay-file"
                 value={selectedFile}
                 onChange={(e) => setSelectedFile(e.target.value)}
                 disabled={replayStatus?.running}
-                className={controlClass}
               >
                 <option value="">{t('traffic.page.replayFileSelectPrompt')}</option>
                 {pcapFiles?.map((file) => (
@@ -230,7 +230,7 @@ export function ReplayControlPanel() {
                     })}
                   </option>
                 ))}
-              </select>
+              </Select>
             </FormField>
 
             {/* Loop Interval */}
@@ -269,18 +269,17 @@ export function ReplayControlPanel() {
 
             {/* Rate Mode */}
             <FormField label={t('traffic.page.replayRateModeLabel')} id="replay-rate-mode">
-              <select
+              <Select
                 id="replay-rate-mode"
                 value={rateMode}
                 onChange={(e) => setRateMode(e.target.value as ReplayRateMode)}
                 disabled={replayStatus?.running}
-                className={controlClass}
               >
                 <option value="">{t('traffic.page.replayRateModeTiming')}</option>
                 <option value="topspeed">{t('traffic.page.replayRateModeTopspeed')}</option>
                 <option value="pps">{t('traffic.page.replayRateModePps')}</option>
                 <option value="mbps">{t('traffic.page.replayRateModeMbps')}</option>
-              </select>
+              </Select>
               <SmallText className="text-text-muted">
                 {t('traffic.page.replayRateModeHelp')}
               </SmallText>

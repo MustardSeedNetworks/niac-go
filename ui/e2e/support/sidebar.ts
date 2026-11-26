@@ -99,3 +99,9 @@ async function settledDrawerEdge(drawer: Locator): Promise<number | null> {
 
   return first === second ? second : null;
 }
+
+/** Choose a scenario in the rail footer's product control, which is a menu of radio items. */
+export async function chooseSession(rail: Locator, id: string): Promise<void> {
+  await rail.getByTestId('rail-product-slot').click();
+  await rail.getByRole('menuitemradio', { name: id }).click();
+}

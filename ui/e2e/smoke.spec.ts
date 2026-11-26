@@ -29,7 +29,7 @@ test.describe('smoke @ authenticated', { tag: '@smoke' }, () => {
   test('settings drawer opens and closes', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByTestId('page-header-title')).toBeVisible({ timeout: 10000 });
-    await sidebar(page).getByTestId('sidebar-settings-button').click();
+    await sidebar(page).getByTestId('rail-settings').click();
     await expect(page.getByTestId('settings-drawer')).toBeVisible();
     await page.getByTestId('settings-drawer-close').click();
     await expect(page.getByTestId('settings-drawer')).toBeHidden();
@@ -38,7 +38,7 @@ test.describe('smoke @ authenticated', { tag: '@smoke' }, () => {
   test('help drawer opens with NIAC version badge', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByTestId('page-header-title')).toBeVisible({ timeout: 10000 });
-    await sidebar(page).getByTestId('sidebar-help-button').click();
+    await sidebar(page).getByTestId('rail-help').click();
     await expect(page.getByTestId('help-drawer')).toBeVisible();
     await expect(page.getByTestId('help-drawer-version')).toContainText(/NIAC v.+/);
     await page.getByTestId('help-drawer-close').click();

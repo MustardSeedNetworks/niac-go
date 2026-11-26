@@ -13,7 +13,8 @@ import { Card } from '../shared/Card';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { DataTable, type DataTableColumn } from '../shared/DataTable';
 import { FormField } from '../shared/FormField';
-import { controlClass, Input } from '../shared/Input';
+import { Input } from '../shared/Input';
+import { Select } from '../shared/Select';
 import { ActionButton } from '../ui/ActionButton';
 import { useDialogLabels } from '../ui/dialogLabels';
 import { SmallText } from '../ui/Typography';
@@ -232,7 +233,7 @@ export function ErrorInjectionPanel() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-comfortable">
               {/* Device Selector */}
               <FormField label={t('injection.deviceLabel')} id="error-device">
-                <select id="error-device" {...register('selectedDevice')} className={controlClass}>
+                <Select id="error-device" {...register('selectedDevice')}>
                   <option value="">{t('injection.deviceSelectPlaceholder')}</option>
                   {errorInfo?.targets?.map((target) => (
                     <option key={target.device} value={target.device}>
@@ -240,7 +241,7 @@ export function ErrorInjectionPanel() {
                       {target.address ? ` (${target.address})` : ''}
                     </option>
                   ))}
-                </select>
+                </Select>
                 {errors.selectedDevice ? (
                   <p className="text-xs text-status-error mt-tight">
                     {errors.selectedDevice.message}
@@ -251,11 +252,10 @@ export function ErrorInjectionPanel() {
               {/* Interface Selector — scoped to the selected device's own
                   interfaces (#897 p5f) so a typo can't silently no-op. */}
               <FormField label={t('injection.interfaceLabel')} id="error-interface">
-                <select
+                <Select
                   id="error-interface"
                   {...register('selectedInterface')}
                   disabled={!selectedTarget?.interfaces.length}
-                  className={controlClass}
                 >
                   <option value="">{t('injection.interfaceSelectPlaceholder')}</option>
                   {selectedTarget?.interfaces.map((iface) => (
@@ -263,7 +263,7 @@ export function ErrorInjectionPanel() {
                       {iface}
                     </option>
                   ))}
-                </select>
+                </Select>
                 {!selectedDevice ? (
                   <SmallText className="text-text-muted mt-tight">
                     {t('injection.interfaceNoDeviceHint')}
@@ -282,7 +282,7 @@ export function ErrorInjectionPanel() {
 
               {/* Error Type Selector */}
               <FormField label={t('injection.errorTypeLabel')} id="error-type">
-                <select id="error-type" {...register('selectedErrorType')} className={controlClass}>
+                <Select id="error-type" {...register('selectedErrorType')}>
                   <option value="">{t('injection.errorTypeSelectPlaceholder')}</option>
                   {errorInfo?.availableTypes?.map((type: ErrorType) => (
                     <option
@@ -293,7 +293,7 @@ export function ErrorInjectionPanel() {
                       {type.type}
                     </option>
                   ))}
-                </select>
+                </Select>
                 {selectedErrorType && errorInfo?.availableTypes && (
                   <SmallText className="text-text-muted mt-tight">
                     {

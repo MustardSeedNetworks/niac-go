@@ -8,6 +8,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { Boxes } from 'lucide-react';
 import { describe, expect, it } from 'vitest';
 import { MemoryDataRouter } from '../test/MemoryDataRouter';
+import { testFooter } from '../test/railFooter';
 import { SidebarLayout } from './Sidebar';
 
 function renderLayout() {
@@ -17,9 +18,7 @@ function renderLayout() {
         groups={[
           { label: 'Simulate', items: [{ path: '/devices', label: 'Devices', icon: Boxes }] },
         ]}
-        version="0.0.0"
-        onOpenHelp={() => {}}
-        onOpenSettings={() => {}}
+        footer={testFooter}
       >
         <div />
       </SidebarLayout>
@@ -43,7 +42,7 @@ describe('SidebarLayout phone drawer', () => {
 
     fireEvent.click(toggle);
     expect(within(drawer).getByTestId('nav-item-devices')).toBeInTheDocument();
-    expect(within(drawer).getByTestId('sidebar-help-button')).toBeInTheDocument();
+    expect(within(drawer).getByTestId('rail-help')).toBeInTheDocument();
     expect(within(drawer).getByTestId('product-mark')).toBeInTheDocument();
 
     fireEvent.click(toggle);

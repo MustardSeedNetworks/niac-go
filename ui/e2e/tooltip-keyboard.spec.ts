@@ -101,8 +101,8 @@ test('file upload and static status have keyboard descriptions, and Help fits, a
   await checkTooltip(page, page.getByTestId('config-upload'));
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.getByTestId('mobile-menu-toggle').click();
-  await checkTooltip(page, sidebar(page, 'mobile').getByTestId('connection-status'));
-  await sidebar(page, 'mobile').getByTestId('sidebar-help-button').click();
+  await checkTooltip(page, sidebar(page, 'mobile').getByTestId('rail-status'));
+  await sidebar(page, 'mobile').getByTestId('rail-help').click();
   const drawer = page.getByTestId('help-drawer');
   await expect(drawer).toBeInViewport({ ratio: 1 });
   const drawerBounds = await drawer.boundingBox();
@@ -151,7 +151,7 @@ test('collapsed navigation keeps every name and reveals its label on focus', asy
 
 test('activating Help clears its tooltip and moves focus into the drawer', async ({ page }) => {
   await page.goto('/runtime');
-  const help = sidebar(page, 'desktop').getByTestId('sidebar-help-button');
+  const help = sidebar(page, 'desktop').getByTestId('rail-help');
   const descriptionId = await help.getAttribute('aria-describedby');
   expect(descriptionId).toBeTruthy();
   const tooltip = page.locator(`[id="${descriptionId}"]`);

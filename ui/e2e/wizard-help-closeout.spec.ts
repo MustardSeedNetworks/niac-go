@@ -82,7 +82,7 @@ for (const theme of ['light', 'dark']) {
     // focus for that to mean anything. WebKit on macOS does not focus a
     // <button> on click (platform convention), which leaves the trap
     // restoring to <body> and says nothing about the drawer.
-    const helpButton = page.getByTestId('sidebar-desktop').getByTestId('sidebar-help-button');
+    const helpButton = page.getByTestId('sidebar-desktop').getByTestId('rail-help');
     await helpButton.focus();
     await page.keyboard.press('Enter');
     const drawer = page.getByTestId('help-drawer');
@@ -137,7 +137,7 @@ for (const theme of ['light', 'dark']) {
     await page.keyboard.press('Enter');
     await expect(drawer).toBeHidden();
     await expect(
-      page.getByTestId('sidebar-desktop').getByTestId('sidebar-help-button'),
+      page.getByTestId('sidebar-desktop').getByTestId('rail-help'),
     ).toBeFocused();
   });
 }
@@ -155,7 +155,7 @@ test('Spanish page help and shared glossary render from the active locale', asyn
     await expect(drawer.getByText(text, { exact: false }).last()).toBeVisible();
     await page.getByTestId('help-drawer-close').click();
   }
-  await page.getByTestId('sidebar-desktop').getByTestId('sidebar-help-button').click();
+  await page.getByTestId('sidebar-desktop').getByTestId('rail-help').click();
   const drawer = page.getByTestId('help-drawer');
   await drawer.getByRole('tab', { name: 'Glosario', exact: true }).click();
   await drawer.getByRole('searchbox').fill('Borrador');

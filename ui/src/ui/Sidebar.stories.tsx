@@ -4,9 +4,11 @@
  * SidebarLayout consumes React Router (NavLink) + a SidebarNavGroup
  * array. Wrap in MemoryRouter and pass a synthetic nav tree.
  */
+
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Activity, Cog, Layers, Network, ScrollText, Sliders, Workflow } from 'lucide-react';
 import { MemoryRouter } from 'react-router';
+import { testFooter } from '../test/railFooter';
 import { SidebarLayout, type SidebarNavGroup } from './Sidebar';
 
 const sampleGroups: SidebarNavGroup[] = [
@@ -65,7 +67,7 @@ const PageContent = ({ title }: { title: string }) => (
 export const Default: Story = {
   args: {
     groups: sampleGroups,
-    version: 'v2.10.0',
+    footer: testFooter,
     children: <PageContent title="Devices" />,
   },
 };
@@ -73,6 +75,7 @@ export const Default: Story = {
 export const WithBadge: Story = {
   args: {
     groups: sampleGroups,
+    footer: testFooter,
     children: <PageContent title="DNS" />,
   },
   parameters: { path: '/protocols/dns' },
@@ -81,6 +84,7 @@ export const WithBadge: Story = {
 export const NoVersionFooter: Story = {
   args: {
     groups: sampleGroups,
+    footer: testFooter,
     children: <PageContent title="Simulation" />,
   },
   parameters: { path: '/simulation' },

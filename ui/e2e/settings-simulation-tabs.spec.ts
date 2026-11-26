@@ -10,7 +10,7 @@ for (const width of [1280, 390]) {
     }) => {
       await page.goto('/');
       const nav = width < 1024 ? await openMobileSidebar(page) : sidebar(page, 'desktop');
-      await nav.getByTestId('sidebar-settings-button').click();
+      await nav.getByTestId('rail-settings').click();
       const drawer = page.getByTestId('settings-drawer');
       await expect
         .poll(() =>
