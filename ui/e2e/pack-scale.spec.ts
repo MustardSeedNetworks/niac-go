@@ -82,6 +82,34 @@ async function scrollJumps(page: Page, scroller: Locator): Promise<number[]> {
   return jumps;
 }
 
+/**
+ * Block per page change across the table's pager: forward to the last page and
+ * back to the first, so every change mounts a page that shares no row with the
+ * one before.
+ */
+async function pageJumps(page: Page, list: Locator): Promise<number[]> {
+  const next = list.getByRole('button', { name: 'Next page' });
+  const previous = list.getByRole('button', { name: 'Previous page' });
+  const jumps: number[] = [];
+  for (let round = 0; round < 2; round++) {
+    await resetBlock(page);
+    while (await next.isEnabled()) {
+      await next.click();
+    }
+    jumps.push(await readBlock(page));
+    await resetBlock(page);
+    while (await previous.isEnabled()) {
+      await previous.click();
+    }
+    jumps.push(await readBlock(page));
+  }
+  // Leave the list on its last page, where the final device is.
+  while (await next.isEnabled()) {
+    await next.click();
+  }
+  return jumps;
+}
+
 async function servePack(page: Page) {
   const { runtimeDevices, topology, configDevices } = packResponses();
   const json = (body: unknown) => ({
@@ -142,30 +170,50 @@ for (const viewport of VIEWPORTS) {
     });
 
     for (const mode of ['table', 'cards'] as const) {
-      test(`device list (${mode}) mounts a window and scrolls the whole pack`, async ({ page }) => {
+      test(`device list (${mode}) mounts a window and reaches the whole pack`, async ({ page }) => {
+        // The table pages through all 11 pages of the pack, twice over.
+        test.slow(mode === 'table');
         const { devices } = buildScalePack();
         const started = Date.now();
         await page.goto('/device-config');
-        await page.getByTestId(`device-view-${mode}`).click();
-        const rows = page.getByTestId(mode === 'table' ? 'device-list-row' : 'device-list-card');
+        await page
+          .getByRole('radio', { name: mode === 'table' ? 'Table view' : 'Card view' })
+          .check({
+            force: true,
+          });
+        const list = page.getByTestId('device-list-rows');
+        // Table rows are the shared DataTable's body rows (its spacer rows carry
+        // no aria-selected); cards are the windowed card grid's cards.
+        const rows =
+          mode === 'table'
+            ? list.locator('tbody tr[aria-selected]')
+            : page.getByTestId('device-list-card');
         await expect(rows.first()).toBeVisible({ timeout: 20_000 });
         const firstRowMs = Date.now() - started;
 
         expect(await rows.count()).toBeLessThanOrEqual(MAX_MOUNTED_ROWS);
 
-        const scroller = page.getByTestId('device-list-rows');
-        const jumps = await scrollJumps(page, scroller);
+        // Cards scroll a windowed list; the table pages (selection is page-wide),
+        // so each jump is a page change. Either way every jump mounts a fresh
+        // window, and the least-blocked sample is budgeted.
         const last = devices[devices.length - 1]?.name as string;
-        await scroller.evaluate((el) => {
-          el.scrollTop = el.scrollHeight;
-        });
+        let jumps: number[];
+        if (mode === 'cards') {
+          const scroller = page.getByTestId('device-list-rows');
+          jumps = await scrollJumps(page, scroller);
+          await scroller.evaluate((el) => {
+            el.scrollTop = el.scrollHeight;
+          });
+        } else {
+          jumps = await pageJumps(page, list);
+        }
         await expect(page.getByText(last, { exact: true })).toBeVisible();
         const scrollBlockMs = Math.min(...jumps);
         expect(await rows.count()).toBeLessThanOrEqual(MAX_MOUNTED_ROWS);
 
         // Search narrows the whole pack, not just the mounted window.
         const searchBlocks: number[] = [];
-        const search = page.getByTestId('device-search-input');
+        const search = page.getByRole('searchbox', { name: /search/i });
         for (let round = 0; round < BLOCK_SAMPLES / 2; round++) {
           await resetBlock(page);
           await search.fill('EHV-CORE-02');

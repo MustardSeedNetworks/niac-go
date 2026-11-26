@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import type { Device } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
-import { Button } from '../../ui/Button';
-import { H2, P } from '../../ui/Typography';
+import { Button } from '../../shared/Button';
+import { ActionButton } from '../../ui/ActionButton';
 import { exportDevicesAsCSV, exportDevicesAsJSON, exportDevicesAsYAML } from '../../utils/export';
 
 interface DeviceListHeaderProps {
@@ -41,63 +41,56 @@ export function DeviceListHeader({
   }, [exportMenuOpen]);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-comfortable">
-      <div>
-        <H2 className="flex items-center gap-compact">
-          <Server className={`${iconSizes.lg} text-brand-accent`} />
-          {t('list.deviceConfigTitle')}
-        </H2>
-        <P className="text-text-muted mt-tight">
-          {t('list.deviceConfigDescription')}
-          {deviceCount > 0 && (
-            <output className="ml-inline text-brand-accent">
-              {tCommon('plurals.deviceCount', { count: deviceCount })}
-            </output>
-          )}
-        </P>
-      </div>
-      <div className="flex gap-compact">
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <p className="text-sm text-text-muted">
+        {deviceCount > 0 ? (
+          <output className="figure">
+            {tCommon('plurals.deviceCount', { count: deviceCount })}
+          </output>
+        ) : null}
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
         <Button
-          variant="outline"
-          leftIcon={<Server className={iconSizes.md} />}
+          variant="secondary"
+          icon={<Server className={iconSizes.md} />}
           onClick={() => navigate('/devices')}
           data-testid="view-running-state"
         >
           {t('list.viewRunningState')}
         </Button>
         <Button
-          variant="outline"
-          leftIcon={<RefreshCw className={iconSizes.md} />}
+          variant="secondary"
+          icon={<RefreshCw className={iconSizes.md} />}
           onClick={onRefresh}
           disabled={loading}
         >
           {tCommon('buttons.refresh')}
         </Button>
-        <Button
-          variant="outline"
-          leftIcon={<FileCode className={iconSizes.md} />}
+        <ActionButton
+          variant="secondary"
+          icon={<FileCode className={iconSizes.md} />}
           onClick={() => exportDevicesAsYAML(filteredDevices)}
           disabled={noDevices}
           title={t('list.downloadYamlTitle')}
         >
           {t('list.downloadYamlButton')}
-        </Button>
+        </ActionButton>
         {/* Data-only exports — kept under a disclosure since JSON/CSV
             can't be re-imported into NIAC; useful for reporting / pipe
             into other tooling only. */}
         <div ref={menuRef} className="relative">
-          <Button
+          <ActionButton
             variant="ghost"
-            leftIcon={<Download className={iconSizes.md} />}
-            rightIcon={<ChevronDown className={iconSizes.sm} />}
+            icon={<Download className={iconSizes.md} />}
             onClick={() => setExportMenuOpen((v) => !v)}
             disabled={noDevices}
             title={t('list.dataExportTitle')}
           >
             {t('list.dataExportButton')}
-          </Button>
+            <ChevronDown className={iconSizes.sm} aria-hidden="true" />
+          </ActionButton>
           {exportMenuOpen && (
-            <div className="absolute right-0 z-10 mt-tight w-44 rounded-lg border border-surface-border bg-bg-surface shadow-lg">
+            <div className="absolute right-0 z-10 mt-1 w-44 rounded-lg border border-surface-border bg-surface-raised shadow-lg">
               <button
                 type="button"
                 onClick={() => {
@@ -121,15 +114,15 @@ export function DeviceListHeader({
             </div>
           )}
         </div>
-        <Button
-          tone="violet"
-          leftIcon={<Plus className={iconSizes.md} />}
+        <ActionButton
+          action="edit"
+          variant="primary"
+          icon={<Plus className={iconSizes.md} />}
           onClick={() => navigate('/device-config/new')}
           data-testid="device-add"
-          action="edit"
         >
           {t('list.states.addDevice')}
-        </Button>
+        </ActionButton>
       </div>
     </div>
   );

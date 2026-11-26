@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Tooltip } from '../../ui/Tooltip';
+import { Tooltip } from '../../shared/Tooltip';
 
 /**
  * One half of the grid/list view-density toggle. Two of these live

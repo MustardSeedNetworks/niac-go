@@ -1,9 +1,8 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Tag } from '../ui/Tag';
+import { CategoryChip } from '../shared/CategoryChip';
 import { SmallText } from '../ui/Typography';
 import { formatBytes } from '../utils/format';
-import { getProtocolColor } from '../utils/protocol-colors';
 import type { Packet } from './PacketList';
 import { ProtocolTree } from './ProtocolTree';
 
@@ -95,9 +94,7 @@ export const PacketDetails = memo(function PacketDetails({
     <div className="h-full overflow-y-auto">
       {/* Header with protocol tag */}
       <div className="flex-between mb-heading">
-        <Tag colorScheme={getProtocolColor(packet.protocol)} className="text-sm">
-          {packet.protocol}
-        </Tag>
+        <CategoryChip label={packet.protocol} />
         <SmallText className="text-text-muted">{formatBytes(packet.size)}</SmallText>
       </div>
 

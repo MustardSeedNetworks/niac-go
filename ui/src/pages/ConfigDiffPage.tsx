@@ -11,9 +11,8 @@ import {
 } from '../components/config/DiffViewer';
 import { MergeControls, MergePreviewModal } from '../components/config/MergeControls';
 import { iconSizes } from '../constants/sizes';
-import { Button } from '../ui/Button';
-import { Card, CardContent } from '../ui/Card';
-import { Tag } from '../ui/Tag';
+import { Card } from '../shared/Card';
+import { ActionButton } from '../ui/ActionButton';
 import { H2, P, SmallText } from '../ui/Typography';
 import { FileUploadZone, type UploadedFile } from './config-diff/FileUploadZone';
 
@@ -160,8 +159,8 @@ export function ConfigDiffPage() {
   return (
     <div className="stack-xl">
       {/* Header section */}
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="stack-lg">
+      <Card>
+        <div className="stack-lg">
           {/* Page-level "Compare & Merge" title + description live in
            * PageHeader (rendered by App.tsx via pageRegistry.title /
            * .description). Duplicating them inside the Card creates a
@@ -171,11 +170,11 @@ export function ConfigDiffPage() {
            * counter remains on the right when files are present. */}
           {hasFiles && (
             <div className="flex items-center justify-end gap-compact">
-              <Tag colorScheme="purple">
-                {t('configDiff.changesCount', {
+              <CategoryChip
+                label={t('configDiff.changesCount', {
                   count: diffBlocks.filter((b) => b.type !== 'unchanged').length,
                 })}
-              </Tag>
+              />
             </div>
           )}
 
@@ -205,22 +204,18 @@ export function ConfigDiffPage() {
               </button>
             </div>
           )}
-        </CardContent>
+        </div>
       </Card>
 
       {/* File upload section */}
       <div className="grid gap-spacious lg:grid-cols-2">
-        <Card className="border-surface-border bg-bg-surface/70">
-          <CardContent className="stack-lg">
+        <Card>
+          <div className="stack-lg">
             <div className="flex-between">
               <H2 className="text-lg" data-testid="diff-panel-original-title">
                 {t('configDiff.originalFileTitle')}
               </H2>
-              {leftFile && (
-                <Tag colorScheme="blue" className="text-xs">
-                  {t('configDiff.sourceTag')}
-                </Tag>
-              )}
+              {leftFile && <CategoryChip label={t('configDiff.sourceTag')} />}
             </div>
             <FileUploadZone
               label={t('configDiff.uploadOriginalLabel')}
@@ -231,20 +226,16 @@ export function ConfigDiffPage() {
                 setMergeDecisions(new Map());
               }}
             />
-          </CardContent>
+          </div>
         </Card>
 
-        <Card className="border-surface-border bg-bg-surface/70">
-          <CardContent className="stack-lg">
+        <Card>
+          <div className="stack-lg">
             <div className="flex-between">
               <H2 className="text-lg" data-testid="diff-panel-modified-title">
                 {t('configDiff.modifiedFileTitle')}
               </H2>
-              {rightFile && (
-                <Tag colorScheme="green" className="text-xs">
-                  {t('configDiff.changesTag')}
-                </Tag>
-              )}
+              {rightFile && <StatusPill tone="success" label={t('configDiff.changesTag')} />}
             </div>
             <FileUploadZone
               label={t('configDiff.uploadModifiedLabel')}
@@ -255,15 +246,15 @@ export function ConfigDiffPage() {
                 setMergeDecisions(new Map());
               }}
             />
-          </CardContent>
+          </div>
         </Card>
       </div>
 
       {/* Diff viewer section */}
       {hasFiles && (
         <>
-          <Card className="border-surface-border bg-bg-surface/70">
-            <CardContent className="stack-lg">
+          <Card>
+            <div className="stack-lg">
               <H2 className="flex items-center gap-compact">
                 <GitCompare className={`${iconSizes.lg} text-status-info`} />
                 {t('configDiff.sideBySideComparison')}
@@ -277,7 +268,7 @@ export function ConfigDiffPage() {
                 onMergeDecision={handleMergeDecision}
                 showMergeControls={true}
               />
-            </CardContent>
+            </div>
           </Card>
 
           {/* Merge controls */}
@@ -295,8 +286,8 @@ export function ConfigDiffPage() {
           />
 
           {/* Server-side overlay merge (CLI parity) */}
-          <Card className="border-surface-border bg-bg-surface/70">
-            <CardContent className="stack">
+          <Card>
+            <div className="stack">
               <div className="flex items-start justify-between gap-comfortable">
                 <div>
                   <H2 className="mb-tight flex items-center gap-compact text-lg">
@@ -311,8 +302,8 @@ export function ConfigDiffPage() {
                     />
                   </P>
                 </div>
-                <Button
-                  tone="violet"
+                <ActionButton
+                  variant="primary"
                   action="edit"
                   onClick={async () => {
                     if (permission.disabled) return;
@@ -349,17 +340,17 @@ export function ConfigDiffPage() {
                   }}
                 >
                   {t('configDiff.runServerMergeButton')}
-                </Button>
+                </ActionButton>
               </div>
-            </CardContent>
+            </div>
           </Card>
         </>
       )}
 
       {/* Empty state when no files */}
       {!hasFiles && (
-        <Card className="border-surface-border bg-bg-surface/70">
-          <CardContent className="py-centered text-center">
+        <Card>
+          <div className="text-center">
             <GitCompare className={`mx-auto ${iconSizes['3xl']} text-text-disabled`} />
             <H2 className="mt-content mb-2">{t('configDiff.readyToCompareTitle')}</H2>
             <P className="text-text-muted max-w-md mx-auto">
@@ -381,7 +372,7 @@ export function ConfigDiffPage() {
                 </SmallText>
               </div>
             </div>
-          </CardContent>
+          </div>
         </Card>
       )}
 
@@ -398,3 +389,5 @@ export function ConfigDiffPage() {
 }
 
 import { useActionPermission } from '../contexts/ScopeContext';
+import { CategoryChip } from '../shared/CategoryChip';
+import { StatusPill } from '../shared/StatusPill';

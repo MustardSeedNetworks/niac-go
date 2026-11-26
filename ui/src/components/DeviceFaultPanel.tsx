@@ -5,10 +5,13 @@ import { validFaultAddress } from '../api/behavior-fault-types';
 import { clearError, injectError } from '../api/client';
 import { useAppState } from '../contexts/AppContext';
 import { useActionPermission } from '../contexts/ScopeContext';
-import { Button } from '../ui/Button';
-import { Card, CardContent } from '../ui/Card';
-import { Input, Select } from '../ui/Input';
-import { H3, SmallText } from '../ui/Typography';
+import { Alert } from '../shared/Alert';
+import { Card } from '../shared/Card';
+import { FormField } from '../shared/FormField';
+import { Input } from '../shared/Input';
+import { Select } from '../shared/Select';
+import { ActionButton } from '../ui/ActionButton';
+import { SmallText } from '../ui/Typography';
 import { getErrorMessage } from '../utils/format';
 
 export function DeviceFaultPanel() {
@@ -83,64 +86,81 @@ export function DeviceFaultPanel() {
   }
 
   return (
-    <Card data-testid="device-fault-panel">
-      <CardContent className="stack">
-        <H3>{t('deviceFault.title')}</H3>
-        <Select
-          label={t('deviceFault.target')}
-          value={device}
-          options={[
-            { value: '', label: t('deviceFault.selectTarget') },
-            ...(data?.deviceTargets ?? []).map((entry) => ({
-              value: entry.device,
-              label: entry.device,
-            })),
-          ]}
-          onChange={(next) => {
-            setDevice(next);
-            setFaultType('');
-            setValue(1);
-            setAddress('');
-          }}
-        />
-        <Select
-          label={t('deviceFault.type')}
-          value={faultType}
-          options={[
-            { value: '', label: t('deviceFault.selectType') },
-            ...types.map((entry) => ({ value: entry.type, label: entry.type })),
-          ]}
-          onChange={(next) => {
-            setFaultType(next);
-            setValue(1);
-            setAddress('');
-          }}
-        />
+    <Card title={t('deviceFault.title')} data-testid="device-fault-panel">
+      <div className="stack">
+        <FormField label={t('deviceFault.target')}>
+          {(control) => (
+            <Select
+              {...control}
+              value={device}
+              options={[
+                { value: '', label: t('deviceFault.selectTarget') },
+                ...(data?.deviceTargets ?? []).map((entry) => ({
+                  value: entry.device,
+                  label: entry.device,
+                })),
+              ]}
+              onValueChange={(next) => {
+                setDevice(next);
+                setFaultType('');
+                setValue(1);
+                setAddress('');
+              }}
+            />
+          )}
+        </FormField>
+        <FormField label={t('deviceFault.type')}>
+          {(control) => (
+            <Select
+              {...control}
+              value={faultType}
+              options={[
+                { value: '', label: t('deviceFault.selectType') },
+                ...types.map((entry) => ({ value: entry.type, label: entry.type })),
+              ]}
+              onValueChange={(next) => {
+                setFaultType(next);
+                setValue(1);
+                setAddress('');
+              }}
+            />
+          )}
+        </FormField>
         {fault && <SmallText>{fault.description}</SmallText>}
         {fault?.valueKind === 'address' && (
-          <Input
-            label={t('deviceFault.conflictAddress')}
-            value={address}
-            onChange={(event) => setAddress(event.target.value)}
-          />
+          <FormField label={t('deviceFault.conflictAddress')}>
+            {(control) => (
+              <Input
+                {...control}
+                value={address}
+                onChange={(event) => setAddress(event.target.value)}
+              />
+            )}
+          </FormField>
         )}
         {fault && fault.valueKind !== 'toggle' && fault.valueKind !== 'address' && (
-          <Input
-            type="number"
+          <FormField
             label={
               fault.valueKind === 'percent'
                 ? t('deviceFault.percent')
                 : t('deviceFault.milliseconds')
             }
-            min={1}
-            max={fault.maxValue}
-            step={1}
-            value={value}
-            onChange={(event) => setValue(Number(event.target.value))}
-          />
+          >
+            {(control) => (
+              <Input
+                {...control}
+                type="number"
+                min={1}
+                max={fault.maxValue}
+                step={1}
+                value={value}
+                onChange={(event) => setValue(Number(event.target.value))}
+              />
+            )}
+          </FormField>
         )}
-        {(failure || error) && <p role="alert">{failure || getErrorMessage(error)}</p>}
-        <Button
+        {(failure || error) && <Alert tone="error">{failure || getErrorMessage(error)}</Alert>}
+        <ActionButton
           action="inject"
           variant="secondary"
           data-testid="apply-device-fault"
@@ -148,7 +168,7 @@ export function DeviceFaultPanel() {
           onClick={() => void apply()}
         >
           {t('deviceFault.apply')}
-        </Button>
+        </ActionButton>
         <ul className="stack-sm">
           {active.map((entry) => (
             <li
@@ -158,7 +178,7 @@ export function DeviceFaultPanel() {
               <span>{entry.device}</span>
               <span>{entry.type}</span>
               <span>{displayValue(entry.type, entry.amount)}</span>
-              <Button
+              <ActionButton
                 action="inject"
                 variant="secondary"
                 disabled={disabled}
@@ -166,11 +186,11 @@ export function DeviceFaultPanel() {
                 aria-label={t('deviceFault.clearOne', { device: entry.device, type: entry.type })}
               >
                 {t('deviceFault.clear')}
-              </Button>
+              </ActionButton>
             </li>
           ))}
         </ul>
-      </CardContent>
+      </div>
     </Card>
   );
 }

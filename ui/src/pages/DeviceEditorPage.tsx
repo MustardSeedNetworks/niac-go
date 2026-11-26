@@ -17,11 +17,13 @@ import {
   DeviceListErrorState,
   DeviceListLoadingState,
 } from '../components/device-list/DeviceListStates';
-import { CollapsibleSection } from '../components/form/CollapsibleSection';
 import { useApiResource } from '../hooks/useApiResource';
-import { ConfirmModal } from '../ui/ConfirmModal';
+import { CollapsibleSection } from '../shared/CollapsibleSection';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
+import { useDialogLabels } from '../ui/dialogLabels';
 
 export function DeviceEditorPage() {
+  const dialogLabels = useDialogLabels();
   const {
     hostname,
     isNewDevice,
@@ -137,50 +139,51 @@ export function DeviceEditorPage() {
             key={section.key}
             id={`${section.key}-section`}
             title={t(`editor.sections.${section.key}.title`, { defaultValue: section.title })}
-            isExpanded={expandedSections.has(section.key)}
-            onToggle={() => toggleSection(section.key)}
+            open={expandedSections.has(section.key)}
+            onOpenChange={() => toggleSection(section.key)}
           >
-            <div className="stack-lg">
-              <SchemaSectionBody
-                section={section}
-                value={device[section.key as keyof typeof device] as AuthoredValue}
-                onChange={(next) => updateField(section.key as keyof typeof device, next)}
-                suggestions={suggestions}
-              />
-              {section.key === 'snmp_agent' && (
-                <SynthesizeWalkControl
-                  hostname={device.name ?? hostname ?? ''}
-                  disabled={isNewDevice}
-                  onSynthesized={(walkPath) =>
-                    updateField('snmp_agent', {
-                      ...(typeof device.snmp_agent === 'object' ? device.snmp_agent : {}),
-                      walk_file: walkPath,
-                    })
-                  }
+            {expandedSections.has(section.key) && (
+              <div className="stack-lg">
+                <SchemaSectionBody
+                  section={section}
+                  value={device[section.key as keyof typeof device] as AuthoredValue}
+                  onChange={(next) => updateField(section.key as keyof typeof device, next)}
+                  suggestions={suggestions}
                 />
-              )}
-            </div>
+                {section.key === 'snmp_agent' && (
+                  <SynthesizeWalkControl
+                    hostname={device.name ?? hostname ?? ''}
+                    disabled={isNewDevice}
+                    onSynthesized={(walkPath) =>
+                      updateField('snmp_agent', {
+                        ...(typeof device.snmp_agent === 'object' ? device.snmp_agent : {}),
+                        walk_file: walkPath,
+                      })
+                    }
+                  />
+                )}
+              </div>
+            )}
           </CollapsibleSection>
         ))}
       </fieldset>
 
-      <ConfirmModal
-        isOpen={showDeleteConfirm}
+      <ConfirmDialog
+        {...dialogLabels}
+        open={showDeleteConfirm}
         onConfirm={handleDelete}
-        action="delete"
         onCancel={() => setShowDeleteConfirm(false)}
         title={t('list.deleteConfirmTitle')}
         message={t('list.deleteConfirmMessage', { hostname: device.name ?? '' })}
         confirmLabel={t('list.deleteConfirmLabel')}
-        confirmTone="red"
         confirming={deleting}
-        confirmingLabel={t('editor.deletingLabel')}
       />
 
       {/* Unsaved-changes navigation guard — covers the Back button and
           any in-app link clicked while the form is dirty. */}
-      <ConfirmModal
-        isOpen={pendingLeavePath !== null}
+      <ConfirmDialog
+        {...dialogLabels}
+        open={pendingLeavePath !== null}
         onConfirm={confirmLeave}
         onCancel={cancelLeave}
         title={t('editor.unsavedNavigation.title')}

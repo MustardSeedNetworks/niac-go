@@ -1,8 +1,8 @@
 import { Check, FolderOpen, HardDrive, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
-import { Tag } from '../../ui/Tag';
-import { Tooltip } from '../../ui/Tooltip';
+import { CategoryChip } from '../../shared/CategoryChip';
+import { Tooltip } from '../../shared/Tooltip';
 import { SmallText } from '../../ui/Typography';
 import type { ConfigItem, ViewMode } from './ConfigPicker.types';
 
@@ -182,9 +182,7 @@ function ExampleBadge({ name }: { name: string }) {
     <Tooltip text={t('configPicker.exampleTitle')}>
       {(description) => (
         <span {...description} data-testid={`config-example-badge-${name}`}>
-          <Tag colorScheme="cyan" className="text-[10px]">
-            {t('configPicker.exampleTag')}
-          </Tag>
+          <CategoryChip label={t('configPicker.exampleTag')} />
         </span>
       )}
     </Tooltip>
@@ -264,9 +262,7 @@ function ConfigCard({
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
         {item.kind !== 'local' && (
-          <Tag colorScheme="purple" className="text-[10px]">
-            {t('configPicker.deviceCount', { count: item.deviceCount })}
-          </Tag>
+          <CategoryChip label={t('configPicker.deviceCount', { count: item.deviceCount })} />
         )}
         {isExample(item) && <ExampleBadge name={item.name} />}
       </div>
@@ -277,7 +273,7 @@ function ConfigCard({
             <span>{t('configPicker.selectedLabel')}</span>
           </div>
         ) : (
-          <Tooltip text={t('configPicker.selectNetworkTitle')} className="flex-1">
+          <Tooltip text={t('configPicker.selectNetworkTitle')}>
             <button
               type="button"
               onClick={() => onSelect(item)}
@@ -338,20 +334,14 @@ function ConfigRow({
           compact
         />
       )}
-      <Tooltip text={t('configPicker.selectItemTitle', { name: item.name })} className="flex-1">
+      <Tooltip text={t('configPicker.selectItemTitle', { name: item.name })}>
         <button type="button" onClick={() => onSelect(item)} className="flex-1 text-left">
           <div className="flex items-center gap-compact">
             <span className="font-medium text-text-primary">{item.name}</span>
             {item.kind !== 'local' && (
-              <Tag colorScheme="purple" className="text-[10px]">
-                {t('configPicker.deviceCount', { count: item.deviceCount })}
-              </Tag>
+              <CategoryChip label={t('configPicker.deviceCount', { count: item.deviceCount })} />
             )}
-            {item.kind === 'local' && (
-              <Tag colorScheme="blue" className="text-[10px]">
-                {t('configPicker.localTag')}
-              </Tag>
-            )}
+            {item.kind === 'local' && <CategoryChip label={t('configPicker.localTag')} />}
             {isExample(item) && <ExampleBadge name={item.name} />}
           </div>
           {item.description && (

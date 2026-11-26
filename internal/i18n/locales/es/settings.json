@@ -2,7 +2,7 @@
   "drawer": {
     "title": "Configuración",
     "closeAriaLabel": "Cerrar configuración",
-    "backdropAriaLabel": "Cerrar panel de configuración"
+    "tabsLabel": "Secciones de configuración"
   },
   "tabs": {
     "simulation": "Simulación",
@@ -41,10 +41,7 @@
     "dark": "Oscuro",
     "light": "Claro",
     "system": "Sistema",
-    "quickToggle": "Cambio rápido",
-    "switchToLight": "Cambiar al modo claro",
-    "switchToDark": "Cambiar al modo oscuro",
-    "persistenceNote": "El modo oscuro es el predeterminado. Su preferencia se guarda entre sesiones.",
+    "persistenceNote": "Sigue el sistema de forma predeterminada. Su elección se guarda en este navegador.",
     "language": "Idioma",
     "languageDescription": "Idioma de la interfaz de NIAC. Se guarda en este navegador."
   },

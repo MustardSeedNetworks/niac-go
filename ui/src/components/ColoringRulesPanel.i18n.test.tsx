@@ -10,6 +10,7 @@ import { render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import i18n from '../i18n';
 import { MemoryDataRouter } from '../test/MemoryDataRouter';
+import { testFooter } from '../test/railFooter';
 import { SidebarLayout } from '../ui/Sidebar';
 import { ColoringRulesPanel } from './ColoringRulesPanel';
 
@@ -48,7 +49,7 @@ describe('SidebarLayout in es', () => {
     await i18n.changeLanguage('es');
     render(
       <MemoryDataRouter>
-        <SidebarLayout groups={[]} version="0.0.0">
+        <SidebarLayout groups={[]} footer={testFooter}>
           <div />
         </SidebarLayout>
       </MemoryDataRouter>,

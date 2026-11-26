@@ -4,9 +4,13 @@ import type { ReplayRateMode } from '../api/api-response-types';
 import { fetchReplayStatus, startReplay, stopReplay } from '../api/client';
 import { fetchLibraryPcaps } from '../api/library-client';
 import { useApiResource } from '../hooks/useApiResource';
-import { Button } from '../ui/Button';
-import { Card, CardContent } from '../ui/Card';
-import { Tag } from '../ui/Tag';
+import { Alert } from '../shared/Alert';
+import { Card } from '../shared/Card';
+import { FormField } from '../shared/FormField';
+import { Input } from '../shared/Input';
+import { Select } from '../shared/Select';
+import { StatusPill } from '../shared/StatusPill';
+import { ActionButton } from '../ui/ActionButton';
 import { SmallText } from '../ui/Typography';
 import { formatBytes, getErrorMessage } from '../utils/format';
 
@@ -149,11 +153,11 @@ export function ReplayControlPanel() {
       {/* Status Card */}
       {replayStatus?.running && (
         <Card>
-          <CardContent>
+          <div>
             <div className="flex-between">
               <div>
                 <div className="flex items-center gap-compact mb-tight">
-                  <Tag colorScheme="green">{t('traffic.page.replayStatusRunning')}</Tag>
+                  <StatusPill tone="success" label={t('traffic.page.replayStatusRunning')} />
                   <span className="font-medium">{replayStatus.file}</span>
                 </div>
                 <SmallText className="text-text-muted">
@@ -185,34 +189,37 @@ export function ReplayControlPanel() {
                   percentComplete={replayStatus.percentComplete}
                 />
               </div>
-              <Button
+              <ActionButton
                 action="stop"
+                variant="secondary"
                 onClick={handleStop}
                 disabled={isSubmitting}
-                variant="secondary"
               >
                 {t('traffic.page.replayStopButton')}
-              </Button>
+              </ActionButton>
             </div>
-          </CardContent>
+          </div>
         </Card>
       )}
 
       {/* Control Card */}
-      <Card>
-        <CardContent className="stack-lg">
+      <Card
+        title={t('traffic.page.pcapReplayTitle')}
+        subtitle={t('traffic.page.pcapReplayDescription')}
+      >
+        <div className="stack-lg">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-comfortable">
             {/* File Selector */}
-            <div className="col-span-full">
-              <label htmlFor="replay-file" className="block text-sm font-medium mb-2">
-                {t('traffic.page.replayFileLabel')}
-              </label>
-              <select
+            <FormField
+              label={t('traffic.page.replayFileLabel')}
+              id="replay-file"
+              className="col-span-full"
+            >
+              <Select
                 id="replay-file"
                 value={selectedFile}
                 onChange={(e) => setSelectedFile(e.target.value)}
                 disabled={replayStatus?.running}
-                className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
               >
                 <option value="">{t('traffic.page.replayFileSelectPrompt')}</option>
                 {pcapFiles?.map((file) => (
@@ -223,15 +230,12 @@ export function ReplayControlPanel() {
                     })}
                   </option>
                 ))}
-              </select>
-            </div>
+              </Select>
+            </FormField>
 
             {/* Loop Interval */}
-            <div>
-              <label htmlFor="replay-loop" className="block text-sm font-medium mb-2">
-                {t('traffic.page.replayLoopIntervalLabel')}
-              </label>
-              <input
+            <FormField label={t('traffic.page.replayLoopIntervalLabel')} id="replay-loop">
+              <Input
                 id="replay-loop"
                 type="number"
                 min="0"
@@ -240,19 +244,15 @@ export function ReplayControlPanel() {
                 onChange={(e) => setLoopMs(Number.parseInt(e.target.value, 10) || 0)}
                 placeholder={t('traffic.page.replayLoopIntervalPlaceholder')}
                 disabled={replayStatus?.running}
-                className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
               />
               <SmallText className="text-text-muted">
                 {t('traffic.page.replayLoopIntervalHelp')}
               </SmallText>
-            </div>
+            </FormField>
 
             {/* Time Scale */}
-            <div>
-              <label htmlFor="replay-scale" className="block text-sm font-medium mb-2">
-                {t('traffic.page.replayTimeScaleLabel')}
-              </label>
-              <input
+            <FormField label={t('traffic.page.replayTimeScaleLabel')} id="replay-scale">
+              <Input
                 id="replay-scale"
                 type="number"
                 min="0.1"
@@ -261,42 +261,34 @@ export function ReplayControlPanel() {
                 value={scale}
                 onChange={(e) => setScale(Number.parseFloat(e.target.value) || 1.0)}
                 disabled={replayStatus?.running}
-                className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
               />
               <SmallText className="text-text-muted">
                 {t('traffic.page.replayTimeScaleHelp')}
               </SmallText>
-            </div>
+            </FormField>
 
             {/* Rate Mode */}
-            <div>
-              <label htmlFor="replay-rate-mode" className="block text-sm font-medium mb-2">
-                {t('traffic.page.replayRateModeLabel')}
-              </label>
-              <select
+            <FormField label={t('traffic.page.replayRateModeLabel')} id="replay-rate-mode">
+              <Select
                 id="replay-rate-mode"
                 value={rateMode}
                 onChange={(e) => setRateMode(e.target.value as ReplayRateMode)}
                 disabled={replayStatus?.running}
-                className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
               >
                 <option value="">{t('traffic.page.replayRateModeTiming')}</option>
                 <option value="topspeed">{t('traffic.page.replayRateModeTopspeed')}</option>
                 <option value="pps">{t('traffic.page.replayRateModePps')}</option>
                 <option value="mbps">{t('traffic.page.replayRateModeMbps')}</option>
-              </select>
+              </Select>
               <SmallText className="text-text-muted">
                 {t('traffic.page.replayRateModeHelp')}
               </SmallText>
-            </div>
+            </FormField>
 
             {/* Rate parameter: pps or Mbps, shown for the matching mode */}
             {rateMode === 'pps' && (
-              <div>
-                <label htmlFor="replay-pps" className="block text-sm font-medium mb-2">
-                  {t('traffic.page.replayPpsLabel')}
-                </label>
-                <input
+              <FormField label={t('traffic.page.replayPpsLabel')} id="replay-pps">
+                <Input
                   id="replay-pps"
                   type="number"
                   min="1"
@@ -304,17 +296,13 @@ export function ReplayControlPanel() {
                   value={pps}
                   onChange={(e) => setPps(Number.parseFloat(e.target.value) || 0)}
                   disabled={replayStatus?.running}
-                  className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
                 />
                 <SmallText className="text-text-muted">{t('traffic.page.replayPpsHelp')}</SmallText>
-              </div>
+              </FormField>
             )}
             {rateMode === 'mbps' && (
-              <div>
-                <label htmlFor="replay-mbps" className="block text-sm font-medium mb-2">
-                  {t('traffic.page.replayMbpsLabel')}
-                </label>
-                <input
+              <FormField label={t('traffic.page.replayMbpsLabel')} id="replay-mbps">
+                <Input
                   id="replay-mbps"
                   type="number"
                   min="0.1"
@@ -322,20 +310,16 @@ export function ReplayControlPanel() {
                   value={mbpsCap}
                   onChange={(e) => setMbpsCap(Number.parseFloat(e.target.value) || 0)}
                   disabled={replayStatus?.running}
-                  className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
                 />
                 <SmallText className="text-text-muted">
                   {t('traffic.page.replayMbpsHelp')}
                 </SmallText>
-              </div>
+              </FormField>
             )}
 
             {/* Loop Count */}
-            <div>
-              <label htmlFor="replay-loop-count" className="block text-sm font-medium mb-2">
-                {t('traffic.page.replayLoopCountLabel')}
-              </label>
-              <input
+            <FormField label={t('traffic.page.replayLoopCountLabel')} id="replay-loop-count">
+              <Input
                 id="replay-loop-count"
                 type="number"
                 min="0"
@@ -344,61 +328,48 @@ export function ReplayControlPanel() {
                 onChange={(e) => setLoopCount(Number.parseInt(e.target.value, 10) || 0)}
                 placeholder={t('traffic.page.replayLoopCountPlaceholder')}
                 disabled={replayStatus?.running}
-                className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
               />
               <SmallText className="text-text-muted">
                 {t('traffic.page.replayLoopCountHelp')}
               </SmallText>
-            </div>
+            </FormField>
 
             {/* BPF Filter */}
-            <div className="col-span-full">
-              <label htmlFor="replay-bpf" className="block text-sm font-medium mb-2">
-                {t('traffic.page.replayBpfLabel')}
-              </label>
-              <input
+            <FormField
+              label={t('traffic.page.replayBpfLabel')}
+              id="replay-bpf"
+              className="col-span-full"
+            >
+              <Input
                 id="replay-bpf"
                 type="text"
                 value={bpfFilter}
                 onChange={(e) => setBpfFilter(e.target.value)}
                 placeholder={t('traffic.page.replayBpfPlaceholder')}
                 disabled={replayStatus?.running}
-                className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
               />
               <SmallText className="text-text-muted">{t('traffic.page.replayBpfHelp')}</SmallText>
-            </div>
+            </FormField>
           </div>
 
           {/* Message Display */}
-          {message && (
-            <div
-              role="alert"
-              aria-live="polite"
-              className={`pad-sm rounded ${
-                message.type === 'success'
-                  ? 'bg-status-success/10 text-status-success-strong border border-status-success/20'
-                  : 'bg-status-error/10 text-status-error-strong border border-status-error/20'
-              }`}
-            >
-              {message.text}
-            </div>
-          )}
+          {message && <Alert tone={message.type}>{message.text}</Alert>}
 
           {/* Action Button */}
           {!replayStatus?.running && (
-            <Button
-              variant="outline"
-              onClick={handleStart}
+            <ActionButton
               action="start"
+              variant="secondary"
+              onClick={handleStart}
               disabled={isSubmitting}
               className="w-full"
             >
               {isSubmitting
                 ? t('traffic.page.replayStarting')
                 : t('traffic.page.replayStartButton')}
-            </Button>
+            </ActionButton>
           )}
-        </CardContent>
+        </div>
       </Card>
     </div>
   );

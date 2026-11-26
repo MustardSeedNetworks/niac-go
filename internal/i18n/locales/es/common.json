@@ -32,8 +32,7 @@
     "connectionFailed": "No se pudo acceder a NIAC. Compruebe el demonio e inténtelo de nuevo.",
     "sessionExpired": "Su sesión ya no está autorizada. Introduzca de nuevo el token de API.",
     "memoryOnly": "El token se conserva solo en la memoria de esta pestaña y se borra al cerrar la página.",
-    "disconnect": "Desconectar",
-    "disconnectHint": "Olvide el token de API de esta pestaña y vuelva a la pantalla de conexión. Un demonio en loopback sin token obligatorio le deja volver a entrar de inmediato."
+    "disconnect": "Desconectar"
   },
   "buttons": {
     "save": "Guardar",
@@ -55,7 +54,7 @@
   },
   "session": {
     "none": "Sin escenario en ejecución",
-    "switchLabel": "Escenario que lee este navegador"
+    "label": "Escenario"
   },
   "status": {
     "loading": "Cargando...",
@@ -72,11 +71,10 @@
     "size": "Tamaño",
     "path": "Ruta",
     "devices": "Dispositivos",
-    "search": "Buscar...",
-    "disabled": "Deshabilitado",
-    "enabled": "Habilitado",
     "none": "Ninguno",
-    "required": "Obligatorio"
+    "required": "Obligatorio",
+    "view": "Vista",
+    "conversations": "Conversaciones"
   },
   "accessibility": {
     "openHelp": "Abrir ayuda",
@@ -101,7 +99,8 @@
     "home": "Inicio",
     "sectionCollapsed": "Sección {{title}}, contraída",
     "sectionExpanded": "Sección {{title}}, expandida",
-    "notifications": "Notificaciones"
+    "notifications": "Notificaciones",
+    "fieldHelp": "Ayuda: {{field}}"
   },
   "footer": {
     "version": "Versión",
@@ -126,7 +125,13 @@
   "table": {
     "showingResults": "Mostrando {{shown}} de {{total}} resultados",
     "selectAll": "Seleccionar todo",
-    "selected": "{{count}} seleccionados"
+    "selected": "{{count}} seleccionados",
+    "actions": "Acciones de la fila",
+    "loading": "Cargando {{subject}}",
+    "nextPage": "Página siguiente",
+    "pageStatus": "Página {{page}} de {{pages}} ({{total}} filas)",
+    "pagination": "Paginación de la tabla",
+    "previousPage": "Página anterior"
   },
   "errorBoundary": {
     "title": "Algo salió mal",
@@ -223,10 +228,10 @@
     "online": "En línea"
   },
   "statusLabel": {
-    "error": "Estado: error",
-    "loading": "Estado: cargando",
     "success": "Estado: correcto",
-    "unknown": "Estado: desconocido",
     "warning": "Estado: advertencia"
+  },
+  "help": {
+    "openFor": "Abrir la ayuda de {{title}}"
   }
 }

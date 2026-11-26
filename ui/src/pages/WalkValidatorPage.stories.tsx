@@ -93,6 +93,9 @@ export const Loaded: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(await canvas.findByRole('button', { name: 'Validate' }));
     await expect(await canvas.findByText('malformed subnet mask')).toBeInTheDocument();
+    // The table's scroll frame becomes a focusable group once it has been measured,
+    // a frame after it renders; axe runs next and needs it there.
+    await canvas.findByRole('group', { name: 'Result' });
   },
 };
 

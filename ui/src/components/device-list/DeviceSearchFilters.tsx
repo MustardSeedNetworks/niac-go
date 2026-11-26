@@ -1,8 +1,11 @@
-import { Filter, LayoutGrid, LayoutList, Search, X } from 'lucide-react';
+import { LayoutGrid, LayoutList } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { DeviceType } from '../../api/types';
-import { iconSizes } from '../../constants/sizes';
-import { Tooltip } from '../../ui/Tooltip';
+import { normalizeDeviceType } from '../../constants/device-types';
+import { useDeviceTypeLabels } from '../../hooks/useDeviceTypeLabels';
+import { SearchInput } from '../../shared/SearchInput';
+import { SegmentedControl } from '../../shared/SegmentedControl';
+import { Select } from '../../shared/Select';
 
 interface DeviceSearchFiltersProps {
   searchQuery: string;
@@ -30,97 +33,64 @@ export function DeviceSearchFilters({
   protocols,
 }: DeviceSearchFiltersProps) {
   const { t } = useTranslation('devices');
-  return (
-    <div className="flex flex-wrap gap-comfortable">
-      {/* Search */}
-      <div className="relative flex-1 min-w-[250px]">
-        <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-text-muted" />
-        <input
-          type="text"
-          data-testid="device-search-input"
-          placeholder={t('list.searchPlaceholder')}
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full rounded-lg border border-surface-border bg-bg-base/60 py-2.5 pl-10 pr-icon text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
-        />
-        {searchQuery && (
-          <button
-            type="button"
-            onClick={() => onSearchChange('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary"
-            aria-label={t('list.searchClearAria')}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
-      </div>
+  const { t: tCommon } = useTranslation('common');
+  const typeLabels = useDeviceTypeLabels();
 
-      {/* Type filter */}
-      <div className="flex items-center gap-compact">
-        <Filter className={`${iconSizes.md} text-text-muted`} />
-        <select
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <SearchInput
+        value={searchQuery}
+        onValueChange={onSearchChange}
+        label={t('list.searchPlaceholder')}
+        clearLabel={t('list.searchClearAria')}
+        placeholder={t('list.searchPlaceholder')}
+        className="min-w-56 flex-1"
+      />
+      <div className="w-44">
+        <Select
           aria-label={t('list.typeFilterAria')}
           value={typeFilter}
-          onChange={(e) => onTypeFilterChange(e.target.value as DeviceType | 'all')}
-          className="rounded-lg border border-surface-border bg-bg-base/60 py-row px-3 text-sm text-text-primary focus:border-brand-accent focus:outline-none"
-        >
-          <option value="all">{t('list.allTypes')}</option>
-          {deviceTypes.map((type) => (
-            <option key={type} value={type}>
-              {type.replace('_', ' ')}
-            </option>
-          ))}
-        </select>
+          options={[
+            { value: 'all', label: t('list.allTypes') },
+            ...deviceTypes.map((type) => ({
+              value: type,
+              label: typeLabels[normalizeDeviceType(type)],
+            })),
+          ]}
+          onValueChange={(value) => {
+            const next = deviceTypes.find((type) => type === value);
+            onTypeFilterChange(next ?? 'all');
+          }}
+        />
       </div>
-
-      {/* Protocol filter */}
-      <select
-        aria-label={t('list.protocolFilterAria')}
-        value={protocolFilter}
-        onChange={(e) => onProtocolFilterChange(e.target.value)}
-        className="rounded-lg border border-surface-border bg-bg-base/60 py-row px-3 text-sm text-text-primary focus:border-brand-accent focus:outline-none"
-      >
-        <option value="all">{t('list.allProtocols')}</option>
-        {protocols.map((proto) => (
-          <option key={proto} value={proto}>
-            {proto}
-          </option>
-        ))}
-      </select>
-
-      {/* View toggle */}
-      <div className="flex items-center gap-tight p-1 rounded-lg bg-bg-base/60 border border-surface-border">
-        <Tooltip text={t('list.tableViewTitle')}>
-          <button
-            type="button"
-            onClick={() => onViewModeChange('table')}
-            className={`pad-xs rounded-md transition-colors ${
-              viewMode === 'table'
-                ? 'bg-brand-primary text-text-primary'
-                : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
-            }`}
-            aria-label={t('list.tableViewTitle')}
-            data-testid="device-view-table"
-          >
-            <LayoutList className={iconSizes.md} />
-          </button>
-        </Tooltip>
-        <Tooltip text={t('list.cardViewTitle')}>
-          <button
-            type="button"
-            onClick={() => onViewModeChange('cards')}
-            className={`pad-xs rounded-md transition-colors ${
-              viewMode === 'cards'
-                ? 'bg-brand-primary text-text-primary'
-                : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
-            }`}
-            aria-label={t('list.cardViewTitle')}
-            data-testid="device-view-cards"
-          >
-            <LayoutGrid className={iconSizes.md} />
-          </button>
-        </Tooltip>
+      <div className="w-44">
+        <Select
+          aria-label={t('list.protocolFilterAria')}
+          value={protocolFilter}
+          options={[
+            { value: 'all', label: t('list.allProtocols') },
+            ...protocols.map((protocol) => ({ value: protocol, label: protocol })),
+          ]}
+          onValueChange={onProtocolFilterChange}
+        />
       </div>
+      <SegmentedControl
+        label={tCommon('labels.view')}
+        value={viewMode}
+        onChange={(value) => onViewModeChange(value === 'cards' ? 'cards' : 'table')}
+        options={[
+          {
+            value: 'table',
+            label: t('list.tableViewTitle'),
+            icon: <LayoutList className="h-4 w-4" />,
+          },
+          {
+            value: 'cards',
+            label: t('list.cardViewTitle'),
+            icon: <LayoutGrid className="h-4 w-4" />,
+          },
+        ]}
+      />
     </div>
   );
 }

@@ -93,7 +93,7 @@ test('a denied action reveals its reason without executing by mouse, Enter, or S
   expect(writes).toEqual([]);
 });
 
-test('file upload, static status, and help version have keyboard descriptions at 390px', async ({
+test('file upload and static status have keyboard descriptions, and Help fits, at 390px', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -101,8 +101,7 @@ test('file upload, static status, and help version have keyboard descriptions at
   await checkTooltip(page, page.getByTestId('config-upload'));
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.getByTestId('mobile-menu-toggle').click();
-  await checkTooltip(page, sidebar(page, 'mobile').getByTestId('connection-status'));
-  await sidebar(page, 'mobile').getByTestId('sidebar-help-button').click();
+  await sidebar(page, 'mobile').getByTestId('rail-help').click();
   const drawer = page.getByTestId('help-drawer');
   await expect(drawer).toBeInViewport({ ratio: 1 });
   const drawerBounds = await drawer.boundingBox();
@@ -110,7 +109,6 @@ test('file upload, static status, and help version have keyboard descriptions at
   expect(drawerBounds?.x).toBeGreaterThanOrEqual(0);
   expect((drawerBounds?.x ?? 0) + (drawerBounds?.width ?? 0)).toBeLessThanOrEqual(390);
   await expect(page.getByTestId('help-drawer-close')).toBeInViewport();
-  await checkTooltip(page, page.getByTestId('help-drawer-version'));
   await page.keyboard.press('Shift+Tab');
   await page.keyboard.press('Tab');
   await page.screenshot({ path: test.info().outputPath('tooltip-390.png') });
@@ -150,34 +148,9 @@ test('collapsed navigation keeps every name and reveals its label on focus', asy
   await expect(page).toHaveURL(/\/runtime$/);
 });
 
-test('Escape dismisses a hover-only tooltip before closing its modal', async ({ page }) => {
+test('activating Help clears its tooltip and moves focus into the drawer', async ({ page }) => {
   await page.goto('/runtime');
-  await sidebar(page, 'desktop').getByTestId('sidebar-help-button').click();
-  const drawer = page.getByTestId('help-drawer');
-  const version = page.getByTestId('help-drawer-version');
-  const close = page.getByTestId('help-drawer-close');
-  await expect(version).toBeFocused();
-  await page.keyboard.press('Tab');
-  await expect(close).toBeFocused();
-  await version.hover();
-  const descriptionId = await version.getAttribute('aria-describedby');
-  expect(descriptionId).toBeTruthy();
-  const tooltip = page.locator(`[id="${descriptionId}"]`);
-  await expect(tooltip).toBeVisible();
-  await expect(version).not.toBeFocused();
-  await page.keyboard.press('Escape');
-  await expect(tooltip).toBeHidden();
-  await expect(close).toBeFocused();
-  await expect(drawer).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(drawer).toBeHidden();
-});
-
-test('activating Help clears its tooltip so Escape closes the drawer once focus leaves version', async ({
-  page,
-}) => {
-  await page.goto('/runtime');
-  const help = sidebar(page, 'desktop').getByTestId('sidebar-help-button');
+  const help = sidebar(page, 'desktop').getByTestId('rail-help');
   const descriptionId = await help.getAttribute('aria-describedby');
   expect(descriptionId).toBeTruthy();
   const tooltip = page.locator(`[id="${descriptionId}"]`);
@@ -187,8 +160,6 @@ test('activating Help clears its tooltip so Escape closes the drawer once focus 
   const drawer = page.getByTestId('help-drawer');
   await expect(drawer).toBeVisible();
   await expect(tooltip).toBeHidden();
-  await expect(page.getByTestId('help-drawer-version')).toBeFocused();
-  await page.keyboard.press('Tab');
   await expect(page.getByTestId('help-drawer-close')).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(drawer).toBeHidden();

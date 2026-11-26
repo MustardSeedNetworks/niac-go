@@ -1,13 +1,14 @@
-import { Wrench } from 'lucide-react';
+import { Layers, Wrench } from 'lucide-react';
 import { memo, type ReactNode, type RefObject, Suspense, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Route, Routes, useLocation } from 'react-router';
+import { disconnectRuntimeAPI } from './api/requestCore';
+import { AppPageHeader } from './components/AppPageHeader';
 import { ErrorBoundary, PageErrorBoundary } from './components/ErrorBoundary';
 import { HelpDrawer } from './components/HelpDrawer';
 import { NotFound } from './components/NotFound';
-import { RailControls } from './components/RailControls';
 import { SettingsDrawer } from './components/SettingsDrawer';
-import { AppProvider } from './contexts/AppContext';
+import { AppProvider, useAppContext } from './contexts/AppContext';
 import { pageHelpRoutes } from './data/page-help';
 import { useBuildVersion } from './hooks/useBuildVersion';
 import { useConnectionStatus } from './hooks/useConnectionStatus';
@@ -17,10 +18,8 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useTheme } from './hooks/useTheme';
 import { useNavGroups } from './navGroups';
 import { DeviceEditorPageRef, type PageConfig, usePages } from './pageRegistry';
-import { Breadcrumbs } from './ui/Breadcrumbs';
-import { PageHeader } from './ui/PageHeader';
 import { PageLoader } from './ui/PageLoader';
-import { SidebarLayout } from './ui/Sidebar';
+import { type SidebarFooterProps, SidebarLayout } from './ui/Sidebar';
 import './App.css';
 
 /**
@@ -45,8 +44,9 @@ export default function App() {
 
 function AppShell() {
   const status = useConnectionStatus();
-  const themeState = useTheme();
-  const { isDark, toggleTheme } = themeState;
+  const { isDark, toggleTheme } = useTheme();
+  const { t: tCommon } = useTranslation('common');
+  const { sessionId, setSessionId, sessions } = useAppContext();
   const { t } = useTranslation('pages');
   const { version } = useBuildVersion();
   const navGroups = useNavGroups();
@@ -63,25 +63,46 @@ function AppShell() {
   const pageTitleRef = useRef<HTMLHeadingElement>(null);
   const { pathname } = useLocation();
 
+  const connectionTone = {
+    connected: 'success',
+    disconnected: 'error',
+    checking: 'warning',
+  } as const;
+  const connectionLabel = {
+    connected: tCommon('connection.online'),
+    disconnected: tCommon('connection.offline'),
+    checking: tCommon('connection.checking'),
+  } as const;
+  const footer: SidebarFooterProps = {
+    status: { tone: connectionTone[status], label: connectionLabel[status] },
+    productSlot: {
+      label: tCommon('session.label'),
+      value: sessionId ?? tCommon('session.none'),
+      icon: <Layers />,
+      options: sessions.flatMap(({ sessionId: id }) => (id ? [{ value: id, label: id }] : [])),
+      selected: sessionId ?? '',
+      onSelect: setSessionId,
+    },
+    help: { label: tCommon('accessibility.openHelp'), onClick: () => setHelpOpen(true) },
+    settings: {
+      label: tCommon('accessibility.openSettings'),
+      onClick: () => setSettingsOpen(true),
+    },
+    theme: {
+      label: tCommon(isDark ? 'accessibility.switchToLightMode' : 'accessibility.switchToDarkMode'),
+      onClick: toggleTheme,
+      isDark,
+    },
+    signOut: { label: tCommon('auth.disconnect'), onClick: disconnectRuntimeAPI },
+    version: { value: version, label: tCommon('footer.version') },
+  };
+
   useDocumentTitle();
   useKeyboardShortcuts(() => setHelpOpen(true));
   useFocusOnRouteChange(pageTitleRef);
 
   return (
-    <SidebarLayout
-      groups={navGroups}
-      version={version}
-      railControls={(collapsed) => (
-        <RailControls
-          collapsed={collapsed}
-          status={status}
-          isDark={isDark}
-          toggleTheme={toggleTheme}
-        />
-      )}
-      onOpenHelp={() => setHelpOpen(true)}
-      onOpenSettings={() => setSettingsOpen(true)}
-    >
+    <SidebarLayout groups={navGroups} footer={footer}>
       {/* Keyed on the route so a suspending navigation mounts a NEW boundary.
           Every page is lazy(), and React Router updates in a transition: a
           transition that suspends against an EXISTING boundary keeps the whole
@@ -117,6 +138,7 @@ function AppShell() {
                 page={{
                   path: '/device-config/new',
                   label: t('deviceEditor.newLabel'),
+                  eyebrow: t('deviceEditor.eyebrow'),
                   title: t('deviceEditor.newTitle'),
                   description: t('deviceEditor.newDescription'),
                   icon: Wrench,
@@ -136,6 +158,7 @@ function AppShell() {
                 page={{
                   path: '/device-config/:hostname',
                   label: t('deviceEditor.editLabel'),
+                  eyebrow: t('deviceEditor.eyebrow'),
                   title: t('deviceEditor.editTitle'),
                   description: t('deviceEditor.editDescription'),
                   icon: Wrench,
@@ -151,7 +174,6 @@ function AppShell() {
       </Suspense>
       <SettingsDrawer
         connectionStatus={status}
-        themeState={themeState}
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         version={version}
@@ -193,13 +215,11 @@ const PageWithErrorBoundary = memo(
     return (
       <PageErrorBoundary key={location.pathname}>
         <section className="stack-xl" data-testid="page-frame">
-          <Breadcrumbs />
-          <PageHeader
+          <AppPageHeader
             titleRef={titleRef}
-            icon={page.icon}
-            eyebrow={page.eyebrow}
+            kicker={page.eyebrow}
             title={page.title}
-            description={page.description}
+            subtitle={page.description}
             onHelp={documented ? () => onOpenHelp(page.path) : undefined}
           />
           {children}

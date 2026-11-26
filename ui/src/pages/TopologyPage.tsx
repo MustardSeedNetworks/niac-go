@@ -24,9 +24,10 @@ import { useAppContext, useAppState } from '../contexts/AppContext';
 import { useTopologyResource } from '../hooks/usePageResources';
 import { useResourceError } from '../hooks/useResourceError';
 import { useTopologyLayoutPersistence } from '../hooks/useTopologyLayoutPersistence';
-import { Button } from '../ui/Button';
-import { Card, CardContent } from '../ui/Card';
-import { Tooltip } from '../ui/Tooltip';
+import { Button } from '../shared/Button';
+import { Card } from '../shared/Card';
+import { Tooltip } from '../shared/Tooltip';
+import { ActionButton } from '../ui/ActionButton';
 import { H2, SmallText } from '../ui/Typography';
 import {
   ActionsMenu,
@@ -464,8 +465,8 @@ export function TopologyPage() {
   return (
     <div className="stack-xl">
       {/* Header Card */}
-      <Card className="relative z-20 border-surface-border bg-bg-surface/70">
-        <CardContent>
+      <Card className="relative z-20">
+        <div>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-comfortable">
             <div className="flex items-center gap-default">
               <div className="pad-xs rounded-lg bg-status-info/20">
@@ -520,9 +521,10 @@ export function TopologyPage() {
                 </Tooltip>
               </div>
               <Button
+                variant="primary"
                 size="sm"
                 onClick={handleRefresh}
-                leftIcon={<RefreshCw className="w-4 h-4" />}
+                icon={<RefreshCw className="w-4 h-4" />}
                 disabled={loading}
               >
                 {tCommon('buttons.refresh')}
@@ -533,7 +535,7 @@ export function TopologyPage() {
                       (snap drags / filters back to defaults) and
                       operators reach for it often enough that hiding
                       it inside a menu got friction reports. */}
-                  <Button
+                  <ActionButton
                     variant="ghost"
                     size="sm"
                     onClick={handleResetLayout}
@@ -542,15 +544,15 @@ export function TopologyPage() {
                     data-testid="topology-reset-layout-button"
                   >
                     {t('topology.header.resetButtonLabel')}
-                  </Button>
-                  <Button
-                    variant={showLabels ? 'outline' : 'ghost'}
+                  </ActionButton>
+                  <ActionButton
+                    variant={showLabels ? 'secondary' : 'ghost'}
                     size="sm"
                     onClick={() => setShowLabels(!showLabels)}
                     title={t('topology.header.labelsButtonTitle')}
                   >
                     {t('topology.header.labelsButtonLabel')}
-                  </Button>
+                  </ActionButton>
                   {/* Export is the only menu — PNG vs JSON is a real
                       two-option choice, but Reset + Labels + Layout
                       are direct buttons / pills for fast iteration. */}
@@ -695,7 +697,7 @@ export function TopologyPage() {
               )}
             </div>
           )}
-        </CardContent>
+        </div>
       </Card>
 
       {/* Topology Visualization — sized to fill the available viewport
@@ -703,7 +705,7 @@ export function TopologyPage() {
           ≈ 240 px on this layout). Gives much more room for the graph
           on standard 1080p+ displays. */}
       {view === 'graph' && (
-        <Card className="relative z-0 border-surface-border bg-bg-surface/70 overflow-hidden">
+        <Card className="relative z-0 overflow-hidden">
           <div className="h-[calc(100vh-260px)] min-h-[520px] relative">
             {loading || loadError || nodes.length === 0 ? (
               <CanvasState loading={loading} error={loadError} onRetry={handleRefresh} />

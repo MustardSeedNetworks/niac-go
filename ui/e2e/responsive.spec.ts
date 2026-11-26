@@ -81,9 +81,9 @@ test.describe('Responsive Design', () => {
   test('should maintain navigation on all pages', async ({ page }) => {
     const pages = [
       { path: '/', title: 'Dashboard' },
-      { path: '/devices', title: 'Running Devices' },
+      { path: '/devices', title: 'Running devices' },
       { path: '/topology', title: 'Topology' },
-      { path: '/device-config', title: 'Device Library' },
+      { path: '/device-config', title: 'Device library' },
     ];
 
     for (const route of pages) {

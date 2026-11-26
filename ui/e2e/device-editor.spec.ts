@@ -165,13 +165,13 @@ test.describe('Device Editor API wiring', () => {
     });
 
     await page.goto('/device-config/new');
-    await expect(page.getByLabel('Hostname')).toBeEnabled();
-    await page.getByLabel('Hostname').fill('edge-switch-01');
+    await expect(page.getByRole('textbox', { name: 'Hostname' })).toBeEnabled();
+    await page.getByRole('textbox', { name: 'Hostname' }).fill('edge-switch-01');
     await page.locator('#device-mac').fill('02:00:00:00:10:01');
 
     // The generated form: no interface section was hand-written, so this also
     // proves the schema-driven renderer reaches a nested list of objects.
-    await page.getByRole('button', { name: /interfaces section, collapsed/i }).click();
+    await page.getByRole('button', { name: /^interfaces/i, expanded: false }).click();
     await page.getByRole('button', { name: 'Add Interfaces' }).click();
     await page.locator('#device-interfaces---name').fill('Ethernet1/1');
     await page.locator('#device-interfaces---speed').fill('10000');
@@ -181,7 +181,7 @@ test.describe('Device Editor API wiring', () => {
     await page.getByTestId('device-editor-save').click();
 
     await expect(page).toHaveURL(/\/device-config\/edge-switch-01$/);
-    await expect(page.getByLabel('Hostname')).toHaveValue('edge-switch-01');
+    await expect(page.getByRole('textbox', { name: 'Hostname' })).toHaveValue('edge-switch-01');
     expect(Object.keys(createPayload ?? {}).sort()).toEqual(['hostname', 'rawYaml']);
     expect(createPayload?.hostname).toBe('edge-switch-01');
     // The document is the daemon's own YAML — snake_case keys, and only the

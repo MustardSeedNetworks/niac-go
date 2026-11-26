@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
+import { FormField } from '../../shared/FormField';
 import { SmallText } from '../../ui/Typography';
-import { FormField } from '../form/FormField';
 import type {
   AuthoredAttachment,
   AuthoredAttachmentPool,
@@ -79,7 +79,7 @@ export function AttachmentPoolEditor({
             <div className="flex items-end gap-default">
               <FormField
                 label={t('newSimWizard.networks.attachmentDevice')}
-                htmlFor={`attachment-device-${id}`}
+                id={`attachment-device-${id}`}
               >
                 <select
                   id={`attachment-device-${id}`}
@@ -103,7 +103,7 @@ export function AttachmentPoolEditor({
               </FormField>
               {groups.length > 1 && (
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   data-testid={`attachment-group-remove-${id}`}
                   onClick={() => commit(groups.filter((_, i) => i !== groupIndex))}
                 >
@@ -150,7 +150,7 @@ export function AttachmentPoolEditor({
       {lastGroup !== undefined && lastGroup.ports.length > 0 && (
         <div>
           <Button
-            variant="outline"
+            variant="secondary"
             data-testid={`attachment-group-add-${index}`}
             onClick={() => commit([...groups, { device: '', ports: [] }])}
           >
@@ -166,7 +166,7 @@ export function AttachmentPoolEditor({
               {t('newSimWizard.networks.attachmentPinsHelp')}
             </SmallText>
             <Button
-              variant="outline"
+              variant="secondary"
               data-testid={`attachment-pin-add-${index}`}
               onClick={() =>
                 onChange({
@@ -188,7 +188,7 @@ export function AttachmentPoolEditor({
             <div key={`pin-${pinIndex}`} className="grid gap-compact md:grid-cols-3 items-end">
               <FormField
                 label={t('newSimWizard.networks.attachmentPinMac')}
-                htmlFor={`attachment-pin-mac-${index}-${pinIndex}`}
+                id={`attachment-pin-mac-${index}-${pinIndex}`}
               >
                 <input
                   id={`attachment-pin-mac-${index}-${pinIndex}`}
@@ -206,7 +206,7 @@ export function AttachmentPoolEditor({
               </FormField>
               <FormField
                 label={t('newSimWizard.networks.attachmentPinPort')}
-                htmlFor={`attachment-pin-port-${index}-${pinIndex}`}
+                id={`attachment-pin-port-${index}-${pinIndex}`}
               >
                 <select
                   id={`attachment-pin-port-${index}-${pinIndex}`}
@@ -239,7 +239,7 @@ export function AttachmentPoolEditor({
                 </select>
               </FormField>
               <Button
-                variant="outline"
+                variant="secondary"
                 data-testid={`attachment-pin-remove-${index}-${pinIndex}`}
                 onClick={() =>
                   onChange({

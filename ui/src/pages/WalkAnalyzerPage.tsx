@@ -3,43 +3,33 @@ import { Trans, useTranslation } from 'react-i18next';
 import { analyzeWalk } from '../api/client';
 import { fetchLibraryWalks, type LibraryFileEntry } from '../api/library-client';
 import type { WalkAnalyzeResponse } from '../api/types';
+import { TableSection } from '../components/TableSection';
 import { WalkProfileCreator } from '../components/walk/WalkProfileCreator';
-import { Button } from '../ui/Button';
-import { Card, CardContent, CardRow, CardValue } from '../ui/Card';
-import { DataTable, type DataTableColumn } from '../ui/DataTable';
-import { Tooltip } from '../ui/Tooltip';
+import { Card, CardRow, CardValue } from '../shared/Card';
+import { CategoryChip } from '../shared/CategoryChip';
+import { DataTable, type DataTableColumn } from '../shared/DataTable';
+import { EmptyState } from '../shared/EmptyState';
+import { StatusPill } from '../shared/StatusPill';
+import { Tooltip } from '../shared/Tooltip';
+import { ActionButton } from '../ui/ActionButton';
+import { useTableLabels } from '../ui/tableLabels';
 import { formatBitsPerSecond } from '../utils/format';
 
-const STATUS_BADGE: Record<string, string> = {
-  up: 'bg-status-success/20 text-status-success-strong ring-status-success/40',
-  down: 'bg-status-error/20 text-status-error-strong ring-status-error/40',
-  testing: 'bg-status-warning/20 text-status-warning-strong ring-status-warning/40',
+const STATUS_TONE: Record<string, 'success' | 'error' | 'warning'> = {
+  up: 'success',
+  down: 'error',
+  testing: 'warning',
 };
-
-const PROTOCOL_BADGE: Record<string, string> = {
-  lldp: 'bg-status-info/20 text-status-info-strong ring-status-info/40',
-  cdp: 'bg-brand-primary/20 text-brand-primary-strong ring-brand-primary/40',
-};
-
-const FALLBACK_BADGE = 'bg-bg-muted/20 text-text-secondary ring-surface-border/40';
 
 function renderStatusBadge(status: string | undefined): ReactNode {
   if (!status) {
     return <span className="text-text-muted">—</span>;
   }
-  const cls = STATUS_BADGE[status.toLowerCase()] ?? FALLBACK_BADGE;
-  return (
-    <span className={`rounded px-cell py-0.5 text-[10px] font-medium ring-1 ${cls}`}>{status}</span>
-  );
+  return <StatusPill tone={STATUS_TONE[status.toLowerCase()] ?? 'unknown'} label={status} />;
 }
 
 function renderProtocolBadge(protocol: string): ReactNode {
-  const cls = PROTOCOL_BADGE[protocol.toLowerCase()] ?? FALLBACK_BADGE;
-  return (
-    <span className={`rounded px-cell py-0.5 text-[10px] font-medium ring-1 ${cls}`}>
-      {protocol.toUpperCase()}
-    </span>
-  );
+  return <CategoryChip label={protocol.toUpperCase()} />;
 }
 
 export function WalkAnalyzerPage() {
@@ -87,13 +77,12 @@ export function WalkAnalyzerPage() {
   const interfaces = result?.interfaces ?? [];
   const neighbors = result?.neighbors ?? [];
 
+  const labels = useTableLabels(t('walkAnalyzer.interfacesHeading').toLowerCase());
   const interfaceColumns: DataTableColumn<(typeof interfaces)[number]>[] = [
     {
       key: 'index',
       header: t('walkAnalyzer.interfacesTable.index'),
-      headerClassName: 'w-16',
-      cellClassName: 'font-mono text-xs text-text-muted',
-      cell: (iface) => iface.index,
+      cell: (iface) => <span className="font-mono text-xs text-text-muted">{iface.index}</span>,
     },
     {
       key: 'name',
@@ -103,14 +92,14 @@ export function WalkAnalyzerPage() {
     {
       key: 'type',
       header: t('walkAnalyzer.interfacesTable.type'),
-      cellClassName: 'text-text-muted',
-      cell: (iface) => iface.type || '—',
+      cell: (iface) => <span className="text-text-muted">{iface.type || '—'}</span>,
     },
     {
       key: 'speed',
       header: t('walkAnalyzer.interfacesTable.speed'),
-      cellClassName: 'font-mono text-xs',
-      cell: (iface) => formatBitsPerSecond(iface.speed),
+      cell: (iface) => (
+        <span className="font-mono text-xs">{formatBitsPerSecond(iface.speed)}</span>
+      ),
     },
     {
       key: 'admin',
@@ -125,14 +114,14 @@ export function WalkAnalyzerPage() {
     {
       key: 'mac',
       header: 'MAC',
-      cellClassName: 'font-mono text-xs text-text-muted',
-      cell: (iface) => iface.macAddress || '—',
+      cell: (iface) => (
+        <span className="font-mono text-xs text-text-muted">{iface.macAddress || '—'}</span>
+      ),
     },
     {
       key: 'description',
       header: t('walkAnalyzer.interfacesTable.description'),
-      cellClassName: 'text-text-muted',
-      cell: (iface) => iface.description || '—',
+      cell: (iface) => <span className="text-text-muted">{iface.description || '—'}</span>,
     },
   ];
 
@@ -140,13 +129,13 @@ export function WalkAnalyzerPage() {
     {
       key: 'localInterface',
       header: t('walkAnalyzer.localInterface'),
-      cellClassName: 'font-mono text-xs',
-      cell: (neighbor) => neighbor.localInterface || '—',
+      cell: (neighbor) => (
+        <span className="font-mono text-xs">{neighbor.localInterface || '—'}</span>
+      ),
     },
     {
       key: 'protocol',
       header: t('walkAnalyzer.protocol'),
-      headerClassName: 'w-24',
       cell: (neighbor) => renderProtocolBadge(neighbor.protocol),
     },
     {
@@ -157,8 +146,9 @@ export function WalkAnalyzerPage() {
     {
       key: 'remoteInterface',
       header: t('walkAnalyzer.remoteInterface'),
-      cellClassName: 'font-mono text-xs text-text-muted',
-      cell: (neighbor) => neighbor.remoteInterface || '—',
+      cell: (neighbor) => (
+        <span className="font-mono text-xs text-text-muted">{neighbor.remoteInterface || '—'}</span>
+      ),
     },
   ];
 
@@ -182,8 +172,8 @@ export function WalkAnalyzerPage() {
   return (
     <div className="stack-xl">
       <WalkProfileCreator />
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="stack-lg">
+      <Card>
+        <div className="stack-lg">
           <header>
             <h2 className="text-2xl font-semibold text-text-primary">
               {t('walkAnalyzer.pageTitle')}
@@ -196,7 +186,7 @@ export function WalkAnalyzerPage() {
           <div className="grid gap-comfortable md:grid-cols-2">
             <label className="block text-sm">
               <span className="text-text-secondary">{t('walkAnalyzer.fromWalksDir')}</span>
-              <Tooltip text={t('walkAnalyzer.fromWalksDirHelp')} className="w-full">
+              <Tooltip text={t('walkAnalyzer.fromWalksDirHelp')}>
                 <select
                   value={selectedFile}
                   onChange={(e) => setSelectedFile(e.target.value)}
@@ -222,7 +212,7 @@ export function WalkAnalyzerPage() {
 
             <label className="block text-sm">
               <span className="text-text-secondary">{t('walkAnalyzer.pastePathLabel')}</span>
-              <Tooltip text={t('walkAnalyzer.pastePathHelp')} className="w-full">
+              <Tooltip text={t('walkAnalyzer.pastePathHelp')}>
                 <input
                   type="text"
                   value={customPath}
@@ -236,12 +226,11 @@ export function WalkAnalyzerPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-default">
-            <Button
-              type="button"
-              variant="outline"
-              tone="blue"
-              onClick={() => void run()}
+            <ActionButton
               action="edit"
+              variant="secondary"
+              type="button"
+              onClick={() => void run()}
               disabled={busy !== 'idle' || !targetPath}
               title={t('walkAnalyzer.analyzeHelp')}
               data-testid="walk-analyzer-analyze-button"
@@ -249,20 +238,20 @@ export function WalkAnalyzerPage() {
               {busy === 'analyzing'
                 ? t('walkAnalyzer.analyzingButton')
                 : t('walkAnalyzer.analyzeButton')}
-            </Button>
+            </ActionButton>
             {error && (
               <span className="text-sm text-status-error" role="alert">
                 {error}
               </span>
             )}
           </div>
-        </CardContent>
+        </div>
       </Card>
 
       {result && (
         <div className="stack-xl" data-testid="walk-analyzer-results">
-          <Card className="border-surface-border bg-bg-surface/70">
-            <CardContent className="stack">
+          <Card>
+            <div className="stack">
               <h2 className="heading-3 text-text-primary">{t('walkAnalyzer.deviceHeading')}</h2>
               <CardRow label="sysName" value={result.device.sysname || '—'} mono />
               <CardRow label="sysDescr" value={result.device.sysdescr || '—'} />
@@ -273,11 +262,11 @@ export function WalkAnalyzerPage() {
               {result.device.syslocation && (
                 <CardRow label="sysLocation" value={result.device.syslocation} />
               )}
-            </CardContent>
+            </div>
           </Card>
 
-          <Card className="border-surface-border bg-bg-surface/70">
-            <CardContent className="stack">
+          <Card>
+            <div className="stack">
               <h2 className="heading-3 text-text-primary">{t('walkAnalyzer.statisticsHeading')}</h2>
               <div className="grid grid-cols-2 gap-comfortable sm:grid-cols-4">
                 <CardValue
@@ -297,50 +286,46 @@ export function WalkAnalyzerPage() {
                   value={result.statistics.totalNeighbors}
                 />
               </div>
-            </CardContent>
+            </div>
           </Card>
 
-          <Card
-            className="border-surface-border bg-bg-surface/70"
+          <TableSection
+            title={t('walkAnalyzer.interfacesHeading')}
             data-testid="walk-analyzer-interfaces-table"
           >
-            <CardContent className="stack-lg">
-              <h2 className="heading-3 text-text-primary">{t('walkAnalyzer.interfacesHeading')}</h2>
-              {interfaces.length === 0 ? (
-                <p className="text-sm text-text-muted">{t('walkAnalyzer.noInterfacesFound')}</p>
-              ) : (
-                <DataTable
-                  rows={interfaces}
-                  columns={interfaceColumns}
-                  getRowKey={(iface) => `${iface.index}-${iface.name}`}
-                  emptyMessage={null}
-                  rowClassName={() => 'text-text-primary hover:bg-bg-base/40'}
-                />
-              )}
-            </CardContent>
-          </Card>
+            {interfaces.length === 0 ? (
+              <EmptyState title={t('walkAnalyzer.noInterfacesFound')} />
+            ) : (
+              <DataTable
+                rows={interfaces}
+                columns={interfaceColumns}
+                getRowKey={(iface) => `${iface.index}-${iface.name}`}
+                caption={t('walkAnalyzer.interfacesHeading')}
+                labels={labels}
+                empty={null}
+              />
+            )}
+          </TableSection>
 
-          <Card
-            className="border-surface-border bg-bg-surface/70"
+          <TableSection
+            title={t('walkAnalyzer.neighborsHeading')}
             data-testid="walk-analyzer-neighbors-table"
           >
-            <CardContent className="stack-lg">
-              <h2 className="heading-3 text-text-primary">{t('walkAnalyzer.neighborsHeading')}</h2>
-              {neighbors.length === 0 ? (
-                <p className="text-sm text-text-muted">{t('walkAnalyzer.noNeighborsFound')}</p>
-              ) : (
-                <DataTable
-                  rows={neighbors}
-                  columns={neighborColumns}
-                  getRowKey={(neighbor) =>
-                    `${neighbor.localInterface}-${neighbor.remoteDevice}-${neighbor.remoteInterface}`
-                  }
-                  emptyMessage={null}
-                  rowClassName={() => 'text-text-primary hover:bg-bg-base/40'}
-                />
-              )}
-            </CardContent>
-          </Card>
+            {neighbors.length === 0 ? (
+              <EmptyState title={t('walkAnalyzer.noNeighborsFound')} />
+            ) : (
+              <DataTable
+                rows={neighbors}
+                columns={neighborColumns}
+                getRowKey={(neighbor) =>
+                  `${neighbor.localInterface}-${neighbor.remoteDevice}-${neighbor.remoteInterface}`
+                }
+                caption={t('walkAnalyzer.neighborsHeading')}
+                labels={labels}
+                empty={null}
+              />
+            )}
+          </TableSection>
         </div>
       )}
     </div>

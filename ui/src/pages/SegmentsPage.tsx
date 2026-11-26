@@ -3,12 +3,13 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SegmentSummary } from '../api/types';
 import { DeviceTable } from '../components/DeviceTable';
-import { iconSizes } from '../constants/sizes';
+import { TableSection } from '../components/TableSection';
 import { useAppContext } from '../contexts/AppContext';
 import { useSegmentsResource } from '../hooks/usePageResources';
-import { BaseCard } from '../ui/BaseCard';
-import { Tag } from '../ui/Tag';
-import { H3, SmallText } from '../ui/Typography';
+import { Alert } from '../shared/Alert';
+import { CategoryChip } from '../shared/CategoryChip';
+import { EmptyState } from '../shared/EmptyState';
+import { Skeleton } from '../shared/Skeleton';
 
 /**
  * Segments Page
@@ -29,41 +30,36 @@ export function SegmentsPage() {
 }
 
 /**
- * Segments List Card - Shows VLAN segments from current config
+ * Segments List - the VLAN segments from the current config
  */
 function SegmentsListCard() {
   const { t } = useTranslation('pages');
   const { sessionId } = useAppContext();
   const { data: segments, loading, error } = useSegmentsResource(sessionId);
 
+  if (loading && !segments) {
+    return (
+      <div role="status" aria-label={t('segments.title')}>
+        <Skeleton className="h-40 w-full" />
+      </div>
+    );
+  }
+  if (error) {
+    return <Alert tone="error">{error.message}</Alert>;
+  }
+  if (!segments || segments.length === 0) {
+    return (
+      <div data-testid="segments-results">
+        <EmptyState icon={<Layers className="h-6 w-6" />} title={t('segments.empty')} />
+      </div>
+    );
+  }
   return (
-    <BaseCard<SegmentSummary[]>
-      title={t('segments.title')}
-      subtitle={t('segments.description')}
-      icon={<Layers className={`${iconSizes.lg} text-status-info`} />}
-      data={segments}
-      loading={loading && !segments}
-      error={error?.message}
-      getStatus={(d) => (d.length > 0 ? 'success' : 'unknown')}
-      emptyMessage={t('segments.empty')}
-    >
-      {(data) =>
-        data.length === 0 ? (
-          <div
-            className="rounded-xl border border-surface-border bg-bg-base/50 pad-xl text-center text-text-muted"
-            data-testid="segments-results"
-          >
-            {t('segments.empty')}
-          </div>
-        ) : (
-          <div className="stack" data-testid="segments-results">
-            {data.map((segment, index) => (
-              <SegmentSection key={`${segment.vlanTag}-${index}`} segment={segment} />
-            ))}
-          </div>
-        )
-      }
-    </BaseCard>
+    <div className="stack-xl" data-testid="segments-results">
+      {segments.map((segment, index) => (
+        <SegmentSection key={`${segment.vlanTag}-${index}`} segment={segment} />
+      ))}
+    </div>
   );
 }
 
@@ -78,27 +74,23 @@ const SegmentSection = memo(({ segment }: { segment: SegmentSummary }) => {
     : t('segments.vlanHeader', { tag: segment.vlanTag });
 
   return (
-    <div
-      className="rounded-xl border border-surface-border bg-bg-surface/40 pad-lg stack-sm"
+    <TableSection
+      title={heading}
       data-testid={`segment-${segment.vlanTag}`}
+      aside={
+        <span className="figure" data-testid={`segment-count-${segment.vlanTag}`}>
+          <CategoryChip
+            label={`${segment.devices.length} ${t('segments.deviceNoun', { count: segment.devices.length })}`}
+          />
+        </span>
+      }
     >
-      <div className="flex-between">
-        <H3>{heading}</H3>
-        {/* The count changes as the simulation runs, so it is a figure; the
-            noun beside it is prose and must not be monospaced with it. */}
-        <Tag colorScheme="blue">
-          <span className="figure" data-testid={`segment-count-${segment.vlanTag}`}>
-            {segment.devices.length}
-          </span>{' '}
-          {t('segments.deviceNoun', { count: segment.devices.length })}
-        </Tag>
-      </div>
       {segment.devices.length === 0 ? (
-        <SmallText className="text-text-muted">{t('segments.emptySegmentDevices')}</SmallText>
+        <EmptyState title={t('segments.emptySegmentDevices')} />
       ) : (
         <DeviceTable devices={segment.devices} />
       )}
-    </div>
+    </TableSection>
   );
 });
 

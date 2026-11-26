@@ -3,9 +3,10 @@ import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import type { TFunction } from '../../i18n';
-import { Button } from '../../ui/Button';
-import { Card, CardContent } from '../../ui/Card';
-import { Tag } from '../../ui/Tag';
+import { Button } from '../../shared/Button';
+import { Card } from '../../shared/Card';
+import { CategoryChip } from '../../shared/CategoryChip';
+import { ActionButton } from '../../ui/ActionButton';
 import { SmallText } from '../../ui/Typography';
 import { formatBytes } from '../../utils/format';
 
@@ -168,8 +169,8 @@ export function PcapUploader({
   }, [onFileSelect]);
 
   return (
-    <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="stack-lg">
+    <Card>
+      <div className="stack-lg">
         {/* Drag and Drop Zone */}
         <input
           ref={fileInputRef}
@@ -232,9 +233,7 @@ export function PcapUploader({
                 <p className="font-medium text-text-primary">{selectedFile.name}</p>
                 <SmallText className="text-text-muted">{formatBytes(selectedFile.size)}</SmallText>
               </div>
-              <Tag colorScheme="purple" className="text-xs">
-                {tCommon('status.ready')}
-              </Tag>
+              <CategoryChip label={tCommon('status.ready')} />
             </div>
 
             <div className="flex items-center gap-compact">
@@ -243,7 +242,7 @@ export function PcapUploader({
                 size="sm"
                 onClick={handleClear}
                 disabled={isAnalyzing}
-                leftIcon={<X className={iconSizes.md} />}
+                icon={<X className={iconSizes.md} />}
               >
                 {tCommon('buttons.clear')}
               </Button>
@@ -262,7 +261,7 @@ export function PcapUploader({
                 variant="ghost"
                 size="sm"
                 onClick={onCancelUpload}
-                leftIcon={<X className={iconSizes.md} />}
+                icon={<X className={iconSizes.md} />}
               >
                 {t('libraryPcaps.uploader.cancelUpload')}
               </Button>
@@ -299,14 +298,13 @@ export function PcapUploader({
         )}
 
         {/* Analyze Button */}
-        <Button
-          tone="violet"
-          size="lg"
+        <ActionButton
+          variant="primary"
+          action="upload"
           className="w-full"
           onClick={onAnalyze}
-          action="upload"
           disabled={!selectedFile || isAnalyzing}
-          leftIcon={
+          icon={
             isAnalyzing ? (
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-surface-border border-t-white" />
             ) : (
@@ -317,8 +315,8 @@ export function PcapUploader({
           {isAnalyzing
             ? t('libraryPcaps.uploader.analyzing')
             : t('libraryPcaps.uploader.analyzeButton')}
-        </Button>
-      </CardContent>
+        </ActionButton>
+      </div>
     </Card>
   );
 }

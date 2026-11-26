@@ -4,9 +4,10 @@ import { fetchSynthesizeWalkModels, synthesizeWalk } from '../../api/client';
 import { isApiError } from '../../api/errors';
 import type { ModelDescriptor } from '../../api/types';
 import { useApiResource } from '../../hooks/useApiResource';
-import { Button } from '../../ui/Button';
+import { FormField } from '../../shared/FormField';
+import { ActionButton } from '../../ui/ActionButton';
+import { FieldHelp } from '../../ui/FieldHelp';
 import { getErrorMessage } from '../../utils/format';
-import { FormField } from '../form';
 import { selectClassName } from './types';
 
 export interface SynthesizeWalkControlProps {
@@ -112,8 +113,13 @@ export function SynthesizeWalkControl({
   return (
     <FormField
       label={t('editor.sections.synthesizeWalk.label')}
-      helpText={t('editor.sections.synthesizeWalk.help')}
-      htmlFor="synthesize-walk-model"
+      labelAccessory={
+        <FieldHelp
+          field={t('editor.sections.synthesizeWalk.label')}
+          text={t('editor.sections.synthesizeWalk.help')}
+        />
+      }
+      id="synthesize-walk-model"
     >
       <div className="stack-sm" data-testid="synthesize-walk-control">
         <div className="flex flex-wrap items-center gap-default">
@@ -140,16 +146,17 @@ export function SynthesizeWalkControl({
               </optgroup>
             ))}
           </select>
-          <Button
+          <ActionButton
+            variant="primary"
+            action="edit"
             disabled={disabled || generating || selected === ''}
             onClick={() => void handleGenerate()}
-            action="edit"
             data-testid="synthesize-walk-generate"
           >
             {generating
               ? t('editor.sections.synthesizeWalk.generatingButton')
               : t('editor.sections.synthesizeWalk.generateButton')}
-          </Button>
+          </ActionButton>
         </div>
         {disabled && (
           <p className="text-xs text-text-muted">

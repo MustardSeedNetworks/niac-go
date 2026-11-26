@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card, CardContent } from '../../ui/Card';
+import { Card } from '../../shared/Card';
+import { CollapsibleSection } from '../../shared/CollapsibleSection';
 import { SmallText } from '../../ui/Typography';
 import { parseAuthoredDevice, serializeAuthoredDevice } from '../../utils/authored-device-yaml';
 import {
@@ -14,7 +15,6 @@ import type {
 } from '../device-editor/generated/authored-device.generated';
 import { DEVICE_SECTIONS } from '../device-editor/generated/sections.generated';
 import { SchemaSectionBody } from '../device-editor/SchemaFields';
-import { CollapsibleSection } from '../form/CollapsibleSection';
 
 interface DeviceProtocolsEditorProps {
   content: string;
@@ -63,10 +63,10 @@ export function DeviceProtocolsEditor({ content, onChange, devices }: DeviceProt
 
   if (devices.length === 0) {
     return (
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent>
+      <Card>
+        <div>
           <SmallText className="text-text-muted">{t('newSimWizard.networks.noDevices')}</SmallText>
-        </CardContent>
+        </div>
       </Card>
     );
   }
@@ -77,8 +77,8 @@ export function DeviceProtocolsEditor({ content, onChange, devices }: DeviceProt
         const device = authored.get(name)?.device;
         if (!device) return null;
         return (
-          <Card key={name} className="border-surface-border bg-bg-surface/70">
-            <CardContent className="stack">
+          <Card key={name}>
+            <div className="stack">
               <SmallText className="font-mono font-medium text-text-primary">{name}</SmallText>
               {DEVICE_SECTIONS.map((section) => {
                 const key = `${name}:${section.key}`;
@@ -86,18 +86,20 @@ export function DeviceProtocolsEditor({ content, onChange, devices }: DeviceProt
                   <CollapsibleSection
                     key={key}
                     title={section.title}
-                    isExpanded={expanded === key}
-                    onToggle={() => setExpanded(expanded === key ? null : key)}
+                    open={expanded === key}
+                    onOpenChange={() => setExpanded(expanded === key ? null : key)}
                   >
-                    <SchemaSectionBody
-                      section={section}
-                      value={device[section.key as keyof AuthoredDevice] as AuthoredValue}
-                      onChange={(value) => updateSection(name, section.key, value)}
-                    />
+                    {expanded === key && (
+                      <SchemaSectionBody
+                        section={section}
+                        value={device[section.key as keyof AuthoredDevice] as AuthoredValue}
+                        onChange={(value) => updateSection(name, section.key, value)}
+                      />
+                    )}
                   </CollapsibleSection>
                 );
               })}
-            </CardContent>
+            </div>
           </Card>
         );
       })}

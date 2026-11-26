@@ -34,7 +34,7 @@ test('an idle UI asks nothing of the stack and reads the idle config calmly', as
       if (pathname === '/api/v1/config') configReads.push(req.url());
     });
     await page.goto(`${baseURL}/devices`);
-    await expect(page.getByTestId('config-editor-idle-empty')).toBeVisible();
+    await expect(page.getByTestId('config-editor-idle')).toBeVisible();
     await expect(page.getByRole('alert')).toHaveCount(0);
     // An enabled poll fires on mount, before the config answer that renders
     // the prompt above, so by now it would have been sent.

@@ -1,7 +1,7 @@
 import { AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '../../ui/Button';
-import { Card, CardContent } from '../../ui/Card';
+import { Button } from '../../shared/Button';
+import { Card } from '../../shared/Card';
 import { SmallText } from '../../ui/Typography';
 
 export interface DeviceEditorStatusViewProps {
@@ -23,13 +23,13 @@ export function DeviceEditorStatusView({
   if (!isNewDevice && loading) {
     return (
       <div className="stack-xl">
-        <Card className="border-surface-border bg-bg-surface/70">
-          <CardContent className="flex-center py-centered">
+        <Card>
+          <div className="flex-center">
             <div className="flex items-center gap-default text-text-muted">
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand-primary border-t-transparent" />
               <span>{t('editor.statusView.loadingDevice')}</span>
             </div>
-          </CardContent>
+          </div>
         </Card>
       </div>
     );
@@ -38,8 +38,8 @@ export function DeviceEditorStatusView({
   if (!isNewDevice && error) {
     return (
       <div className="stack-xl">
-        <Card className="border-status-error/30 bg-status-error/20">
-          <CardContent className="stack">
+        <Card>
+          <div className="stack">
             <div className="flex items-start gap-default">
               <AlertCircle className="mt-tight h-5 w-5 text-status-error" />
               <div>
@@ -48,16 +48,16 @@ export function DeviceEditorStatusView({
                 </p>
                 <SmallText className="text-status-error-strong">{error.message}</SmallText>
                 <div className="flex gap-compact mt-heading">
-                  <Button variant="outline" size="sm" onClick={onRetry}>
+                  <Button variant="secondary" size="sm" onClick={onRetry}>
                     {t('list.states.retry')}
                   </Button>
-                  <Button variant="outline" size="sm" onClick={onNavigateBack}>
+                  <Button variant="secondary" size="sm" onClick={onNavigateBack}>
                     {t('editor.statusView.backToList')}
                   </Button>
                 </div>
               </div>
             </div>
-          </CardContent>
+          </div>
         </Card>
       </div>
     );

@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import type { WalkProfileReview } from '../../api/walk-profile-client';
-import { Button } from '../../ui/Button';
-import { Input, Select } from '../../ui/Input';
+import { FormField } from '../../shared/FormField';
+import { Input } from '../../shared/Input';
+import { Select } from '../../shared/Select';
+import { ActionButton } from '../../ui/ActionButton';
 
 interface Props {
   review: WalkProfileReview;
@@ -49,49 +51,73 @@ export function WalkProfileReviewForm({ review, setReview, creating, createProfi
         </p>
       </div>
       <div className="grid gap-default md:grid-cols-2">
-        <Input
-          label={t('walkAnalyzer.profile.role')}
-          value={review.profile.role}
-          onChange={(event) => update('role', event.target.value)}
-        />
-        <Select
-          label={t('walkAnalyzer.profile.deviceType')}
-          value={review.profile.deviceType}
-          options={deviceTypes.map((value) => ({ value, label: value }))}
-          onChange={(value) => update('deviceType', value)}
-        />
-        <Input
-          label={t('walkAnalyzer.profile.vendor')}
-          value={review.profile.vendor}
-          onChange={(event) => update('vendor', event.target.value)}
-        />
-        <Input
-          label={t('walkAnalyzer.profile.model')}
-          value={review.profile.model}
-          onChange={(event) => update('model', event.target.value)}
-        />
-        <Input
-          label={t('walkAnalyzer.profile.platform')}
-          value={review.profile.platform}
-          onChange={(event) => update('platform', event.target.value)}
-        />
-        <Input
-          label={t('walkAnalyzer.profile.software')}
-          value={review.profile.software}
-          onChange={(event) => update('software', event.target.value)}
-        />
+        <FormField label={t('walkAnalyzer.profile.role')}>
+          {(control) => (
+            <Input
+              {...control}
+              value={review.profile.role}
+              onChange={(event) => update('role', event.target.value)}
+            />
+          )}
+        </FormField>
+        <FormField label={t('walkAnalyzer.profile.deviceType')}>
+          {(control) => (
+            <Select
+              {...control}
+              value={review.profile.deviceType}
+              options={deviceTypes.map((value) => ({ value, label: value }))}
+              onValueChange={(value) => update('deviceType', value)}
+            />
+          )}
+        </FormField>
+        <FormField label={t('walkAnalyzer.profile.vendor')}>
+          {(control) => (
+            <Input
+              {...control}
+              value={review.profile.vendor}
+              onChange={(event) => update('vendor', event.target.value)}
+            />
+          )}
+        </FormField>
+        <FormField label={t('walkAnalyzer.profile.model')}>
+          {(control) => (
+            <Input
+              {...control}
+              value={review.profile.model}
+              onChange={(event) => update('model', event.target.value)}
+            />
+          )}
+        </FormField>
+        <FormField label={t('walkAnalyzer.profile.platform')}>
+          {(control) => (
+            <Input
+              {...control}
+              value={review.profile.platform}
+              onChange={(event) => update('platform', event.target.value)}
+            />
+          )}
+        </FormField>
+        <FormField label={t('walkAnalyzer.profile.software')}>
+          {(control) => (
+            <Input
+              {...control}
+              value={review.profile.software}
+              onChange={(event) => update('software', event.target.value)}
+            />
+          )}
+        </FormField>
       </div>
-      <Button
+      <ActionButton
+        variant="primary"
+        action="edit"
         type="button"
-        tone="green"
         disabled={!valid || creating}
         loading={creating}
         onClick={() => void createProfile()}
-        action="edit"
         data-testid="walk-profile-create"
       >
         {t('walkAnalyzer.profile.createAction')}
-      </Button>
+      </ActionButton>
     </section>
   );
 }

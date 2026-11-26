@@ -3,7 +3,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LogEntry, LogLevel } from '../api/types';
 import { iconSizes } from '../constants/sizes';
-import { Tooltip } from '../ui/Tooltip';
+import { Tooltip } from '../shared/Tooltip';
 import { copyToClipboard } from '../utils/file';
 
 /**

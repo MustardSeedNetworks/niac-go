@@ -19,11 +19,12 @@ import { iconSizes } from '../constants/sizes';
 import { useColoringRules } from '../hooks/useColoringRules';
 import { useDisplayFilter } from '../hooks/useDisplayFilter';
 import { useToast } from '../hooks/useToast';
-import { Button } from '../ui/Button';
-import { Card, CardContent } from '../ui/Card';
+import { Button } from '../shared/Button';
+import { Card } from '../shared/Card';
+import { CategoryChip } from '../shared/CategoryChip';
+import { StatusPill } from '../shared/StatusPill';
+import { Tooltip } from '../shared/Tooltip';
 import { Inspector, InspectorPane, InspectorPanes, InspectorRecords } from '../ui/Inspector';
-import { Tag } from '../ui/Tag';
-import { Tooltip } from '../ui/Tooltip';
 import { H2, SmallText } from '../ui/Typography';
 import { canFollowStream, getStreamFilter } from '../utils/conversations';
 import { fileToBase64 } from '../utils/file';
@@ -273,8 +274,8 @@ export function PcapAnalyzerPage() {
       {analysisResult && (
         <>
           {/* Controls Header */}
-          <Card className="border-surface-border bg-bg-surface/70">
-            <CardContent>
+          <Card>
+            <div>
               <div className="flex flex-col gap-comfortable sm:flex-row sm:items-center sm:justify-between">
                 {/* Title and file info */}
                 <div className="flex items-center gap-comfortable">
@@ -283,17 +284,19 @@ export function PcapAnalyzerPage() {
                     {tPages('libraryPcaps.analyzer.pageHeading')}
                     <GlossaryPopover term="pcap" />
                   </H2>
-                  <Tag colorScheme="green">
-                    {tPages('libraryPcaps.analyzer.packetsCountTag', {
+                  <StatusPill
+                    tone="success"
+                    label={tPages('libraryPcaps.analyzer.packetsCountTag', {
                       count: analysisResult.packets.length,
                     })}
-                  </Tag>
+                  />
                   {analysisResult.truncated && (
-                    <Tag colorScheme="yellow">
-                      {tPages('libraryPcaps.analyzer.truncatedNotice', {
+                    <StatusPill
+                      tone="warning"
+                      label={tPages('libraryPcaps.analyzer.truncatedNotice', {
                         shown: analysisResult.packets.length,
                       })}
-                    </Tag>
+                    />
                   )}
                 </div>
 
@@ -346,7 +349,7 @@ export function PcapAnalyzerPage() {
                     variant="ghost"
                     size="sm"
                     onClick={handleExport}
-                    leftIcon={<Download className={iconSizes.md} />}
+                    icon={<Download className={iconSizes.md} />}
                   >
                     {t('buttons.export')}
                   </Button>
@@ -355,7 +358,7 @@ export function PcapAnalyzerPage() {
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowColoringRules(true)}
-                    leftIcon={<Palette className={iconSizes.md} />}
+                    icon={<Palette className={iconSizes.md} />}
                   >
                     {tPages('libraryPcaps.analyzer.colorsButton')}
                   </Button>
@@ -364,7 +367,7 @@ export function PcapAnalyzerPage() {
                     variant="ghost"
                     size="sm"
                     onClick={handleFollowStream}
-                    leftIcon={<Share2 className={iconSizes.md} />}
+                    icon={<Share2 className={iconSizes.md} />}
                     disabled={!followable}
                   >
                     {tPages('libraryPcaps.analyzer.followStreamButton')}
@@ -374,13 +377,13 @@ export function PcapAnalyzerPage() {
                     variant="ghost"
                     size="sm"
                     onClick={handleClear}
-                    leftIcon={<Trash2 className={iconSizes.md} />}
+                    icon={<Trash2 className={iconSizes.md} />}
                   >
                     {t('buttons.clear')}
                   </Button>
                 </div>
               </div>
-            </CardContent>
+            </div>
           </Card>
 
           {/* Packets View */}
@@ -440,8 +443,8 @@ export function PcapAnalyzerPage() {
 
       {/* Info Banner when no file is loaded */}
       {!(analysisResult || selectedFile) && (
-        <Card className="border-surface-border bg-bg-surface/70">
-          <CardContent>
+        <Card>
+          <div>
             <div className="flex items-start gap-default">
               <Info className={`${iconSizes.lg} text-status-info flex-shrink-0 mt-0.5`} />
               <div>
@@ -452,13 +455,13 @@ export function PcapAnalyzerPage() {
                   {tPages('libraryPcaps.analyzer.aboutDescription')}
                 </SmallText>
                 <div className="mt-heading flex flex-wrap gap-compact">
-                  <Tag colorScheme="gray">{tPages('libraryPcaps.analyzer.supportsPcap')}</Tag>
-                  <Tag colorScheme="gray">{tPages('libraryPcaps.analyzer.supportsPcapng')}</Tag>
-                  <Tag colorScheme="gray">{tPages('libraryPcaps.analyzer.maxSizeTag')}</Tag>
+                  <CategoryChip label={tPages('libraryPcaps.analyzer.supportsPcap')} />
+                  <CategoryChip label={tPages('libraryPcaps.analyzer.supportsPcapng')} />
+                  <CategoryChip label={tPages('libraryPcaps.analyzer.maxSizeTag')} />
                 </div>
               </div>
             </div>
-          </CardContent>
+          </div>
         </Card>
       )}
 

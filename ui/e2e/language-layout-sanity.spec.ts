@@ -79,7 +79,7 @@ test.describe('Language layout sanity', () => {
 
       test("sidebar nav labels don't get clipped", async ({ page }) => {
         // Nav labels are the highest-risk surface for ES overflow:
-        // "Compare & Merge" → "Comparar y fusionar" (~30% wider),
+        // "Compare & merge" → "Comparar y fusionar" (~30% wider),
         // "Walks" → "Recorridos" (~70% wider).
         await noClippedText(page, 'nav a, aside a, [role="navigation"] a');
       });

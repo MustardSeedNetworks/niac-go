@@ -16,10 +16,11 @@ import type { ErrorType } from '../api/types';
 import { iconSizes } from '../constants/sizes';
 import { useAppState } from '../contexts/AppContext';
 import { useSimulationStatus } from '../hooks/useSimulationStatus';
-import { LinkButton } from '../ui/Button';
-import { Card, CardContent } from '../ui/Card';
+import { ButtonLink } from '../shared/Button';
+import { Card } from '../shared/Card';
+import { CategoryChip } from '../shared/CategoryChip';
+import { linkTo } from '../ui/linkTo';
 import { type RollupState, StatusRollup } from '../ui/StatusRollup';
-import { Tag } from '../ui/Tag';
 import { AccentLink, H2 } from '../ui/Typography';
 import { formatNumber, formatTime, formatUptime } from '../utils/format';
 
@@ -135,16 +136,20 @@ export function DashboardPage() {
            the quick-action tile of the same name: the same label twice on
            one page, once as a shortcut among equals, is not a primary. */
         actions={
-          <LinkButton to="/runtime" leftIcon={<Play className={iconSizes.md} />}>
+          <ButtonLink
+            variant="primary"
+            renderLink={linkTo('/runtime')}
+            icon={<Play className={iconSizes.md} />}
+          >
             {t('dashboard.quickActions.startSimulationLabel')}
-          </LinkButton>
+          </ButtonLink>
         }
       />
 
       {/* Stat cards row */}
       <div className="grid gap-comfortable sm:grid-cols-2 lg:grid-cols-4">
-        <Card hover={true} className="group">
-          <CardContent className="stack-xs">
+        <Card className="group">
+          <div className="stack-xs">
             <div className="flex-between">
               <span className="text-sm font-medium text-text-muted">
                 {t('dashboard.stats.devicesOnline')}
@@ -155,13 +160,13 @@ export function DashboardPage() {
             </div>
             <p className="text-3xl font-bold text-text-primary">{stats?.deviceCount ?? '—'}</p>
             <p className="text-xs text-text-muted">{t('dashboard.stats.devicesOnlineHelper')}</p>
-          </CardContent>
+          </div>
         </Card>
 
         {/* Honest pair: RX and TX are both real, labeled counters — neither
             is smuggled into the other's helper text. */}
-        <Card hover={true} className="group">
-          <CardContent className="stack-xs">
+        <Card className="group">
+          <div className="stack-xs">
             <div className="flex-between">
               <span className="text-sm font-medium text-text-muted">
                 {t('dashboard.stats.packetsTitle')}
@@ -184,12 +189,12 @@ export function DashboardPage() {
                 <p className="text-xs text-text-muted">{t('dashboard.stats.txLabel')}</p>
               </div>
             </div>
-          </CardContent>
+          </div>
         </Card>
 
         {/* Honest pair: DNS and DHCP are both real, labeled counters. */}
-        <Card hover={true} className="group">
-          <CardContent className="stack-xs">
+        <Card className="group">
+          <div className="stack-xs">
             <div className="flex-between">
               <span className="text-sm font-medium text-text-muted">
                 {t('dashboard.stats.queriesTitle')}
@@ -212,7 +217,7 @@ export function DashboardPage() {
                 <p className="text-xs text-text-muted">{t('dashboard.stats.dhcpLabel')}</p>
               </div>
             </div>
-          </CardContent>
+          </div>
         </Card>
       </div>
 
@@ -220,7 +225,7 @@ export function DashboardPage() {
       <div className="grid gap-spacious lg:grid-cols-3">
         {/* Quick Actions */}
         <Card className="lg:col-span-2">
-          <CardContent className="stack-lg">
+          <div className="stack-lg">
             <H2 className="flex items-center gap-compact">
               <Zap className={`${iconSizes.lg} text-brand-accent`} />
               {t('dashboard.quickActions.title')}
@@ -230,7 +235,7 @@ export function DashboardPage() {
                 const Icon = action.icon;
                 return (
                   <AccentLink key={action.path} to={action.path} className="no-underline">
-                    <div className="flex items-center gap-default rounded-lg border border-surface-border bg-surface-hover pad text-left hover:bg-surface-hover hover:border-brand-primary/30 transition-all group">
+                    <div className="group flex items-center gap-default rounded-lg pad-sm text-left hover:bg-surface-hover transition-colors">
                       <div
                         className={`flex-shrink-0 h-10 w-10 rounded-lg ${action.tileClass} flex-center group-hover:scale-110 transition-transform`}
                       >
@@ -254,29 +259,31 @@ export function DashboardPage() {
                 onToggle={() => setShowErrorCatalog(!showErrorCatalog)}
               />
             )}
-          </CardContent>
+          </div>
         </Card>
 
         {/* Recent Runs */}
         <Card>
-          <CardContent className="stack-lg">
+          <div className="stack-lg">
             <div className="flex-between">
               <H2>{t('dashboard.recentRuns.title')}</H2>
-              <Tag colorScheme="gray">{t('dashboard.recentRuns.tag')}</Tag>
+              <CategoryChip label={t('dashboard.recentRuns.tag')} />
             </div>
             <div className="stack">
               {(history ?? []).slice(0, 4).map((item) => (
                 <div
                   key={item.id}
-                  className="rounded-lg border border-surface-border bg-bg-base/50 pad-sm hover:border-surface-border transition-colors"
+                  className="border-t border-hairline pt-3 first:border-t-0 first:pt-0"
                 >
                   <div className="flex-between mb-tight">
                     <p className="font-mono text-xs text-brand-accent">
                       {formatTime(item.startedAt)}
                     </p>
-                    <Tag colorScheme="gray" className="text-[10px]">
-                      {t('dashboard.recentRuns.deviceCountShort', { value: item.deviceCount })}
-                    </Tag>
+                    <CategoryChip
+                      label={t('dashboard.recentRuns.deviceCountShort', {
+                        value: item.deviceCount,
+                      })}
+                    />
                   </div>
                   <p className="text-text-primary font-medium text-sm wrap-anywhere">
                     {item.configName}
@@ -307,7 +314,7 @@ export function DashboardPage() {
                 {t('dashboard.recentRuns.viewAll')}
               </AccentLink>
             )}
-          </CardContent>
+          </div>
         </Card>
       </div>
     </div>

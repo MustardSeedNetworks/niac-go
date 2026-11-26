@@ -3,10 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { executeDeviceAction } from '../api/client';
 import { useAppState } from '../contexts/AppContext';
 import { useActionPermission } from '../contexts/ScopeContext';
-import { Button } from '../ui/Button';
-import { Card, CardContent } from '../ui/Card';
-import { Select } from '../ui/Input';
-import { H3, SmallText } from '../ui/Typography';
+import { Alert } from '../shared/Alert';
+import { Card } from '../shared/Card';
+import { FormField } from '../shared/FormField';
+import { Select } from '../shared/Select';
+import { ActionButton } from '../ui/ActionButton';
+import { SmallText } from '../ui/Typography';
 import { getErrorMessage } from '../utils/format';
 
 /**
@@ -48,41 +50,48 @@ export function DeviceActionPanel() {
   }
 
   return (
-    <Card data-testid="device-action-panel">
-      <CardContent className="stack">
-        <H3>{t('deviceAction.title')}</H3>
-        <Select
-          label={t('deviceAction.target')}
-          value={device}
-          options={[
-            { value: '', label: t('deviceAction.selectTarget') },
-            ...(data?.actionTargets ?? []).map((entry) => ({
-              value: entry.device,
-              label: entry.device,
-            })),
-          ]}
-          onChange={(next) => {
-            setDevice(next);
-            setAction('');
-            setDone('');
-          }}
-        />
-        <Select
-          label={t('deviceAction.action')}
-          value={action}
-          options={[
-            { value: '', label: t('deviceAction.selectAction') },
-            ...actions.map((entry) => ({ value: entry.type, label: entry.type })),
-          ]}
-          onChange={(next) => {
-            setAction(next);
-            setDone('');
-          }}
-        />
+    <Card title={t('deviceAction.title')} data-testid="device-action-panel">
+      <div className="stack">
+        <FormField label={t('deviceAction.target')}>
+          {(control) => (
+            <Select
+              {...control}
+              value={device}
+              options={[
+                { value: '', label: t('deviceAction.selectTarget') },
+                ...(data?.actionTargets ?? []).map((entry) => ({
+                  value: entry.device,
+                  label: entry.device,
+                })),
+              ]}
+              onValueChange={(next) => {
+                setDevice(next);
+                setAction('');
+                setDone('');
+              }}
+            />
+          )}
+        </FormField>
+        <FormField label={t('deviceAction.action')}>
+          {(control) => (
+            <Select
+              {...control}
+              value={action}
+              options={[
+                { value: '', label: t('deviceAction.selectAction') },
+                ...actions.map((entry) => ({ value: entry.type, label: entry.type })),
+              ]}
+              onValueChange={(next) => {
+                setAction(next);
+                setDone('');
+              }}
+            />
+          )}
+        </FormField>
         {selected && <SmallText>{selected.description}</SmallText>}
-        {(failure || error) && <p role="alert">{failure || getErrorMessage(error)}</p>}
+        {(failure || error) && <Alert tone="error">{failure || getErrorMessage(error)}</Alert>}
         {done && <SmallText>{done}</SmallText>}
-        <Button
+        <ActionButton
           action="inject"
           variant="secondary"
           data-testid="run-device-action"
@@ -90,8 +99,8 @@ export function DeviceActionPanel() {
           onClick={() => void run()}
         >
           {t('deviceAction.run')}
-        </Button>
-      </CardContent>
+        </ActionButton>
+      </div>
     </Card>
   );
 }

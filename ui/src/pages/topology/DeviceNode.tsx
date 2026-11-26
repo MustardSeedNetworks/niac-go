@@ -1,4 +1,4 @@
-import { Tooltip } from '../../ui/Tooltip';
+import { Tooltip } from '../../shared/Tooltip';
 /**
  * Custom Device Node Component for React Flow topology visualization
  */

@@ -61,6 +61,11 @@ export default defineConfig({
   ],
   use: {
     baseURL,
+    // The app follows the OS until the operator picks a side. The suite's
+    // expectations (and the audit captures) were written against the dark
+    // palette, so the emulated OS preference is dark; shell-top.spec.ts covers
+    // light and the persisted override explicitly.
+    colorScheme: 'dark',
     storageState: 'playwright/.auth/user.json',
     // Keep the failing attempt; a trace of a successful retry cannot explain a flake.
     trace: 'retain-on-failure',

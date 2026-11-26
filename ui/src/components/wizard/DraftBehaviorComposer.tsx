@@ -9,8 +9,10 @@ import {
 } from '../../api/library-client';
 import { iconSizes } from '../../constants/sizes';
 import { useToast } from '../../hooks/useToast';
-import { Button } from '../../ui/Button';
-import { Input } from '../../ui/Input';
+import { Button } from '../../shared/Button';
+import { FormField } from '../../shared/FormField';
+import { Input } from '../../shared/Input';
+import { ActionButton } from '../../ui/ActionButton';
 import { SmallText } from '../../ui/Typography';
 import { BehaviorPhaseActions } from './BehaviorPhaseActions';
 import { parseDraftBehaviorTimelines } from './behavior-timeline';
@@ -156,16 +158,16 @@ export function DraftBehaviorComposer({
     <div className="stack" data-testid="behavior-composer">
       <div className="flex flex-wrap items-center justify-between gap-default">
         <SmallText className="text-text-muted">{t('newSimWizard.behaviors.help')}</SmallText>
-        <Button
-          variant="outline"
-          leftIcon={<Plus className={iconSizes.md} />}
+        <ActionButton
+          variant="secondary"
+          icon={<Plus className={iconSizes.md} />}
           disabled={busy || !firstDevice}
           title={!firstDevice ? t('newSimWizard.behaviors.needsDevice') : undefined}
           onClick={addTimeline}
           data-testid="add-timeline"
         >
           {t('newSimWizard.behaviors.addTimeline')}
-        </Button>
+        </ActionButton>
       </div>
 
       {timelines.length === 0 && (
@@ -188,45 +190,56 @@ export function DraftBehaviorComposer({
           className="stack rounded-lg border border-surface-border bg-bg-base/40 p-4"
         >
           <div className="grid gap-default md:grid-cols-[2fr_1fr_1fr_auto] md:items-end">
-            <Input
-              label={t('newSimWizard.behaviors.timelineName')}
-              value={timeline.name}
-              onChange={(event) =>
-                updateTimeline(timelineIndex, (current) => ({
-                  ...current,
-                  name: event.target.value,
-                }))
-              }
-            />
-            <Input
-              label={t('newSimWizard.behaviors.startsAfter')}
-              type="number"
-              min={0}
-              step="0.1"
-              value={seconds(timeline.startOffsetMs)}
-              onChange={(event) =>
-                updateTimeline(timelineIndex, (current) => ({
-                  ...current,
-                  startOffsetMs: milliseconds(event.target.value),
-                }))
-              }
-            />
-            <Input
-              label={t('newSimWizard.behaviors.repetitions')}
-              type="number"
-              min={1}
-              max={1000}
-              value={timeline.repeatCount}
-              onChange={(event) =>
-                updateTimeline(timelineIndex, (current) => ({
-                  ...current,
-                  repeatCount: Number(event.target.value),
-                }))
-              }
-            />
+            <FormField label={t('newSimWizard.behaviors.timelineName')}>
+              {(control) => (
+                <Input
+                  {...control}
+                  value={timeline.name}
+                  onChange={(event) =>
+                    updateTimeline(timelineIndex, (current) => ({
+                      ...current,
+                      name: event.target.value,
+                    }))
+                  }
+                />
+              )}
+            </FormField>
+            <FormField label={t('newSimWizard.behaviors.startsAfter')}>
+              {(control) => (
+                <Input
+                  {...control}
+                  type="number"
+                  min={0}
+                  step="0.1"
+                  value={seconds(timeline.startOffsetMs)}
+                  onChange={(event) =>
+                    updateTimeline(timelineIndex, (current) => ({
+                      ...current,
+                      startOffsetMs: milliseconds(event.target.value),
+                    }))
+                  }
+                />
+              )}
+            </FormField>
+            <FormField label={t('newSimWizard.behaviors.repetitions')}>
+              {(control) => (
+                <Input
+                  {...control}
+                  type="number"
+                  min={1}
+                  max={1000}
+                  value={timeline.repeatCount}
+                  onChange={(event) =>
+                    updateTimeline(timelineIndex, (current) => ({
+                      ...current,
+                      repeatCount: Number(event.target.value),
+                    }))
+                  }
+                />
+              )}
+            </FormField>
             <Button
-              variant="outline"
-              tone="red"
+              variant="destructive"
               aria-label={t('newSimWizard.behaviors.removeTimeline')}
               onClick={() =>
                 setTimelines((current) => current.filter((_, item) => item !== timelineIndex))
@@ -242,42 +255,54 @@ export function DraftBehaviorComposer({
               className="stack border-l-2 border-brand-primary/40 pl-4"
             >
               <div className="grid gap-default md:grid-cols-4">
-                <Input
-                  label={t('newSimWizard.behaviors.phaseName')}
-                  value={phase.name}
-                  onChange={(event) =>
-                    updatePhase(timelineIndex, phaseIndex, (current) => ({
-                      ...current,
-                      name: event.target.value,
-                    }))
-                  }
-                />
-                <Input
-                  label={t('newSimWizard.behaviors.phaseOffset')}
-                  type="number"
-                  min={0}
-                  step="0.1"
-                  value={seconds(phase.startOffsetMs)}
-                  onChange={(event) =>
-                    updatePhase(timelineIndex, phaseIndex, (current) => ({
-                      ...current,
-                      startOffsetMs: milliseconds(event.target.value),
-                    }))
-                  }
-                />
-                <Input
-                  label={t('newSimWizard.behaviors.duration')}
-                  type="number"
-                  min={0.1}
-                  step="0.1"
-                  value={seconds(phase.durationMs)}
-                  onChange={(event) =>
-                    updatePhase(timelineIndex, phaseIndex, (current) => ({
-                      ...current,
-                      durationMs: milliseconds(event.target.value),
-                    }))
-                  }
-                />
+                <FormField label={t('newSimWizard.behaviors.phaseName')}>
+                  {(control) => (
+                    <Input
+                      {...control}
+                      value={phase.name}
+                      onChange={(event) =>
+                        updatePhase(timelineIndex, phaseIndex, (current) => ({
+                          ...current,
+                          name: event.target.value,
+                        }))
+                      }
+                    />
+                  )}
+                </FormField>
+                <FormField label={t('newSimWizard.behaviors.phaseOffset')}>
+                  {(control) => (
+                    <Input
+                      {...control}
+                      type="number"
+                      min={0}
+                      step="0.1"
+                      value={seconds(phase.startOffsetMs)}
+                      onChange={(event) =>
+                        updatePhase(timelineIndex, phaseIndex, (current) => ({
+                          ...current,
+                          startOffsetMs: milliseconds(event.target.value),
+                        }))
+                      }
+                    />
+                  )}
+                </FormField>
+                <FormField label={t('newSimWizard.behaviors.duration')}>
+                  {(control) => (
+                    <Input
+                      {...control}
+                      type="number"
+                      min={0.1}
+                      step="0.1"
+                      value={seconds(phase.durationMs)}
+                      onChange={(event) =>
+                        updatePhase(timelineIndex, phaseIndex, (current) => ({
+                          ...current,
+                          durationMs: milliseconds(event.target.value),
+                        }))
+                      }
+                    />
+                  )}
+                </FormField>
                 <div className="flex items-end justify-between gap-default">
                   <label className="flex min-h-11 items-center gap-tight text-sm text-text-secondary">
                     <input
@@ -293,8 +318,7 @@ export function DraftBehaviorComposer({
                     {t('newSimWizard.behaviors.reset')}
                   </label>
                   <Button
-                    variant="outline"
-                    tone="red"
+                    variant="destructive"
                     aria-label={t('newSimWizard.behaviors.removePhase')}
                     onClick={() =>
                       updateTimeline(timelineIndex, (current) => ({
@@ -321,24 +345,24 @@ export function DraftBehaviorComposer({
             </div>
           ))}
 
-          <Button size="sm" variant="outline" onClick={() => addPhase(timelineIndex)}>
+          <Button variant="secondary" size="sm" onClick={() => addPhase(timelineIndex)}>
             {t('newSimWizard.behaviors.addPhase')}
           </Button>
         </section>
       ))}
 
       <div>
-        <Button
-          tone="violet"
-          leftIcon={<Save className={iconSizes.md} />}
+        <ActionButton
+          variant="primary"
+          action="edit"
+          icon={<Save className={iconSizes.md} />}
           disabled={busy || !valid || timelines.length === 0}
           loading={busy}
           data-testid="save-behaviors"
           onClick={() => void save()}
-          action="edit"
         >
           {t('newSimWizard.behaviors.save')}
-        </Button>
+        </ActionButton>
       </div>
     </div>
   );

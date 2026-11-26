@@ -26,22 +26,6 @@ export function useWalkSanitize(refetch: () => void | Promise<void>) {
   const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
   const [batchSanitizing, setBatchSanitizing] = useState(false);
 
-  const toggleRow = useCallback((key: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
-  }, []);
-
-  const toggleAll = useCallback((allKeys: string[]) => {
-    setSelected((prev) => (prev.size === allKeys.length ? new Set() : new Set(allKeys)));
-  }, []);
-
   const clearSelection = useCallback(() => setSelected(new Set()), []);
 
   const confirmSanitize = useCallback(async () => {
@@ -97,8 +81,7 @@ export function useWalkSanitize(refetch: () => void | Promise<void>) {
     sanitizing,
     confirmSanitize,
     selected,
-    toggleRow,
-    toggleAll,
+    setSelected,
     clearSelection,
     batchConfirmOpen,
     setBatchConfirmOpen,

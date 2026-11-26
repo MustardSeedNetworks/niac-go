@@ -10,25 +10,18 @@
  * via callback props so the actual drawer components stay mounted at
  * AppShell level alongside the existing test/state plumbing.
  */
-import {
-  ChevronLeft,
-  ChevronRight,
-  HelpCircle,
-  type LucideIcon,
-  Menu,
-  Settings,
-  X,
-} from 'lucide-react';
+import { type LucideIcon, Menu, X } from 'lucide-react';
 import { createElement, type ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router';
+import msnLogo from '../assets/msn-logo.svg';
 import { iconSizes } from '../constants/sizes';
 import { accessibleNameIncluding } from '../lib/accessibleName';
+import { RailFooter, type RailFooterProps } from '../shared/RailFooter';
+import { Tooltip } from '../shared/Tooltip';
 import { prefetchRoute } from '../utils/prefetch';
 import { safeGetItem, safeSetItem } from '../utils/storage';
-import { MsnMark } from './MsnMark';
 import { ProductMark } from './ProductMark';
-import { Tooltip } from './Tooltip';
 
 export interface SidebarNavItem {
   path: string;
@@ -42,18 +35,16 @@ export interface SidebarNavGroup {
   items: SidebarNavItem[];
 }
 
+/** What the shared RailFooter needs from the app; the layout adds the collapse state. */
+export type SidebarFooterProps = Omit<
+  RailFooterProps,
+  'collapsed' | 'variant' | 'collapse' | 'mark'
+>;
+
 interface SidebarLayoutProps {
   groups: SidebarNavGroup[];
-  version?: string;
+  footer: SidebarFooterProps;
   children: ReactNode;
-  /**
-   * Drawer callbacks — all optional. Pass only the ones your product uses;
-   * the corresponding footer button only renders when its callback is provided.
-   * niac uses help/settings. Add more here if a new product needs another drawer.
-   */
-  onOpenHelp?: () => void;
-  onOpenSettings?: () => void;
-  railControls?: (collapsed: boolean) => ReactNode;
 }
 
 const STORAGE_KEY = 'niac-sidebar-collapsed';
@@ -73,7 +64,7 @@ function badgeClass(badge: string): string {
 
 function NavItemButton({ item, active, collapsed, onNavigate }: NavItemButtonProps) {
   return (
-    <Tooltip text={collapsed ? item.label : undefined} className="w-full">
+    <Tooltip text={collapsed ? item.label : undefined}>
       <button
         type="button"
         onClick={() => onNavigate(item.path)}
@@ -129,184 +120,44 @@ function NavItemButton({ item, active, collapsed, onNavigate }: NavItemButtonPro
   );
 }
 
-interface FooterIconButtonProps {
-  collapsed: boolean;
-  onClick: () => void;
-  icon: LucideIcon;
-  label: string;
-  title: string;
-  'data-testid'?: string;
-}
-
-function FooterIconButton({
-  collapsed,
-  onClick,
-  icon,
-  label,
-  title,
-  'data-testid': dataTestId,
-}: FooterIconButtonProps) {
-  return (
-    <Tooltip text={title} className="w-full flex-1">
-      <button
-        type="button"
-        onClick={onClick}
-        data-testid={dataTestId}
-        className={`${collapsed ? 'w-full' : 'flex-1'} flex items-center ${
-          collapsed ? 'justify-center' : 'gap-compact'
-        } px-3 py-row rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors text-sm font-medium`}
-        aria-label={accessibleNameIncluding(title, collapsed ? '' : label)}
-      >
-        {createElement(icon, { className: `${iconSizes.md} flex-shrink-0` })}
-        {!collapsed ? <span>{label}</span> : null}
-      </button>
-    </Tooltip>
-  );
-}
-
-interface SidebarHeaderProps {
-  collapsed: boolean;
-  onCollapse: () => void;
-}
-
-function SidebarHeader({ collapsed, onCollapse }: SidebarHeaderProps) {
+function SidebarHeader({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation();
   return (
     <div
       className={`flex items-center ${
-        collapsed ? 'justify-center' : 'justify-between'
+        collapsed ? 'justify-center' : ''
       } px-3 py-4 border-b border-surface-border`}
     >
-      <div className={`flex items-center gap-compact ${collapsed ? 'justify-center' : ''}`}>
-        <div className="relative flex-shrink-0">
-          <ProductMark />
-          <div className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-status-success border-2 border-surface-raised" />
-        </div>
+      <div className="flex items-center gap-compact">
+        <ProductMark />
         {!collapsed ? (
           <span className="font-display font-bold text-lg text-text-primary tracking-tight">
             {t('app.title')}
           </span>
         ) : null}
       </div>
-      {!collapsed ? (
-        <Tooltip text={t('accessibility.collapseSidebar')}>
-          <button
-            type="button"
-            onClick={onCollapse}
-            className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors lg:flex hidden"
-            aria-label={t('accessibility.collapseSidebar')}
-          >
-            <ChevronLeft className={iconSizes.md} />
-          </button>
-        </Tooltip>
-      ) : null}
-    </div>
-  );
-}
-
-interface SidebarFooterProps {
-  collapsed: boolean;
-  version?: string;
-  onOpenHelp?: () => void;
-  onOpenSettings?: () => void;
-  onExpand: () => void;
-  railControls?: (collapsed: boolean) => ReactNode;
-}
-
-function SidebarFooter({
-  collapsed,
-  version,
-  onOpenHelp,
-  onOpenSettings,
-  onExpand,
-  railControls,
-}: SidebarFooterProps) {
-  const { t } = useTranslation();
-  return (
-    <div
-      className={`py-4 border-t border-surface-border ${collapsed ? 'px-2 text-center' : 'px-3'}`}
-    >
-      {railControls?.(collapsed)}
-      <div className={`${collapsed ? 'stack-sm' : 'flex items-center gap-compact'} mb-heading`}>
-        {onOpenHelp ? (
-          <FooterIconButton
-            collapsed={collapsed}
-            onClick={onOpenHelp}
-            icon={HelpCircle}
-            label={t('footer.help')}
-            title={t('footer.openHelp')}
-            data-testid="sidebar-help-button"
-          />
-        ) : null}
-        {onOpenSettings ? (
-          <FooterIconButton
-            collapsed={collapsed}
-            onClick={onOpenSettings}
-            icon={Settings}
-            label={t('footer.settings')}
-            title={t('footer.openSettings')}
-            data-testid="sidebar-settings-button"
-          />
-        ) : null}
-      </div>
-
-      {version ? (
-        <div
-          className={`text-xs font-mono text-text-muted ${collapsed ? '' : 'flex-between gap-tight'}`}
-        >
-          {!collapsed ? <span className="shrink-0">{t('footer.version')}</span> : null}
-          {/* A development build's version carries the commit and a -dirty
-              suffix, which wrapped onto the label once the rail narrowed to
-              224px (UI-NIAC-19). Truncate with the full string on hover. */}
-          <span className="truncate" title={version}>
-            {version}
-          </span>
-        </div>
-      ) : null}
-      {/* Whose tool this is, under what it is. Quiet by design: the product
-          mark at the top of the rail is the one that has to be recognised. */}
-      <MsnMark collapsed={collapsed} className="mt-3" />
-      {collapsed ? (
-        <Tooltip text={t('footer.expandSidebar')}>
-          <button
-            type="button"
-            onClick={onExpand}
-            data-testid="sidebar-expand"
-            className="mt-inline p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors"
-            aria-label={t('footer.expandSidebar')}
-          >
-            <ChevronRight className={iconSizes.md} />
-          </button>
-        </Tooltip>
-      ) : null}
     </div>
   );
 }
 
 interface SidebarBodyProps {
-  railControls?: (collapsed: boolean) => ReactNode;
   groups: SidebarNavGroup[];
   collapsed: boolean;
-  version?: string;
-  onCollapse: () => void;
-  onExpand: () => void;
+  variant: 'rail' | 'drawer';
+  footer: SidebarFooterProps;
+  onToggleCollapse: () => void;
   onNavigate: (path: string) => void;
   isActive: (path: string) => boolean;
-  onOpenHelp?: () => void;
-  onOpenSettings?: () => void;
 }
 
 function SidebarBody({
-  railControls,
   groups,
   collapsed,
-  version,
-  onCollapse,
-  onExpand,
+  variant,
+  footer,
+  onToggleCollapse,
   onNavigate,
   isActive,
-  onOpenHelp,
-  onOpenSettings,
 }: SidebarBodyProps) {
   const { t } = useTranslation();
   // group.label is either a plain display string ("Account") or an
@@ -316,7 +167,7 @@ function SidebarBody({
     label ? t(label, { defaultValue: label }) : '';
   return (
     <>
-      <SidebarHeader collapsed={collapsed} onCollapse={onCollapse} />
+      <SidebarHeader collapsed={collapsed} />
       <nav className="flex-1 overflow-y-auto py-4 px-cell stack-xl">
         {groups.map((group, groupIndex) => (
           <div key={group.label || `nav-group-${String(groupIndex)}`}>
@@ -340,13 +191,20 @@ function SidebarBody({
           </div>
         ))}
       </nav>
-      <SidebarFooter
+      <RailFooter
+        {...footer}
         collapsed={collapsed}
-        version={version}
-        onOpenHelp={onOpenHelp}
-        onOpenSettings={onOpenSettings}
-        onExpand={onExpand}
-        railControls={railControls}
+        variant={variant}
+        mark={{
+          src: msnLogo,
+          /* allow-hardcoded: a company name is a proper noun, not copy. */
+          name: 'Mustard Seed Networks',
+        }}
+        collapse={{
+          collapseLabel: t('accessibility.collapseSidebar'),
+          expandLabel: t('accessibility.expandSidebar'),
+          onToggle: onToggleCollapse,
+        }}
       />
     </>
   );
@@ -380,14 +238,7 @@ function MobileTopBar({ mobileOpen, toggleMobile }: MobileTopBarProps) {
   );
 }
 
-export function SidebarLayout({
-  groups,
-  version,
-  children,
-  onOpenHelp,
-  onOpenSettings,
-  railControls,
-}: SidebarLayoutProps) {
+export function SidebarLayout({ groups, footer, children }: SidebarLayoutProps) {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -427,16 +278,16 @@ export function SidebarLayout({
   // getByTestId calls resolving to one element. That kept the desktop tests
   // simple and left the mobile navigation undrivable — nothing could open it,
   // so no test could reach any mobile layout (#1320).
-  const body = (railCollapsed: boolean) => (
+  const body = (railCollapsed: boolean, variant: 'rail' | 'drawer') => (
     <SidebarBody
       groups={groups}
       collapsed={railCollapsed}
-      version={version}
-      onCollapse={() => setCollapsed(true)}
-      onExpand={() => setCollapsed(false)}
+      variant={variant}
+      footer={footer}
+      onToggleCollapse={() => setCollapsed(!collapsed)}
       onNavigate={(p) => {
         // Close with the click that caused the navigation, not from an
-        // observer that fires whenever React gets to it. The effect below
+        // observer that fires whenever React gets to it. The effect above
         // still closes the drawer for history navigation, but by then this
         // has already set the same value, so it cannot surprise anything
         // that looked at the drawer in between (#2083).
@@ -444,9 +295,6 @@ export function SidebarLayout({
         navigate(p);
       }}
       isActive={isActive}
-      onOpenHelp={onOpenHelp}
-      onOpenSettings={onOpenSettings}
-      railControls={railControls}
     />
   );
 
@@ -481,7 +329,7 @@ export function SidebarLayout({
           mobileOpen ? 'translate-x-0' : '-translate-x-full invisible'
         }`}
       >
-        {mobileOpen ? <div className="flex flex-col h-full">{body(false)}</div> : null}
+        {mobileOpen ? <div className="flex flex-col h-full">{body(false, 'drawer')}</div> : null}
       </aside>
 
       <aside
@@ -493,7 +341,7 @@ export function SidebarLayout({
           collapsed ? 'w-16' : 'w-56'
         }`}
       >
-        {body(collapsed)}
+        {body(collapsed, 'rail')}
       </aside>
 
       <main

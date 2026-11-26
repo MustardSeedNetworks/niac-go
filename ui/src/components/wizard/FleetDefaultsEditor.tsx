@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card, CardContent } from '../../ui/Card';
+import { Card } from '../../shared/Card';
+import { FormField } from '../../shared/FormField';
 import { SmallText } from '../../ui/Typography';
 import { spliceConfigSection } from '../../utils/config-section';
-import { FormField } from '../form/FormField';
 import {
   type CapturePlayback,
   type DiscoveryDefaults,
@@ -55,8 +55,8 @@ export function FleetDefaultsEditor({ content, onChange }: FleetDefaultsEditorPr
 
   return (
     <div className="stack">
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="stack">
+      <Card>
+        <div className="stack">
           <SmallText className="font-medium text-text-primary">
             {t('newSimWizard.fleetDefaults.discoveryTitle')}
           </SmallText>
@@ -90,7 +90,7 @@ export function FleetDefaultsEditor({ content, onChange }: FleetDefaultsEditorPr
                 </label>
                 <FormField
                   label={t('newSimWizard.fleetDefaults.interval')}
-                  htmlFor={`discovery-${protocol}-interval`}
+                  id={`discovery-${protocol}-interval`}
                 >
                   <input
                     id={`discovery-${protocol}-interval`}
@@ -112,11 +112,11 @@ export function FleetDefaultsEditor({ content, onChange }: FleetDefaultsEditorPr
               </div>
             );
           })}
-        </CardContent>
+        </div>
       </Card>
 
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="stack">
+      <Card>
+        <div className="stack">
           <SmallText className="font-medium text-text-primary">
             {t('newSimWizard.fleetDefaults.captureTitle')}
           </SmallText>
@@ -127,7 +127,7 @@ export function FleetDefaultsEditor({ content, onChange }: FleetDefaultsEditorPr
           <div className="grid gap-comfortable md:grid-cols-3 items-end">
             <FormField
               label={t('newSimWizard.fleetDefaults.fileName')}
-              htmlFor="capture-playback-file-name"
+              id="capture-playback-file-name"
             >
               <input
                 id="capture-playback-file-name"
@@ -138,7 +138,7 @@ export function FleetDefaultsEditor({ content, onChange }: FleetDefaultsEditorPr
             </FormField>
             <FormField
               label={t('newSimWizard.fleetDefaults.loopTime')}
-              htmlFor="capture-playback-loop-time"
+              id="capture-playback-loop-time"
             >
               <input
                 id="capture-playback-loop-time"
@@ -155,7 +155,7 @@ export function FleetDefaultsEditor({ content, onChange }: FleetDefaultsEditorPr
             </FormField>
             <FormField
               label={t('newSimWizard.fleetDefaults.scaleTime')}
-              htmlFor="capture-playback-scale-time"
+              id="capture-playback-scale-time"
             >
               <input
                 id="capture-playback-scale-time"
@@ -171,7 +171,7 @@ export function FleetDefaultsEditor({ content, onChange }: FleetDefaultsEditorPr
               />
             </FormField>
           </div>
-        </CardContent>
+        </div>
       </Card>
     </div>
   );

@@ -2,10 +2,11 @@ import { ArrowDown, ArrowUp, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../constants/sizes';
+import { Button } from '../shared/Button';
+import { Modal } from '../shared/Modal';
+import { Tooltip } from '../shared/Tooltip';
 import { RULE_SWATCHES } from '../theme/coloringRuleSwatches';
-import { Button } from '../ui/Button';
-import { Modal } from '../ui/Modal';
-import { Tooltip } from '../ui/Tooltip';
+import { useCloseLabel } from '../ui/dialogLabels';
 import { SmallText } from '../ui/Typography';
 import type { ColoringRule } from '../utils/coloring-rules';
 import { generateRuleId } from '../utils/coloring-rules';
@@ -154,6 +155,7 @@ export const ColoringRulesPanel = memo(function ColoringRulesPanel({
   onReset,
   onClose,
 }: ColoringRulesPanelProps) {
+  const closeLabel = useCloseLabel();
   const { t } = useTranslation('common');
   const [localRules, setLocalRules] = useState<ColoringRule[]>([...rules]);
 
@@ -224,7 +226,8 @@ export const ColoringRulesPanel = memo(function ColoringRulesPanel({
 
   return (
     <Modal
-      isOpen
+      closeLabel={closeLabel}
+      open
       onClose={onClose}
       size="3xl"
       title={t('coloringRules.title')}
@@ -235,7 +238,7 @@ export const ColoringRulesPanel = memo(function ColoringRulesPanel({
               variant="ghost"
               size="sm"
               onClick={handleAdd}
-              leftIcon={<Plus className={iconSizes.md} />}
+              icon={<Plus className={iconSizes.md} />}
             >
               {t('coloringRules.addRule')}
             </Button>
@@ -243,7 +246,7 @@ export const ColoringRulesPanel = memo(function ColoringRulesPanel({
               variant="ghost"
               size="sm"
               onClick={handleReset}
-              leftIcon={<RotateCcw className={iconSizes.md} />}
+              icon={<RotateCcw className={iconSizes.md} />}
             >
               {t('coloringRules.resetDefaults')}
             </Button>
@@ -253,7 +256,7 @@ export const ColoringRulesPanel = memo(function ColoringRulesPanel({
             <Button variant="ghost" size="sm" onClick={onClose}>
               {t('buttons.cancel')}
             </Button>
-            <Button tone="violet" size="sm" onClick={handleApply}>
+            <Button variant="primary" size="sm" onClick={handleApply}>
               {t('buttons.apply')}
             </Button>
           </div>

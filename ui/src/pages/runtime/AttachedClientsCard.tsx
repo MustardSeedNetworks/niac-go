@@ -1,11 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import { fetchSessionClients } from '../../api/client';
 import type { ObservedClient, SimulationStatus } from '../../api/types';
+import { TableSection } from '../../components/TableSection';
 import { POLL_INTERVALS } from '../../constants/polling';
 import { useApiResource } from '../../hooks/useApiResource';
-import { Card, CardContent } from '../../ui/Card';
-import { DataTable, type DataTableColumn } from '../../ui/DataTable';
-import { H2, SmallText } from '../../ui/Typography';
+import { Alert } from '../../shared/Alert';
+import { DataTable, type DataTableColumn } from '../../shared/DataTable';
+import { EmptyState } from '../../shared/EmptyState';
+import { useTableLabels } from '../../ui/tableLabels';
 import { useFormatRelativeTime } from '../../utils/format';
 import { AttachedClientMove } from './AttachedClientMove';
 import { sessionPool } from './sessionPool';
@@ -34,78 +36,81 @@ export function AttachedClientsCard({ sessionId, fabric }: AttachedClientsCardPr
 
   const pool = sessionPool(fabric);
   const notPlaced = t('runtime.clients.notPlaced');
+  const labels = useTableLabels<ObservedClient>(t('runtime.clients.title').toLowerCase());
   const columns: DataTableColumn<ObservedClient>[] = [
     {
       key: 'mac',
       header: t('runtime.clients.mac'),
-      cellClassName: 'font-mono text-xs text-text-primary',
-      cell: (client) => client.mac,
+      sortValue: (client) => client.mac,
+      cell: (client) => <span className="font-mono text-xs text-text-primary">{client.mac}</span>,
     },
     {
       key: 'ip',
       header: t('runtime.clients.ip'),
-      cellClassName: 'font-mono text-xs text-text-muted',
-      cell: (client) => client.ip || tCommon('format.dash'),
+      cell: (client) => (
+        <span className="font-mono text-xs text-text-muted">
+          {client.ip || tCommon('format.dash')}
+        </span>
+      ),
     },
     {
       key: 'device',
       header: t('runtime.clients.device'),
-      'data-testid': 'attached-client-device',
-      cell: (client) => client.device || notPlaced,
+      sortValue: (client) => client.device ?? '',
+      cell: (client) => (
+        <span data-testid="attached-client-device">{client.device || notPlaced}</span>
+      ),
     },
     {
       key: 'port',
       header: t('runtime.clients.port'),
-      'data-testid': 'attached-client-port',
-      cell: (client) => client.interface || notPlaced,
+      cell: (client) => (
+        <span data-testid="attached-client-port">{client.interface || notPlaced}</span>
+      ),
     },
     {
       key: 'vlan',
       header: t('runtime.fabric.physicalVlan'),
-      cellClassName: 'text-text-muted',
-      cell: (client) => client.vlan ?? t('runtime.fabric.untagged'),
+      cell: (client) => (
+        <span className="text-text-muted">{client.vlan ?? t('runtime.fabric.untagged')}</span>
+      ),
     },
     {
       key: 'lastSeen',
       header: t('runtime.clients.lastSeen'),
-      cellClassName: 'text-text-muted',
-      cell: (client) => formatRelative(client.lastSeen),
+      cell: (client) => <span className="text-text-muted">{formatRelative(client.lastSeen)}</span>,
     },
   ];
 
   return (
-    <Card data-testid="attached-clients">
-      <CardContent className="stack-lg">
-        <div>
-          <H2>{t('runtime.clients.title')}</H2>
-          <SmallText>{t('runtime.clients.help')}</SmallText>
-        </div>
-        {error ? (
-          <SmallText className="text-status-error" role="alert">
-            {t('runtime.clients.loadError', { error: error.message })}
-          </SmallText>
-        ) : (
-          <>
-            <DataTable
-              rows={clients ?? []}
-              columns={columns}
-              getRowKey={(client) => client.mac}
-              rowTestId={(client) => `attached-client-${client.mac}`}
-              loading={clients === null}
-              loadingMessage={t('runtime.clients.loading')}
-              emptyMessage={t('runtime.clients.empty')}
+    <TableSection
+      title={t('runtime.clients.title')}
+      description={t('runtime.clients.help')}
+      data-testid="attached-clients"
+    >
+      {error ? (
+        <Alert tone="error">{t('runtime.clients.loadError', { error: error.message })}</Alert>
+      ) : (
+        <>
+          <DataTable
+            rows={clients ?? []}
+            columns={columns}
+            getRowKey={(client) => client.mac}
+            caption={t('runtime.clients.title')}
+            labels={labels}
+            loading={clients === null}
+            empty={<EmptyState title={t('runtime.clients.empty')} />}
+          />
+          {pool && clients && clients.length > 0 && (
+            <AttachedClientMove
+              sessionId={sessionId}
+              pool={pool}
+              clients={clients}
+              onMoved={refetch}
             />
-            {pool && clients && clients.length > 0 && (
-              <AttachedClientMove
-                sessionId={sessionId}
-                pool={pool}
-                clients={clients}
-                onMoved={refetch}
-              />
-            )}
-          </>
-        )}
-      </CardContent>
-    </Card>
+          )}
+        </>
+      )}
+    </TableSection>
   );
 }

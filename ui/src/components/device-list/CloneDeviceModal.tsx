@@ -6,8 +6,10 @@ import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { useActionPermission } from '../../contexts/ScopeContext';
 import { type CloneDeviceFormFields, CloneDeviceSchema } from '../../schemas/forms';
-import { Button } from '../../ui/Button';
-import { Modal } from '../../ui/Modal';
+import { Button } from '../../shared/Button';
+import { Modal } from '../../shared/Modal';
+import { ActionButton } from '../../ui/ActionButton';
+import { useCloseLabel } from '../../ui/dialogLabels';
 
 interface CloneDeviceModalProps {
   hostname: string;
@@ -16,6 +18,7 @@ interface CloneDeviceModalProps {
 }
 
 export function CloneDeviceModal({ hostname, onClone, onCancel }: CloneDeviceModalProps) {
+  const closeLabel = useCloseLabel();
   const permission = useActionPermission('edit');
   const { t } = useTranslation('devices');
   const { t: tCommon } = useTranslation('common');
@@ -40,19 +43,26 @@ export function CloneDeviceModal({ hostname, onClone, onCancel }: CloneDeviceMod
 
   return (
     <Modal
-      isOpen
+      closeLabel={closeLabel}
+      open
       onClose={onCancel}
       size="md"
       showCloseButton={false}
       labelledBy={titleId}
       footer={
         <>
-          <Button variant="outline" type="button" onClick={onCancel}>
+          <Button variant="secondary" type="button" onClick={onCancel}>
             {tCommon('buttons.cancel')}
           </Button>
-          <Button action="edit" tone="violet" type="submit" form={formId} disabled={!isValid}>
+          <ActionButton
+            variant="primary"
+            action="edit"
+            type="submit"
+            form={formId}
+            disabled={!isValid}
+          >
             {tCommon('buttons.clone')}
-          </Button>
+          </ActionButton>
         </>
       }
     >

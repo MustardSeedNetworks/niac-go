@@ -4,8 +4,8 @@ import { pinSessionClient } from '../../api/client';
 import { type ApiErrorDetail, isApiError } from '../../api/errors';
 import type { AttachmentPort, CompiledAttachment, ObservedClient } from '../../api/types';
 import { selectClassName } from '../../components/device-editor/types';
+import { ActionButton } from '../../ui/ActionButton';
 import { ApiErrorMessage } from '../../ui/ApiErrorMessage';
-import { Button } from '../../ui/Button';
 import { SmallText } from '../../ui/Typography';
 
 interface AttachedClientMoveProps {
@@ -146,16 +146,17 @@ export function AttachedClientMove({
             ))}
           </select>
         </div>
-        <Button
-          type="submit"
+        <ActionButton
+          variant="primary"
           action="start"
           size="sm"
+          type="submit"
           disabled={!target || moving}
           loading={moving}
           data-testid="attached-client-move-submit"
         >
           {t('runtime.clients.move.submit')}
-        </Button>
+        </ActionButton>
       </div>
       {moved && (
         <SmallText className="text-status-success" role="status">

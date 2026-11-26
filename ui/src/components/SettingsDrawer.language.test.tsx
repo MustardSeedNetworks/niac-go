@@ -17,18 +17,7 @@ afterEach(async () => {
 it('switches the interface language and remembers the choice', async () => {
   render(
     <MemoryRouter>
-      <SettingsDrawer
-        isOpen
-        onClose={vi.fn()}
-        connectionStatus="connected"
-        themeState={{
-          theme: 'dark',
-          effectiveTheme: 'dark',
-          isDark: true,
-          setTheme: vi.fn(),
-          toggleTheme: vi.fn(),
-        }}
-      />
+      <SettingsDrawer isOpen onClose={vi.fn()} connectionStatus="connected" />
     </MemoryRouter>,
   );
   fireEvent.click(screen.getByRole('tab', { name: 'Appearance' }));

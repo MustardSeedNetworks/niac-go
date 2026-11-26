@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { chooseSession } from './support/sidebar';
 
 /**
  * Scenario switcher (U3) E2E.
@@ -82,15 +83,15 @@ test('switches every runtime read to the scenario picked in the rail', async ({ 
   // Both sidebars are in the DOM; drive the desktop one at this viewport.
   const nav = page.getByTestId('sidebar-desktop');
 
-  const switcher = nav.getByTestId('session-switcher-select');
+  const switcher = nav.getByTestId('rail-product-slot');
   await expect(switcher).toBeVisible({ timeout: 10000 });
-  await expect(switcher).toHaveValue('hospital');
+  await expect(switcher).toContainText('hospital');
   await expect
     .poll(() => reads.some((path) => path.startsWith('/api/v1/sessions/hospital/')))
     .toBe(true);
 
   const urlBeforeSwitch = page.url();
-  await switcher.selectOption('warehouse');
+  await chooseSession(nav, 'warehouse');
 
   // Devices is the page we are on; it must repoint where it stands. Wait for
   // the first warehouse read before clearing: a hospital poll already in
@@ -108,7 +109,7 @@ test('switches every runtime read to the scenario picked in the rail', async ({ 
   reads.length = 0;
   await nav.getByTestId('nav-item-topology').click();
   await expect(page).toHaveURL(/\/topology$/);
-  await expect(nav.getByTestId('session-switcher-select')).toHaveValue('warehouse');
+  await expect(nav.getByTestId('rail-product-slot')).toContainText('warehouse');
   await expect
     .poll(() => reads.some((path) => path === '/api/v1/sessions/warehouse/topology'))
     .toBe(true);

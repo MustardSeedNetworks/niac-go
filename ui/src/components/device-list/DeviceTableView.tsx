@@ -1,172 +1,124 @@
-import { Copy, Edit3, Trash2 } from 'lucide-react';
+import { Copy, Pencil, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import {
-  deviceTypeColors,
-  deviceTypeIcons,
-  normalizeDeviceType,
-} from '../../constants/device-types';
-import { iconSizes } from '../../constants/sizes';
+import type { Device } from '../../api/types';
 import { useDeviceList } from '../../contexts/DeviceListContext';
+import { DataTable, type DataTableColumn } from '../../shared/DataTable';
 import { ActionButton } from '../../ui/ActionButton';
-import { Card, CardContent } from '../../ui/Card';
-import { Tag } from '../../ui/Tag';
-import { VirtualList } from './VirtualList';
+import { useTableLabels } from '../../ui/tableLabels';
+import { DeviceTypeChip } from '../DeviceTypeChip';
+import { ProtocolChips } from '../ProtocolChips';
 
-const ROW_HEIGHT_PX = 60;
+/**
+ * Rows per page. Selection (for the bulk delete) is page-wide in the shared
+ * DataTable, and a library of 543 devices is searched or filtered long before
+ * it is paged, so the table pages rather than windows.
+ */
+const PAGE_SIZE = 50;
 
 export function DeviceTableView() {
   const { t } = useTranslation('devices');
+  const { t: tCommon } = useTranslation('common');
   const {
     devices,
     selectedDevices,
-    onSelectDevice,
-    onSelectAll,
+    onSelectionChange,
     onEdit,
     onClone,
     onDelete,
     getDeviceProtocols,
   } = useDeviceList();
+  const labels = useTableLabels<Device>(tCommon('labels.devices').toLowerCase(), (device) =>
+    t('list.selectDeviceAria', { hostname: device.hostname }),
+  );
+
+  const columns: DataTableColumn<Device>[] = [
+    {
+      key: 'hostname',
+      header: t('list.tableHeaderHostname'),
+      sortValue: (device) => device.hostname,
+      cell: (device) => (
+        <ActionButton
+          action="edit"
+          variant="ghost"
+          size="sm"
+          onClick={() => onEdit(device.hostname)}
+          title={t('list.openEditorTitle', { hostname: device.hostname })}
+          className="max-w-64 justify-start truncate px-1 font-semibold"
+        >
+          {device.hostname}
+        </ActionButton>
+      ),
+    },
+    {
+      key: 'type',
+      header: t('list.tableHeaderType'),
+      sortValue: (device) => device.type ?? '',
+      cell: (device) => <DeviceTypeChip type={device.type} />,
+    },
+    {
+      key: 'ip',
+      header: t('list.tableHeaderIpAddress'),
+      cell: (device) => (
+        <span className="whitespace-nowrap font-mono text-xs">
+          {device.ip || device.ips?.[0] || '—'}
+          {device.ips && device.ips.length > 1 ? (
+            <span className="ml-1 text-text-muted">+{device.ips.length - 1}</span>
+          ) : null}
+        </span>
+      ),
+    },
+    {
+      key: 'protocols',
+      header: t('list.tableHeaderProtocols'),
+      cell: (device) => <ProtocolChips protocols={getDeviceProtocols(device)} />,
+    },
+  ];
+
   return (
-    <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="p-0">
-        {/* Table header */}
-        <div>
-          <div className="flex items-center gap-comfortable border-b border-surface-border px-4 py-row-lg bg-bg-base/40">
-            <input
-              type="checkbox"
-              checked={selectedDevices.size === devices.length && devices.length > 0}
-              onChange={onSelectAll}
-              className="h-4 w-4 rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-primary"
-              aria-label={t('list.selectAllAria')}
-            />
-            <div className="hidden flex-1 grid-cols-12 gap-comfortable text-sm font-medium text-text-muted sm:grid">
-              <div className="col-span-3">{t('list.tableHeaderHostname')}</div>
-              <div className="col-span-2">{t('list.tableHeaderType')}</div>
-              <div className="col-span-2">{t('list.tableHeaderIpAddress')}</div>
-              <div className="col-span-3">{t('list.tableHeaderProtocols')}</div>
-              <div className="col-span-2 text-right">{t('list.tableHeaderActions')}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Device rows */}
-        <VirtualList
-          items={devices}
-          itemHeight={ROW_HEIGHT_PX}
-          getKey={(device) => device.hostname}
-          ariaLabel={t('list.listAria')}
-          data-testid="device-list-rows"
-          renderItem={(device) => {
-            const safeType = normalizeDeviceType(device.type);
-            const DeviceIcon = deviceTypeIcons[safeType];
-            const typeColor = deviceTypeColors[safeType];
-            const deviceProtocols = getDeviceProtocols(device);
-
-            return (
-              <div
-                data-testid="device-list-row"
-                className={`flex h-full items-center gap-comfortable border-b border-knob/5 px-4 hover:bg-surface-hover transition-colors ${
-                  selectedDevices.has(device.hostname) ? 'bg-brand-primary/10' : ''
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedDevices.has(device.hostname)}
-                  onChange={() => onSelectDevice(device.hostname)}
-                  className="h-4 w-4 rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-primary"
-                  aria-label={t('list.selectDeviceAria', { hostname: device.hostname })}
-                />
-                <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-comfortable gap-y-tight sm:grid-cols-12">
-                  {/* Hostname */}
-                  <div className="flex min-w-0 items-center gap-compact sm:col-span-3">
-                    <DeviceIcon className={`${iconSizes.md} text-text-muted`} />
-                    <ActionButton
-                      action="edit"
-                      onClick={() => onEdit(device.hostname)}
-                      className="text-text-primary hover:text-brand-accent font-medium truncate"
-                      title={t('list.openEditorTitle', { hostname: device.hostname })}
-                    >
-                      {device.hostname}
-                    </ActionButton>
-                  </div>
-
-                  {/* Type and IP share the second line on a phone, and are
-                      separate columns from `sm` up (`contents` hands their
-                      children to the 12-column grid). */}
-                  <div className="col-span-2 row-start-2 flex min-w-0 items-center gap-compact sm:contents">
-                    <div className="sm:col-span-2">
-                      <Tag colorScheme={typeColor} className="text-xs capitalize">
-                        {device.type?.replace('_', ' ') || t('list.unknownType')}
-                      </Tag>
-                    </div>
-
-                    {/* IP */}
-                    <div className="min-w-0 truncate sm:col-span-2">
-                      <span className="text-text-secondary text-sm font-mono">
-                        {device.ip || device.ips?.[0] || '—'}
-                      </span>
-                      {device.ips && device.ips.length > 1 && (
-                        <span className="ml-tight text-text-muted text-xs">
-                          +{device.ips.length - 1}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Protocols */}
-                  <div className="hidden flex-nowrap gap-tight overflow-hidden sm:col-span-3 sm:flex">
-                    {deviceProtocols.length > 0 ? (
-                      deviceProtocols.slice(0, 4).map((proto) => (
-                        <Tag key={proto} colorScheme="gray" className="text-xs">
-                          {proto}
-                        </Tag>
-                      ))
-                    ) : (
-                      <span className="text-text-muted text-sm">{t('list.noProtocols')}</span>
-                    )}
-                    {deviceProtocols.length > 4 && (
-                      <Tag colorScheme="gray" className="text-xs">
-                        +{deviceProtocols.length - 4}
-                      </Tag>
-                    )}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="row-start-1 col-start-2 flex justify-end gap-tight sm:col-span-2 sm:col-start-auto sm:row-start-auto">
-                    <ActionButton
-                      action="edit"
-                      onClick={() => onEdit(device.hostname)}
-                      className="pad-xs text-text-muted hover:text-brand-accent hover:bg-surface-hover rounded-lg transition-colors"
-                      title={t('list.editDeviceTitle', { hostname: device.hostname })}
-                      aria-label={t('list.editDeviceAria', { hostname: device.hostname })}
-                    >
-                      <Edit3 className={iconSizes.md} />
-                    </ActionButton>
-                    <ActionButton
-                      action="edit"
-                      onClick={() => onClone(device.hostname)}
-                      className="pad-xs text-text-muted hover:text-status-info hover:bg-surface-hover rounded-lg transition-colors"
-                      title={t('list.cloneDeviceTitle', { hostname: device.hostname })}
-                      aria-label={t('list.cloneDeviceAria', { hostname: device.hostname })}
-                    >
-                      <Copy className={iconSizes.md} />
-                    </ActionButton>
-                    <ActionButton
-                      action="delete"
-                      onClick={() => onDelete(device.hostname)}
-                      className="pad-xs text-text-muted hover:text-status-error hover:bg-surface-hover rounded-lg transition-colors"
-                      title={t('list.deleteDeviceTitle', { hostname: device.hostname })}
-                      aria-label={t('list.deleteDeviceAria', { hostname: device.hostname })}
-                    >
-                      <Trash2 className={iconSizes.md} />
-                    </ActionButton>
-                  </div>
-                </div>
-              </div>
-            );
-          }}
-        />
-      </CardContent>
-    </Card>
+    <DataTable
+      rows={devices}
+      columns={columns}
+      getRowKey={(device) => device.hostname}
+      caption={t('list.listAria')}
+      labels={labels}
+      pageSize={PAGE_SIZE}
+      selection={{ selectedKeys: selectedDevices, onChange: onSelectionChange }}
+      data-testid="device-list-rows"
+      empty={null}
+      rowActions={(device) => (
+        <>
+          <ActionButton
+            action="edit"
+            variant="ghost"
+            size="sm"
+            iconOnly
+            icon={<Pencil className="h-4 w-4" />}
+            onClick={() => onEdit(device.hostname)}
+            title={t('list.editDeviceTitle', { hostname: device.hostname })}
+            aria-label={t('list.editDeviceAria', { hostname: device.hostname })}
+          />
+          <ActionButton
+            action="edit"
+            variant="ghost"
+            size="sm"
+            iconOnly
+            icon={<Copy className="h-4 w-4" />}
+            onClick={() => onClone(device.hostname)}
+            title={t('list.cloneDeviceTitle', { hostname: device.hostname })}
+            aria-label={t('list.cloneDeviceAria', { hostname: device.hostname })}
+          />
+          <ActionButton
+            action="delete"
+            variant="destructive"
+            size="sm"
+            iconOnly
+            icon={<Trash2 className="h-4 w-4" />}
+            onClick={() => onDelete(device.hostname)}
+            title={t('list.deleteDeviceTitle', { hostname: device.hostname })}
+            aria-label={t('list.deleteDeviceAria', { hostname: device.hostname })}
+          />
+        </>
+      )}
+    />
   );
 }

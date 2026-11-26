@@ -1,10 +1,10 @@
 {
   "drawer": {
-    "backdropAriaLabel": "Close help drawer",
     "closeAriaLabel": "Close help",
-    "drawerAriaLabel": "Help",
     "noResults": "No matches for \"{{query}}\"",
+    "searchLabel": "Search help",
     "searchPlaceholder": "Search help...",
+    "tabsLabel": "Help sections",
     "title": "Help"
   },
   "faq": {

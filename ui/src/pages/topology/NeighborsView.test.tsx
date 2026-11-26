@@ -167,7 +167,7 @@ describe('filtering', () => {
     render(<NeighborsView />);
     expect(await rows()).toHaveLength(2);
 
-    fireEvent.click(screen.getByRole('button', { name: /^CDP/ }));
+    fireEvent.click(screen.getByRole('radio', { name: /^CDP/ }));
 
     await waitFor(async () => expect(await rows()).toHaveLength(1));
     expect((await rows())[0]?.textContent).toContain('Gi0/1');

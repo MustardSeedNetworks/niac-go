@@ -101,30 +101,6 @@ export function normalizeDeviceType(raw: string | undefined | null): DeviceType 
 }
 
 /**
- * Tag color scheme type for UI components
- */
-export type TagColorScheme = 'blue' | 'green' | 'purple' | 'yellow' | 'red' | 'gray';
-
-/**
- * Device type colors for Tag components
- */
-export const deviceTypeColors: Record<DeviceType, TagColorScheme> = {
-  router: 'blue',
-  switch: 'green',
-  'layer3-switch': 'green',
-  ap: 'purple',
-  'access-point': 'purple',
-  firewall: 'red',
-  server: 'yellow',
-  host: 'gray',
-  workstation: 'gray',
-  iot: 'purple',
-  printer: 'yellow',
-  'voip-phone': 'blue',
-  unknown: 'gray',
-};
-
-/**
  * Device type CSS custom property colors for topology view
  * Uses CSS variables defined in the theme
  */
@@ -177,11 +153,6 @@ export function getTopologyDeviceIcon(type: string): IconComponent {
   return deviceTypeIcons[normalizeDeviceType(type)];
 }
 
-/** Get the tag colour scheme for a device type as authored. */
-export function getDeviceColor(type: DeviceType | string): TagColorScheme {
-  return deviceTypeColors[normalizeDeviceType(type)];
-}
-
 /** Get the topology colour (a CSS variable) for a device type as authored. */
 export function getTopologyDeviceColor(type: string): string {
   return topologyDeviceColors[normalizeDeviceType(type)];
@@ -193,29 +164,4 @@ export function getTopologyDeviceColor(type: string): string {
 export function getDeviceLabel(type: DeviceType): string {
   const option = deviceTypeOptions.find((opt) => opt.value === type);
   return option?.label || 'Unknown';
-}
-
-/**
- * Tailwind CSS classes for device type colors
- * Used for icon backgrounds and text colors
- */
-const deviceColorClasses: Record<TagColorScheme, { bg: string; text: string }> = {
-  blue: { bg: 'bg-status-info/20', text: 'text-status-info-strong' },
-  green: { bg: 'bg-status-success/20', text: 'text-status-success-strong' },
-  purple: { bg: 'bg-brand-primary/20', text: 'text-brand-primary-strong' },
-  yellow: { bg: 'bg-status-warning/20', text: 'text-status-warning-strong' },
-  red: { bg: 'bg-status-error/20', text: 'text-status-error-strong' },
-  gray: { bg: 'bg-bg-muted/20', text: 'text-text-muted' },
-};
-
-/**
- * Get Tailwind CSS classes for device type colors
- * @param colorScheme - The color scheme (from deviceTypeColors)
- * @returns Object with bg and text class names
- */
-export function getDeviceColorClasses(colorScheme: TagColorScheme): {
-  bg: string;
-  text: string;
-} {
-  return deviceColorClasses[colorScheme] || deviceColorClasses.gray;
 }

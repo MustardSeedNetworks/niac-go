@@ -3,8 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ScenarioDraft } from '../../api/library-client';
 import { iconSizes } from '../../constants/sizes';
-import { Button } from '../../ui/Button';
-import { Card, CardContent } from '../../ui/Card';
+import { Card } from '../../shared/Card';
+import { ActionButton } from '../../ui/ActionButton';
 import { SmallText } from '../../ui/Typography';
 import { YamlEditor } from '../config/YamlEditor';
 import { DraftBehaviorComposer } from './DraftBehaviorComposer';
@@ -56,8 +56,8 @@ export function DevicesStep({
   };
 
   return (
-    <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="stack">
+    <Card>
+      <div className="stack">
         <div className="flex items-center gap-default">
           <FileCog className={`${iconSizes.lg} text-brand-accent`} />
           <div>
@@ -117,22 +117,22 @@ export function DevicesStep({
               className="mt-heading"
             />
             <div>
-              <Button
-                tone="violet"
-                leftIcon={<Save className={iconSizes.md} />}
+              <ActionButton
+                variant="primary"
+                action="edit"
+                icon={<Save className={iconSizes.md} />}
                 disabled={!dirty || saving}
                 loading={saving}
                 onClick={() => void onSave()}
-                action="edit"
               >
                 {saving
                   ? t('newSimWizard.devices.savingLabel')
                   : t('newSimWizard.devices.saveLabel')}
-              </Button>
+              </ActionButton>
             </div>
           </>
         )}
-      </CardContent>
+      </div>
     </Card>
   );
 }

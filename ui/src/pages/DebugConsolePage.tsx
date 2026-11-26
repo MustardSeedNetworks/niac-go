@@ -8,11 +8,13 @@ import { LogViewer } from '../components/LogViewer';
 import { iconSizes } from '../constants/sizes';
 import { useLogStream } from '../hooks/useEventSource';
 import { useToast } from '../hooks/useToast';
-import { Button } from '../ui/Button';
-import { Card, CardContent } from '../ui/Card';
-import { ConfirmModal } from '../ui/ConfirmModal';
-import { Tag } from '../ui/Tag';
-import { Tooltip } from '../ui/Tooltip';
+import { Button } from '../shared/Button';
+import { Card } from '../shared/Card';
+import { CategoryChip } from '../shared/CategoryChip';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
+import { StatusPill } from '../shared/StatusPill';
+import { Tooltip } from '../shared/Tooltip';
+import { useDialogLabels } from '../ui/dialogLabels';
 
 // Maximum number of logs to buffer
 const MAX_LOG_BUFFER = 1000;
@@ -46,6 +48,7 @@ function mapToLogEntry(data: unknown): LogEntry | null {
 }
 
 export function DebugConsolePage() {
+  const dialogLabels = useDialogLabels();
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const { addToast } = useToast();
@@ -178,52 +181,47 @@ export function DebugConsolePage() {
     if (paused) {
       return {
         label: t('debug.statusPaused'),
-        color: 'yellow' as const,
-        indicator: 'bg-status-warning',
+        tone: 'warning' as const,
       };
     }
     if (connected) {
       return {
         label: t('debug.statusLive'),
-        color: 'green' as const,
-        indicator: 'bg-status-success animate-pulse',
+        tone: 'success' as const,
       };
     }
     // SSE auto-reconnects, so disconnected state is brief
     return {
       label: t('debug.statusConnecting'),
-      color: 'yellow' as const,
-      indicator: 'bg-status-warning animate-pulse',
+      tone: 'warning' as const,
     };
   }, [connected, paused, t]);
 
   return (
     <div className="stack-xl">
       {/* Main Console Card */}
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="stack-lg">
+      <Card>
+        <div className="stack-lg">
           {/* Header with Connection Status */}
           <div className="flex-between">
             <h2 className="heading-2 text-text-primary">{t('debug.title')}</h2>
             <div className="flex items-center gap-default">
               {/* Debug Settings Toggle */}
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={() => setShowDebugSettings(!showDebugSettings)}
-                leftIcon={<Settings2 className={iconSizes.md} />}
-                rightIcon={
-                  showDebugSettings ? (
-                    <ChevronUp className={iconSizes.md} />
-                  ) : (
-                    <ChevronDown className={iconSizes.md} />
-                  )
-                }
+                icon={<Settings2 className={iconSizes.md} />}
                 aria-expanded={showDebugSettings}
                 aria-controls="debug-settings-panel"
                 data-testid="debug-level-toggle"
               >
                 {t('debug.debugLevelButton')}
+                {showDebugSettings ? (
+                  <ChevronUp className={iconSizes.md} aria-hidden="true" />
+                ) : (
+                  <ChevronDown className={iconSizes.md} aria-hidden="true" />
+                )}
               </Button>
               {/* Connection Status */}
               <Tooltip
@@ -235,8 +233,7 @@ export function DebugConsolePage() {
                   onClick={reconnect}
                   className="flex items-center gap-compact rounded-lg border border-surface-border bg-bg-base/50 px-3 py-compact-md text-sm transition-colors hover:bg-bg-elevated/50"
                 >
-                  <span className={`h-2 w-2 rounded-full ${connectionStatus.indicator}`} />
-                  <Tag colorScheme={connectionStatus.color}>{connectionStatus.label}</Tag>
+                  <StatusPill tone={connectionStatus.tone} label={connectionStatus.label} />
                 </button>
               </Tooltip>
             </div>
@@ -269,14 +266,12 @@ export function DebugConsolePage() {
                 })}
               </span>
               {levelFilter !== 'All' && (
-                <Tag colorScheme="purple">{t('debug.levelTag', { level: levelFilter })}</Tag>
+                <CategoryChip label={t('debug.levelTag', { level: levelFilter })} />
               )}
               {protocolFilter !== 'All' && (
-                <Tag colorScheme="blue">{t('debug.protocolTag', { protocol: protocolFilter })}</Tag>
+                <CategoryChip label={t('debug.protocolTag', { protocol: protocolFilter })} />
               )}
-              {searchQuery && (
-                <Tag colorScheme="gray">{t('debug.searchTag', { query: searchQuery })}</Tag>
-              )}
+              {searchQuery && <CategoryChip label={t('debug.searchTag', { query: searchQuery })} />}
               <button
                 type="button"
                 onClick={() => {
@@ -302,23 +297,24 @@ export function DebugConsolePage() {
             </span>
             <span>{t('debug.sseEndpointLabel')}</span>
           </div>
-        </CardContent>
+        </div>
       </Card>
 
       {/* Global debug-level control */}
       {showDebugSettings && (
         <div id="debug-settings-panel">
-          <Card className="border-surface-border bg-bg-surface/70">
-            <CardContent className="stack-lg">
+          <Card>
+            <div className="stack-lg">
               <DebugLevelControl />
-            </CardContent>
+            </div>
           </Card>
         </div>
       )}
 
       {/* Clear logs confirmation modal */}
-      <ConfirmModal
-        isOpen={showClearConfirm}
+      <ConfirmDialog
+        {...dialogLabels}
+        open={showClearConfirm}
         onConfirm={confirmClear}
         onCancel={() => setShowClearConfirm(false)}
         title={t('debug.clearAllLogsTitle')}

@@ -50,21 +50,32 @@ for (const viewport of [
       await page.setViewportSize(viewport);
       await page.goto(path);
 
-      const crumbs = page.locator('nav[aria-label="Breadcrumb"] [data-crumb]');
+      const crumbs = page.locator('nav[aria-label="Breadcrumb"] li');
       await expect(crumbs.last()).toHaveText(label);
       for (const text of await crumbs.allTextContents()) {
         expect(text, `${path} crumb "${text}"`).toMatch(TITLE_CASE);
         expect(text, `${path} crumb "${text}" is a URL slug`).not.toContain('-');
       }
 
-      await expect(page).toHaveTitle(`${label} | ${enPages.app?.name ?? 'NIAC'}`);
+      await expect(page).toHaveTitle(`${label} · ${enPages.app?.name ?? 'NIAC'}`);
       await expectPageFirst(page);
     });
   }
 }
 
-test('the dashboard is the product, with no trail above it', async ({ page }) => {
+test('the dashboard is a trail of one, and the tab names the page', async ({ page }) => {
   await page.goto('/');
-  await expect(page).toHaveTitle('NIAC');
-  await expect(page.locator('nav[aria-label="Breadcrumb"]')).toHaveCount(0);
+  await expect(page).toHaveTitle(`${enPages.dashboard.label} · ${enPages.app?.name ?? 'NIAC'}`);
+  await expect(page.locator('nav[aria-label="Breadcrumb"] li')).toHaveText([
+    enPages.dashboard.label,
+  ]);
+  await expect(page.getByTestId('page-header-eyebrow')).toBeVisible();
+});
+
+test('an unknown address gets the same header, with a kicker and a trail', async ({ page }) => {
+  await page.goto('/no-such-page');
+  await expect(page.getByTestId('not-found')).toBeVisible();
+  await expect(page.getByTestId('page-header-title')).toBeVisible();
+  await expect(page.getByTestId('page-header-eyebrow')).toBeVisible();
+  await expect(page.locator('nav[aria-label="Breadcrumb"]')).toBeVisible();
 });

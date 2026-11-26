@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { FileCog, Server } from 'lucide-react';
+import { FileCog } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
@@ -7,7 +7,6 @@ import { parseDocument } from 'yaml';
 import { updateConfig, updateDevice } from '../api/client';
 import { isApiError } from '../api/errors';
 import type { LibraryFileEntry } from '../api/library-client';
-import type { DeviceSummary } from '../api/types';
 import { YamlEditor } from '../components/config/YamlEditor';
 import { DeviceTable } from '../components/DeviceTable';
 import { UnsavedChangesModal } from '../components/device-editor/UnsavedChangesModal';
@@ -15,13 +14,16 @@ import {
   type UnsavedChangesGuard,
   useUnsavedChangesGuard,
 } from '../components/device-editor/useUnsavedChangesGuard';
+import { TableSection } from '../components/TableSection';
 import { POLL_INTERVALS } from '../constants/polling';
-import { iconSizes } from '../constants/sizes';
 import { useAppState } from '../contexts/AppContext';
 import { useConfigResource, useLibraryResource } from '../hooks/usePageResources';
-import { BaseCard } from '../ui/BaseCard';
-import { Button, LinkButton } from '../ui/Button';
-import { CardRow } from '../ui/Card';
+import { Alert } from '../shared/Alert';
+import { Button, ButtonLink } from '../shared/Button';
+import { Card, CardRow } from '../shared/Card';
+import { Skeleton } from '../shared/Skeleton';
+import { ActionButton } from '../ui/ActionButton';
+import { linkTo } from '../ui/linkTo';
 import { SmallText } from '../ui/Typography';
 import { findDeviceFragment } from '../utils/device-fragment';
 import { copyToClipboard } from '../utils/file';
@@ -74,30 +76,32 @@ function DeviceListCard({
   const { data: devices, loading, error } = useAppState('devices');
 
   return (
-    <BaseCard<DeviceSummary[]>
+    <TableSection
       title={t('devices.title')}
-      subtitle={t('devices.subtitle')}
-      icon={<Server className={`${iconSizes.lg} text-status-info`} />}
-      data={devices}
-      loading={loading && !devices}
-      error={error?.message}
-      getStatus={(d) => (d.length > 0 ? 'success' : 'unknown')}
-      emptyMessage={t('devices.emptyMessage')}
-      testId="devices-card"
+      description={t('devices.subtitle')}
+      data-testid="devices-card"
     >
-      {(data) => (
+      {loading && !devices ? (
+        <div role="status" aria-label={t('devices.title')}>
+          <Skeleton className="h-40 w-full" />
+        </div>
+      ) : error ? (
+        <Alert tone="error">{error.message}</Alert>
+      ) : (
         <>
           <DeviceTable
-            devices={data}
+            devices={devices ?? []}
             selectedName={selected}
             onSelect={(device) => onSelect(device.name)}
           />
-          <LinkButton to="/device-config" size="sm" className="mt-heading">
-            {t('devices.editInLibrary')}
-          </LinkButton>
+          <div>
+            <ButtonLink variant="primary" renderLink={linkTo('/device-config')}>
+              {t('devices.editInLibrary')}
+            </ButtonLink>
+          </div>
         </>
       )}
-    </BaseCard>
+    </TableSection>
   );
 }
 
@@ -273,17 +277,15 @@ function ConfigEditorCard({
 
   if (noConfigLoaded && !data) {
     return (
-      <BaseCard
+      <Card
         title={t('devices.yamlEditorTitle')}
         subtitle={t('devices.yamlEditorSubtitle')}
-        icon={<FileCog className={`${iconSizes.lg} text-status-success`} />}
-        data={null}
-        emptyMessage={t('devices.noConfigMessage')}
-        getStatus={() => 'success'}
-        testId="config-editor-idle"
-      >
-        {() => null}
-      </BaseCard>
+        icon={<FileCog className="h-5 w-5" />}
+        status="success"
+        statusLabel={tCommon('statusLabel.success')}
+        empty={t('devices.noConfigMessage')}
+        data-testid="config-editor-idle"
+      />
     );
   }
 
@@ -311,27 +313,27 @@ function ConfigEditorCard({
           {error.message}
         </p>
       )}
-      <BaseCard<{ content: string; path: string; modifiedAt: string; sizeBytes: number }>
+      <Card
         title={editingDevice ? t('devices.deviceEditorTitle') : t('devices.yamlEditorTitle')}
         subtitle={
           editingDevice ? t('devices.deviceEditorSubtitle') : t('devices.yamlEditorSubtitle')
         }
-        icon={<FileCog className={`${iconSizes.lg} text-status-success`} />}
-        data={data}
+        icon={<FileCog className="h-5 w-5" />}
+        status={dirty ? 'warning' : 'success'}
+        statusLabel={dirty ? tCommon('statusLabel.warning') : tCommon('statusLabel.success')}
         loading={loading && !data}
-        error={dirty ? undefined : error?.message}
-        getStatus={() => (dirty ? 'warning' : 'success')}
-        testId="config-editor-card"
+        {...(!dirty && error ? { error: error.message } : {})}
+        data-testid="config-editor-card"
       >
-        {(cfg) => (
+        {data ? (
           <>
             {editingDevice ? (
               <CardRow label={t('devices.selectedLabel')} value={selected ?? ''} mono />
             ) : (
               <>
-                <CardRow label={tCommon('labels.path')} value={cfg.path} mono />
-                <CardRow label={tCommon('labels.updatedAt')} value={formatTime(cfg.modifiedAt)} />
-                <CardRow label={tCommon('labels.size')} value={formatBytes(cfg.sizeBytes)} />
+                <CardRow label={tCommon('labels.path')} value={data.path} mono />
+                <CardRow label={tCommon('labels.updatedAt')} value={formatTime(data.modifiedAt)} />
+                <CardRow label={tCommon('labels.size')} value={formatBytes(data.sizeBytes)} />
               </>
             )}
             {fragmentMissing && (
@@ -356,24 +358,24 @@ function ConfigEditorCard({
               </SmallText>
             )}
             <div className="flex flex-wrap gap-default mt-heading">
-              <Button
-                tone="violet"
+              <ActionButton
+                variant="primary"
+                action={fragment ? 'edit' : 'admin'}
                 disabled={!dirty || saving}
                 onClick={handleSave}
                 // #2173: the same control saves either one device or the whole
                 // document. A whole-document save is a topology replacement and
                 // needs admin; a per-device save stays a routine operator edit.
-                action={fragment ? 'edit' : 'admin'}
                 title={t('devices.saveReloadTitle')}
               >
                 {saving ? t('devices.savingLabel') : t('devices.saveReloadButton')}
-              </Button>
-              <Button variant="outline" disabled={!dirty || saving} onClick={handleReset}>
+              </ActionButton>
+              <Button variant="secondary" disabled={!dirty || saving} onClick={handleReset}>
                 {t('devices.discardChangesButton')}
               </Button>
               {selected !== null && (
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   onClick={onClearSelection}
                   data-testid="edit-whole-config"
                 >
@@ -387,8 +389,8 @@ function ConfigEditorCard({
             </SmallText>
             <WalkFileBrowser files={walkFiles ?? []} onCopy={handleWalkCopy} />
           </>
-        )}
-      </BaseCard>
+        ) : null}
+      </Card>
     </>
   );
 }
@@ -421,9 +423,14 @@ function WalkFileBrowser({
               <SmallText className="text-text-muted capitalize">{file.source}</SmallText>
             </div>
             <div className="flex items-center gap-tight">
-              <Button action="edit" size="sm" variant="outline" onClick={() => onCopy(file.name)}>
+              <ActionButton
+                action="edit"
+                variant="secondary"
+                size="sm"
+                onClick={() => onCopy(file.name)}
+              >
                 {t('devices.copyNameButton')}
-              </Button>
+              </ActionButton>
               <Link
                 to="/device-config/new#snmp"
                 className="text-sm text-brand-accent hover:underline whitespace-nowrap"

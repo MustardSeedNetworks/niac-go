@@ -12,6 +12,7 @@
     "dismissMessage": "Dismiss message",
     "dismissNotification": "Dismiss notification",
     "expandSidebar": "Expand sidebar",
+    "fieldHelp": "Help: {{field}}",
     "home": "Home",
     "notifications": "Notifications",
     "openDrawer": "Open drawer",
@@ -36,7 +37,6 @@
     "connectionFailed": "NIAC could not be reached. Check the daemon and try again.",
     "description": "Enter the API token configured for this NIAC daemon.",
     "disconnect": "Disconnect",
-    "disconnectHint": "Forget this tab's API token and return to the connect prompt. A daemon on loopback with no token requirement lets you straight back in.",
     "invalidToken": "That API token was rejected.",
     "memoryOnly": "The token is kept only in this tab's memory and is cleared when the page closes.",
     "sessionExpired": "Your session is no longer authorized. Enter the API token again.",
@@ -152,25 +152,27 @@
     "uptimeMS": "{{min}}m {{sec}}s",
     "uptimeS": "{{value}}s"
   },
+  "help": {
+    "openFor": "Open help for {{title}}"
+  },
   "jargon": {
     "ariaLabel": "About {{term}}",
     "groupedByTerm": "grouped by {{term}}"
   },
   "labels": {
     "config": "Config",
+    "conversations": "Conversations",
     "devices": "Devices",
-    "disabled": "Disabled",
-    "enabled": "Enabled",
     "interface": "Interface",
     "interfaces": "Interfaces",
     "none": "None",
     "path": "Path",
     "required": "Required",
-    "search": "Search...",
     "size": "Size",
     "status": "Status",
     "type": "Type",
-    "updatedAt": "Updated"
+    "updatedAt": "Updated",
+    "view": "View"
   },
   "permissions": {
     "checking": "Checking permissions…",
@@ -199,8 +201,8 @@
     "warn": "Degraded"
   },
   "session": {
-    "none": "No scenario running",
-    "switchLabel": "Scenario this browser is reading"
+    "label": "Scenario",
+    "none": "No scenario running"
   },
   "status": {
     "loading": "Loading...",
@@ -208,13 +210,16 @@
     "saving": "Saving..."
   },
   "statusLabel": {
-    "error": "Status: error",
-    "loading": "Status: loading",
     "success": "Status: success",
-    "unknown": "Status: unknown",
     "warning": "Status: warning"
   },
   "table": {
+    "actions": "Row actions",
+    "loading": "Loading {{subject}}",
+    "nextPage": "Next page",
+    "pageStatus": "Page {{page}} of {{pages}} ({{total}} rows)",
+    "pagination": "Table pagination",
+    "previousPage": "Previous page",
     "selectAll": "Select all",
     "selected": "{{count}} selected",
     "showingResults": "Showing {{shown}} of {{total}} results"

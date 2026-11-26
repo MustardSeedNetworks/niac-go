@@ -31,12 +31,16 @@ import { isPacketStreamEvent, usePacketStream } from '../hooks/useEventSource';
 import { useCaptureResource } from '../hooks/usePageResources';
 import { useResourceError } from '../hooks/useResourceError';
 import { useToast } from '../hooks/useToast';
-import { Button } from '../ui/Button';
-import { Card, CardContent } from '../ui/Card';
-import { ConfirmModal } from '../ui/ConfirmModal';
+import { Button } from '../shared/Button';
+import { Card } from '../shared/Card';
+import { CategoryChip } from '../shared/CategoryChip';
+import { Checkbox } from '../shared/Checkbox';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
+import { StatusPill } from '../shared/StatusPill';
+import { ActionButton } from '../ui/ActionButton';
+import { useDialogLabels } from '../ui/dialogLabels';
 import { Inspector, InspectorPane, InspectorPanes, InspectorRecords } from '../ui/Inspector';
-import { Tag } from '../ui/Tag';
-import { H2, SmallText } from '../ui/Typography';
+import { SmallText } from '../ui/Typography';
 import { canFollowStream, getStreamFilter } from '../utils/conversations';
 import { buildProtocolLayers, computeHeaderBoundary } from '../utils/protocol-layers';
 import { PcapAnalyzerPage } from './PcapAnalyzerPage';
@@ -62,7 +66,7 @@ function ConnectionStatus({ connected }: { connected: boolean }) {
     return (
       <div className="flex items-center gap-compact">
         <Wifi className={`${iconSizes.md} text-status-success`} />
-        <Tag colorScheme="green">{t('packets.inspector.connectedStatus')}</Tag>
+        <StatusPill tone="success" label={t('packets.inspector.connectedStatus')} />
       </div>
     );
   }
@@ -71,7 +75,7 @@ function ConnectionStatus({ connected }: { connected: boolean }) {
   return (
     <div className="flex items-center gap-compact">
       <WifiOff className={`${iconSizes.md} text-status-warning animate-pulse`} />
-      <Tag colorScheme="yellow">{t('packets.inspector.connectingStatus')}</Tag>
+      <StatusPill tone="warning" label={t('packets.inspector.connectingStatus')} />
     </div>
   );
 }
@@ -88,6 +92,7 @@ function ConnectionStatus({ connected }: { connected: boolean }) {
  * - Protocol and search filtering
  */
 export function PacketInspectorPage() {
+  const dialogLabels = useDialogLabels();
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const navigate = useNavigate();
@@ -305,18 +310,17 @@ export function PacketInspectorPage() {
       {view === 'live' && streamActive && (
         <>
           {/* Header with controls */}
-          <Card className="border-surface-border bg-bg-surface/70">
-            <CardContent>
+          <Card>
+            <div>
               <div className="flex flex-col gap-comfortable sm:flex-row sm:items-center sm:justify-between">
                 {/* Title and connection status */}
                 <div className="flex items-center gap-comfortable">
-                  <H2>{t('packets.title')}</H2>
                   <SmallText className="text-text-muted">
                     {t('packets.inspector.onInterfacePrefix')}{' '}
                     <span className="font-mono text-text-primary">{activeInterface ?? '—'}</span>
                   </SmallText>
                   {captureRunning && !simRunning && (
-                    <Tag colorScheme="violet">{t('packets.inspector.standaloneTag')}</Tag>
+                    <CategoryChip label={t('packets.inspector.standaloneTag')} />
                   )}
                   <ConnectionStatus connected={connected} />
                 </div>
@@ -324,9 +328,10 @@ export function PacketInspectorPage() {
                 {/* Control buttons */}
                 <div className="flex flex-wrap items-center gap-compact">
                   <Button
+                    variant="primary"
                     size="sm"
                     onClick={handlePauseToggle}
-                    leftIcon={
+                    icon={
                       isPaused ? (
                         <Play className={iconSizes.md} />
                       ) : (
@@ -341,71 +346,70 @@ export function PacketInspectorPage() {
                     variant="ghost"
                     size="sm"
                     onClick={handleClear}
-                    leftIcon={<Trash2 className={iconSizes.md} />}
+                    icon={<Trash2 className={iconSizes.md} />}
                     disabled={retained.length === 0 && packets.length === 0}
                   >
                     {tCommon('buttons.clear')}
                   </Button>
 
                   {captureRunning && !simRunning && (
-                    <Button
-                      variant="outline"
-                      tone="red"
+                    <ActionButton
+                      action="stop"
+                      variant="destructive"
                       size="sm"
                       onClick={() => setShowStopCaptureConfirm(true)}
-                      action="stop"
                     >
                       {t('packets.inspector.stopCaptureButton')}
-                    </Button>
+                    </ActionButton>
                   )}
 
-                  <Button
+                  <ActionButton
                     variant="ghost"
                     size="sm"
                     onClick={handleExport}
-                    leftIcon={<Download className={iconSizes.md} />}
+                    icon={<Download className={iconSizes.md} />}
                     disabled={filteredPackets.length === 0}
                     title={t('packets.inspector.exportButtonTitle')}
                   >
                     {t('packets.inspector.exportButton')}
-                  </Button>
+                  </ActionButton>
 
-                  <Button
+                  <ActionButton
                     variant="ghost"
                     size="sm"
                     onClick={handleExportPcap}
-                    leftIcon={<FileDown className={iconSizes.md} />}
+                    icon={<FileDown className={iconSizes.md} />}
                     disabled={!exportSessionId}
                     title={t('packets.inspector.exportPcapButtonTitle')}
                   >
                     {t('packets.inspector.exportPcapButton')}
-                  </Button>
+                  </ActionButton>
 
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowColoringRules(true)}
-                    leftIcon={<Palette className={iconSizes.md} />}
+                    icon={<Palette className={iconSizes.md} />}
                   >
                     {t('packets.inspector.colorsButton')}
                   </Button>
 
-                  <Button
+                  <ActionButton
                     variant="ghost"
                     size="sm"
                     onClick={handleFollowStream}
-                    leftIcon={<Share2 className={iconSizes.md} />}
+                    icon={<Share2 className={iconSizes.md} />}
                     disabled={!followable}
                     title={
                       followable ? undefined : t('packets.inspector.followStreamDisabledTitle')
                     }
                   >
                     {t('packets.inspector.followStreamTitle')}
-                  </Button>
+                  </ActionButton>
 
                   {/* SSE auto-reconnects, but manual reconnect is available */}
                   {!connected && (
-                    <Button variant="outline" size="sm" onClick={reconnect}>
+                    <Button variant="secondary" size="sm" onClick={reconnect}>
                       {t('packets.inspector.reconnectButton')}
                     </Button>
                   )}
@@ -419,17 +423,11 @@ export function PacketInspectorPage() {
                 </div>
 
                 {/* Auto-scroll toggle */}
-                <label className="flex items-center gap-compact cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={autoScroll}
-                    onChange={(e) => setAutoScroll(e.target.checked)}
-                    className="rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-accent focus:ring-offset-surface-base"
-                  />
-                  <SmallText className="text-text-muted">
-                    {t('packets.inspector.autoScrollLabel')}
-                  </SmallText>
-                </label>
+                <Checkbox
+                  checked={autoScroll}
+                  onChange={setAutoScroll}
+                  label={t('packets.inspector.autoScrollLabel')}
+                />
 
                 {/* Packet count */}
                 <SmallText className="text-text-muted">
@@ -442,35 +440,34 @@ export function PacketInspectorPage() {
                   {t('packets.inspector.evictedCount', { count: evicted, limit: MAX_PACKETS })}
                 </SmallText>
                 {isPaused && pending > 0 && (
-                  <Tag colorScheme="yellow">
-                    <span data-testid="packet-buffer-pending">
-                      {t('packets.inspector.pendingCount', { count: pending })}
-                    </span>
-                  </Tag>
+                  <span data-testid="packet-buffer-pending">
+                    <StatusPill
+                      tone="warning"
+                      label={t('packets.inspector.pendingCount', { count: pending })}
+                    />
+                  </span>
                 )}
               </div>
-            </CardContent>
+            </div>
           </Card>
 
           {/* BPF Capture Filter */}
-          <Card className="border-surface-border bg-bg-surface/70">
-            <CardContent>
+          <Card>
+            <div>
               <BpfFilterBar />
-            </CardContent>
+            </div>
           </Card>
 
           <Inspector>
             <InspectorRecords>
-              <Card className="border-surface-border bg-bg-surface/70 h-full">
-                <CardContent className="h-full flex flex-col">
+              <Card className="h-full">
+                <div className="h-full flex flex-col">
                   <div className="flex-between mb-heading">
                     <SmallText className="text-text-muted uppercase tracking-wide font-semibold">
                       {t('packets.inspector.packetListLabel')}
                     </SmallText>
                     {isPaused && (
-                      <Tag colorScheme="yellow" className="text-xs">
-                        {t('packets.inspector.pausedTag')}
-                      </Tag>
+                      <StatusPill tone="warning" label={t('packets.inspector.pausedTag')} />
                     )}
                   </div>
                   <div className="flex-1 min-h-0">
@@ -482,7 +479,7 @@ export function PacketInspectorPage() {
                       getRowStyle={getRowStyle}
                     />
                   </div>
-                </CardContent>
+                </div>
               </Card>
             </InspectorRecords>
 
@@ -525,15 +522,14 @@ export function PacketInspectorPage() {
         </>
       )}
 
-      <ConfirmModal
-        isOpen={showStopCaptureConfirm}
+      <ConfirmDialog
+        {...dialogLabels}
+        open={showStopCaptureConfirm}
         onConfirm={handleStopCaptureConfirmed}
-        action="stop"
         onCancel={() => setShowStopCaptureConfirm(false)}
         title={t('packets.inspector.stopCaptureConfirmTitle')}
         message={t('packets.inspector.stopCaptureConfirmMessage')}
         confirmLabel={t('packets.inspector.stopCaptureButton')}
-        confirmingLabel={t('packets.inspector.stopCaptureStopping')}
         cancelLabel={tCommon('buttons.cancel')}
         confirming={stoppingCapture}
       />

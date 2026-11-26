@@ -14,18 +14,7 @@ vi.mock('./settings/SimulationSection', () => ({ SimulationSection: () => null }
 it('uses the shell connection state without starting another health poll', async () => {
   render(
     <MemoryRouter>
-      <SettingsDrawer
-        isOpen
-        onClose={vi.fn()}
-        connectionStatus="disconnected"
-        themeState={{
-          theme: 'dark',
-          effectiveTheme: 'dark',
-          isDark: true,
-          setTheme: vi.fn(),
-          toggleTheme: vi.fn(),
-        }}
-      />
+      <SettingsDrawer isOpen onClose={vi.fn()} connectionStatus="disconnected" />
     </MemoryRouter>,
   );
   fireEvent.click(screen.getByRole('tab', { name: 'Network' }));

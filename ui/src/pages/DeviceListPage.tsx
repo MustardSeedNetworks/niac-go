@@ -16,10 +16,11 @@ import { DeviceStatusMessage } from '../components/device-list/DeviceStatusMessa
 import { DeviceTableView } from '../components/device-list/DeviceTableView';
 import { useDeviceListState } from '../components/device-list/useDeviceListState';
 import { DeviceListProvider } from '../contexts/DeviceListContext';
-import { Card, CardContent } from '../ui/Card';
-import { ConfirmModal } from '../ui/ConfirmModal';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
+import { useDialogLabels } from '../ui/dialogLabels';
 
 export function DeviceListPage() {
+  const dialogLabels = useDialogLabels();
   const { t } = useTranslation('devices');
   const navigate = useNavigate();
 
@@ -42,7 +43,7 @@ export function DeviceListPage() {
     handleViewModeChange,
     selectedDevices,
     toggleDeviceSelection,
-    handleSelectAll,
+    setSelection,
     clearSelection,
     message,
     setMessage,
@@ -65,38 +66,35 @@ export function DeviceListPage() {
 
   return (
     <div className="stack-xl">
-      {/* Header section */}
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="stack-lg">
-          <DeviceListHeader
-            deviceCount={devices.length}
-            filteredDevices={filteredDevices}
-            loading={loading}
-            onRefresh={refetch}
-          />
+      <div className="stack">
+        <DeviceListHeader
+          deviceCount={devices.length}
+          filteredDevices={filteredDevices}
+          loading={loading}
+          onRefresh={refetch}
+        />
 
-          <DeviceSearchFilters
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            typeFilter={typeFilter}
-            onTypeFilterChange={setTypeFilter}
-            protocolFilter={protocolFilter}
-            onProtocolFilterChange={setProtocolFilter}
-            viewMode={viewMode}
-            onViewModeChange={handleViewModeChange}
-            deviceTypes={deviceTypes}
-            protocols={protocols}
-          />
+        <DeviceSearchFilters
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          typeFilter={typeFilter}
+          onTypeFilterChange={setTypeFilter}
+          protocolFilter={protocolFilter}
+          onProtocolFilterChange={setProtocolFilter}
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
+          deviceTypes={deviceTypes}
+          protocols={protocols}
+        />
 
-          <DeviceBulkActions
-            selectedCount={selectedDevices.size}
-            onDeleteSelected={() => setShowBulkDeleteConfirm(true)}
-            onClearSelection={clearSelection}
-          />
+        <DeviceBulkActions
+          selectedCount={selectedDevices.size}
+          onDeleteSelected={() => setShowBulkDeleteConfirm(true)}
+          onClearSelection={clearSelection}
+        />
 
-          <DeviceStatusMessage message={message} onDismiss={() => setMessage(null)} />
-        </CardContent>
-      </Card>
+        <DeviceStatusMessage message={message} onDismiss={() => setMessage(null)} />
+      </div>
 
       {/* Loading state */}
       {loading && !deviceList && <DeviceListLoadingState viewMode={viewMode} />}
@@ -118,7 +116,7 @@ export function DeviceListPage() {
           devices={filteredDevices}
           selectedDevices={selectedDevices}
           onSelectDevice={toggleDeviceSelection}
-          onSelectAll={handleSelectAll}
+          onSelectionChange={setSelection}
           onEdit={(hostname) => navigate(`/device-config/${encodeURIComponent(hostname)}`)}
           onClone={(hostname) => setShowCloneModal(hostname)}
           onDelete={(hostname) => setShowDeleteConfirm(hostname)}
@@ -130,15 +128,14 @@ export function DeviceListPage() {
       )}
 
       {/* Delete confirmation modal */}
-      <ConfirmModal
-        isOpen={showDeleteConfirm !== null}
+      <ConfirmDialog
+        {...dialogLabels}
+        open={showDeleteConfirm !== null}
         onConfirm={() => showDeleteConfirm && handleDelete(showDeleteConfirm)}
-        action="delete"
         onCancel={() => setShowDeleteConfirm(null)}
         title={t('list.deleteConfirmTitle')}
         message={t('list.deleteConfirmMessage', { hostname: showDeleteConfirm ?? '' })}
         confirmLabel={t('list.deleteConfirmLabel')}
-        confirmTone="red"
       />
 
       {/* Clone device modal */}
@@ -151,15 +148,14 @@ export function DeviceListPage() {
       )}
 
       {/* Bulk delete confirmation modal */}
-      <ConfirmModal
-        isOpen={showBulkDeleteConfirm}
+      <ConfirmDialog
+        {...dialogLabels}
+        open={showBulkDeleteConfirm}
         onConfirm={handleBulkDeleteConfirm}
-        action="delete"
         onCancel={() => setShowBulkDeleteConfirm(false)}
         title={t('list.bulkActions.confirmDeleteTitle')}
         message={t('list.bulkActions.confirmDeleteMessage', { count: selectedDevices.size })}
         confirmLabel={t('list.bulkActions.confirmDeleteLabel')}
-        confirmTone="red"
       />
     </div>
   );

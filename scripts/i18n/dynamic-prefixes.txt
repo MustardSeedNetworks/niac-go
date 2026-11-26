@@ -175,6 +175,10 @@ pages:walkAnalyzer.label
 pages:walkAnalyzer.title
 pages:walkAnalyzer.description
 pages:walkAnalyzer.eyebrow
+pages:segments.label
+pages:segments.title
+pages:segments.description
+pages:segments.eyebrow
 pages:license.label
 pages:license.title
 pages:license.description

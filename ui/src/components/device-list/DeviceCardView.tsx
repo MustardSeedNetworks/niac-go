@@ -1,18 +1,12 @@
-import { Copy, Edit3, Network, Trash2 } from 'lucide-react';
+import { Copy, Pencil, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Device } from '../../api/types';
-import {
-  deviceTypeColors,
-  deviceTypeIcons,
-  getDeviceColorClasses,
-  normalizeDeviceType,
-} from '../../constants/device-types';
-import { iconSizes } from '../../constants/sizes';
 import { useDeviceList } from '../../contexts/DeviceListContext';
+import { Card } from '../../shared/Card';
 import { ActionButton } from '../../ui/ActionButton';
-import { Card, CardContent } from '../../ui/Card';
-import { Tag } from '../../ui/Tag';
+import { DeviceTypeChip } from '../DeviceTypeChip';
+import { ProtocolChips } from '../ProtocolChips';
 import { VirtualList } from './VirtualList';
 
 /** A card plus its row gap; windowing needs every row of cards to be this tall. */
@@ -62,115 +56,76 @@ export function DeviceCardView() {
   const rows = useMemo(() => chunk(devices, columns), [devices, columns]);
 
   const renderCard = (device: Device) => {
-    const safeType = normalizeDeviceType(device.type);
-    const DeviceIcon = deviceTypeIcons[safeType];
-    const typeColor = deviceTypeColors[safeType];
-    const colorClasses = getDeviceColorClasses(typeColor);
     const deviceProtocols = getDeviceProtocols(device);
+    const selected = selectedDevices.has(device.hostname);
 
     return (
-      <div key={device.hostname} data-testid="device-list-card" className="h-full rounded-2xl">
-        <Card
-          className={`group border-surface-border bg-bg-surface/70 hover:border-brand-primary/30 transition-all h-full ${
-            selectedDevices.has(device.hostname)
-              ? 'ring-2 ring-brand-primary/50 border-brand-primary/30'
-              : ''
-          }`}
-        >
-          <CardContent className="pad stack">
-            {/* Header with checkbox and type icon */}
-            <div className="flex items-start justify-between">
-              <label className="flex items-center gap-default">
-                <input
-                  type="checkbox"
-                  checked={selectedDevices.has(device.hostname)}
-                  onChange={() => onSelectDevice(device.hostname)}
-                  className="h-4 w-4 rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-primary cursor-pointer"
-                />
-                <div className={`pad-xs rounded-lg ${colorClasses.bg}`}>
-                  <DeviceIcon className={`${iconSizes.lg} ${colorClasses.text}`} />
-                </div>
-              </label>
-              <Tag colorScheme={typeColor} className="text-xs capitalize">
-                {device.type?.replace('_', ' ') || t('list.unknownType')}
-              </Tag>
+      <div key={device.hostname} data-testid="device-list-card" className="h-full">
+        <Card className={`h-full ${selected ? 'border-brand-primary' : ''}`}>
+          <div className="stack">
+            <div className="flex items-center justify-between gap-2">
+              <input
+                type="checkbox"
+                checked={selected}
+                onChange={() => onSelectDevice(device.hostname)}
+                className="h-4 w-4 accent-brand-primary"
+                aria-label={t('list.selectDeviceAria', { hostname: device.hostname })}
+              />
+              <DeviceTypeChip type={device.type} />
             </div>
 
-            <ActionButton
-              action="edit"
-              onClick={() => onEdit(device.hostname)}
-              className="w-full text-left rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 focus:ring-offset-surface-base"
-              aria-label={t('list.editDeviceAria', { hostname: device.hostname })}
-            >
-              {/* Device name and IP */}
-              <div>
-                <h3 className="font-semibold text-text-primary group-hover:text-brand-accent transition-colors truncate">
-                  {device.hostname}
-                </h3>
-                <div className="flex items-center gap-tight mt-tight">
-                  <Network className={`${iconSizes.sm} text-text-muted`} />
-                  <span className="text-sm text-text-muted font-mono">
-                    {device.ip || device.ips?.[0] || t('list.noIp')}
-                  </span>
-                  {device.ips && device.ips.length > 1 && (
-                    <span className="text-xs text-text-muted">+{device.ips.length - 1}</span>
-                  )}
-                </div>
-              </div>
-
-              {/* MAC Address */}
-              <div className="text-xs text-text-muted font-mono truncate">{device.mac}</div>
-
-              {/* Protocols */}
-              <div className="flex flex-wrap gap-tight">
-                {deviceProtocols.length > 0 ? (
-                  deviceProtocols.slice(0, 3).map((proto) => (
-                    <Tag key={proto} colorScheme="gray" className="text-xs">
-                      {proto}
-                    </Tag>
-                  ))
-                ) : (
-                  <span className="text-text-muted text-xs">{t('list.noProtocols')}</span>
-                )}
-                {deviceProtocols.length > 3 && (
-                  <Tag colorScheme="gray" className="text-xs">
-                    +{deviceProtocols.length - 3}
-                  </Tag>
-                )}
-              </div>
-            </ActionButton>
-
-            {/* Actions */}
-            <div className="flex justify-end gap-tight pt-2 border-t border-surface-border">
+            <div className="min-w-0">
               <ActionButton
                 action="edit"
+                variant="ghost"
                 onClick={() => onEdit(device.hostname)}
-                className="pad-xs text-text-muted hover:text-brand-accent hover:bg-surface-hover rounded-lg transition-colors"
-                title={t('list.editDeviceTitle', { hostname: device.hostname })}
+                className="w-full justify-start px-1 font-semibold"
                 aria-label={t('list.editDeviceAria', { hostname: device.hostname })}
               >
-                <Edit3 className={iconSizes.md} />
+                <span className="truncate">{device.hostname}</span>
               </ActionButton>
+              <p className="mt-1 truncate font-mono text-sm text-text-muted">
+                {device.ip || device.ips?.[0] || t('list.noIp')}
+                {device.ips && device.ips.length > 1 ? ` +${device.ips.length - 1}` : ''}
+              </p>
+              <p className="truncate font-mono text-xs text-text-muted">{device.mac}</p>
+            </div>
+
+            <ProtocolChips protocols={deviceProtocols} />
+
+            <div className="flex justify-end gap-1 border-t border-hairline pt-2">
               <ActionButton
                 action="edit"
+                variant="ghost"
+                size="sm"
+                iconOnly
+                icon={<Pencil className="h-4 w-4" />}
+                onClick={() => onEdit(device.hostname)}
+                title={t('list.editDeviceTitle', { hostname: device.hostname })}
+                aria-label={t('list.editDeviceAria', { hostname: device.hostname })}
+              />
+              <ActionButton
+                action="edit"
+                variant="ghost"
+                size="sm"
+                iconOnly
+                icon={<Copy className="h-4 w-4" />}
                 onClick={() => onClone(device.hostname)}
-                className="pad-xs text-text-muted hover:text-status-info hover:bg-surface-hover rounded-lg transition-colors"
                 title={t('list.cloneDeviceTitle', { hostname: device.hostname })}
                 aria-label={t('list.cloneDeviceAria', { hostname: device.hostname })}
-              >
-                <Copy className={iconSizes.md} />
-              </ActionButton>
+              />
               <ActionButton
                 action="delete"
+                variant="destructive"
+                size="sm"
+                iconOnly
+                icon={<Trash2 className="h-4 w-4" />}
                 onClick={() => onDelete(device.hostname)}
-                className="pad-xs text-text-muted hover:text-status-error hover:bg-surface-hover rounded-lg transition-colors"
                 title={t('list.deleteDeviceTitle', { hostname: device.hostname })}
                 aria-label={t('list.deleteDeviceAria', { hostname: device.hostname })}
-              >
-                <Trash2 className={iconSizes.md} />
-              </ActionButton>
+              />
             </div>
-          </CardContent>
+          </div>
         </Card>
       </div>
     );

@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import type { ConnectionState } from '../hooks/useConnectionStatus';
 import { accessibleNameIncluding } from '../lib/accessibleName';
-import { Tooltip } from './Tooltip';
+import { Tooltip } from '../shared/Tooltip';
 
 const STATUS_STYLES: Record<ConnectionState, string> = {
   connected: 'bg-status-success',

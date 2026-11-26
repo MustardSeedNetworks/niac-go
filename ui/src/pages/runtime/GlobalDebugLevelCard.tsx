@@ -1,5 +1,5 @@
 import { DebugLevelControl } from '../../components/debug/DebugLevelControl';
-import { Card, CardContent } from '../../ui/Card';
+import { Card } from '../../shared/Card';
 
 /**
  * GlobalDebugLevelCard — Runtime-page home for the global debug-level control.
@@ -8,10 +8,10 @@ import { Card, CardContent } from '../../ui/Card';
  */
 export function GlobalDebugLevelCard() {
   return (
-    <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="stack">
+    <Card>
+      <div className="stack">
         <DebugLevelControl />
-      </CardContent>
+      </div>
     </Card>
   );
 }

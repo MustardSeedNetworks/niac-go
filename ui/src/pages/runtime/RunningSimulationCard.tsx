@@ -6,10 +6,11 @@ import type { SimulationStatus } from '../../api/types';
 import { StatBlock } from '../../components/StatBlock';
 import { iconSizes } from '../../constants/sizes';
 import { useToast } from '../../hooks/useToast';
-import { Button } from '../../ui/Button';
-import { Card, CardContent } from '../../ui/Card';
-import { Tag } from '../../ui/Tag';
-import { H2, SmallText } from '../../ui/Typography';
+import { Button } from '../../shared/Button';
+import { Card } from '../../shared/Card';
+import { StatusPill } from '../../shared/StatusPill';
+import { ActionButton } from '../../ui/ActionButton';
+import { SmallText } from '../../ui/Typography';
 import { formatTime, formatUptime } from '../../utils/format';
 
 export interface RunningSimulationCardProps {
@@ -30,7 +31,7 @@ export interface RunningSimulationCardProps {
 }
 
 /**
- * RunningSimulationCard — the green "simulation is live" card. Lives
+ * RunningSimulationCard — the "simulation is live" card. Lives
  * alongside RuntimeControlPage in pages/runtime/ so the page-level
  * file reads as a clean Start/Stop flow without 100+ lines of
  * Stat-block markup.
@@ -62,16 +63,12 @@ export function RunningSimulationCard({
   };
 
   return (
-    <Card className="border-status-success/30 bg-gradient-to-br from-status-success/20 to-bg-surface/70">
-      <CardContent className="space-y-5">
-        <div className="flex-between">
-          <div className="flex items-center gap-default">
-            <div className="h-3 w-3 animate-pulse rounded-full bg-status-success" />
-            <H2>{t('runtime.running.title')}</H2>
-          </div>
-          <Tag colorScheme="green">{t('runtime.running.active')}</Tag>
-        </div>
-
+    <Card
+      title={t('runtime.running.title')}
+      headerAction={<StatusPill tone="success" label={t('runtime.running.active')} />}
+      data-testid="running-simulation-card"
+    >
+      <div className="stack-lg">
         <div className="grid gap-comfortable md:grid-cols-2 lg:grid-cols-3">
           <StatBlock
             label={tCommon('labels.interface')}
@@ -101,7 +98,7 @@ export function RunningSimulationCard({
         </div>
 
         {simStatus.fabric && (
-          <div className="rounded-lg border border-surface-border bg-bg-base/40 pad-default stack">
+          <div className="stack border-t border-hairline pt-4">
             <div className="flex flex-wrap gap-default text-sm text-text-secondary">
               <span>
                 {t('runtime.fabric.attachment')}: {simStatus.fabric.topology.binding.attachment}
@@ -160,34 +157,34 @@ export function RunningSimulationCard({
               action — it was drawn as an outline beside two ghosts, so the
               running card had no primary at all. Red because it ends the
               run; it is confirmed before it fires. */}
-          <Button
-            tone="red"
+          <ActionButton
+            action="stop"
+            variant="destructive"
             disabled={stopping}
             onClick={onStop}
             data-testid="runtime-stop"
-            action="stop"
-            leftIcon={<Activity className={iconSizes.md} />}
+            icon={<Activity className={iconSizes.md} />}
           >
             {stopping ? t('runtime.running.stoppingLabel') : t('runtime.running.stopButton')}
-          </Button>
+          </ActionButton>
           <Button
             variant="ghost"
-            leftIcon={<FileCog className={iconSizes.md} />}
+            icon={<FileCog className={iconSizes.md} />}
             onClick={() => navigate('/devices')}
           >
             {t('runtime.running.viewDevices')}
           </Button>
-          <Button
+          <ActionButton
             variant="ghost"
-            leftIcon={<Download className={iconSizes.md} />}
+            icon={<Download className={iconSizes.md} />}
             onClick={handleDownload}
             data-testid="runtime-download-yaml"
             title={t('runtime.running.downloadYamlTitle')}
           >
             {t('runtime.running.downloadYaml')}
-          </Button>
+          </ActionButton>
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 }

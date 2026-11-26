@@ -5,8 +5,9 @@ import { isApiError } from '../../api/errors';
 import { installContentBundleWithProgress } from '../../api/library-client';
 import { iconSizes } from '../../constants/sizes';
 import { useToast } from '../../hooks/useToast';
-import { Button } from '../../ui/Button';
-import { Card, CardContent } from '../../ui/Card';
+import { Button } from '../../shared/Button';
+import { Card } from '../../shared/Card';
+import { ActionButton } from '../../ui/ActionButton';
 import { SmallText } from '../../ui/Typography';
 import { fileToBase64 } from '../../utils/file';
 import { formatBytes } from '../../utils/format';
@@ -131,8 +132,8 @@ export function ContentBundleUploader() {
   }, [selectedFile, addToast, showError, t, handleClear]);
 
   return (
-    <Card className="border-surface-border bg-bg-surface/70" data-testid="content-bundle-uploader">
-      <CardContent className="stack-lg">
+    <Card data-testid="content-bundle-uploader">
+      <div className="stack-lg">
         <div>
           <h3 className="text-sm font-medium text-text-primary">
             {t('libraryFiles.installBundle.title')}
@@ -157,7 +158,7 @@ export function ContentBundleUploader() {
             size="sm"
             onClick={() => fileInputRef.current?.click()}
             disabled={installing}
-            leftIcon={<Upload className={iconSizes.md} />}
+            icon={<Upload className={iconSizes.md} />}
             data-testid="content-bundle-browse"
           >
             {t('libraryFiles.installBundle.browseButton')}
@@ -169,7 +170,7 @@ export function ContentBundleUploader() {
               {selectedFile.name} ({formatBytes(selectedFile.size)})
               <Button
                 variant="ghost"
-                size="xs"
+                size="sm"
                 onClick={handleClear}
                 disabled={installing}
                 aria-label={tCommon('buttons.clear')}
@@ -179,19 +180,19 @@ export function ContentBundleUploader() {
             </span>
           )}
 
-          <Button
-            tone="violet"
+          <ActionButton
+            variant="primary"
+            action="admin"
             size="sm"
             onClick={() => void handleInstall()}
-            action="admin"
             disabled={!selectedFile || installing}
-            leftIcon={<PackageCheck className={iconSizes.md} />}
+            icon={<PackageCheck className={iconSizes.md} />}
             data-testid="content-bundle-install"
           >
             {installing
               ? t('libraryFiles.installBundle.installingButton')
               : t('libraryFiles.installBundle.installButton')}
-          </Button>
+          </ActionButton>
         </div>
 
         <SmallText className="text-text-muted">
@@ -228,7 +229,7 @@ export function ContentBundleUploader() {
             <SmallText className="text-status-error-strong">{validationError}</SmallText>
           </div>
         )}
-      </CardContent>
+      </div>
     </Card>
   );
 }

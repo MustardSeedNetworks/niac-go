@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { ConfirmModal } from './ConfirmModal';
-import { Modal } from './Modal';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
+import { Modal } from '../shared/Modal';
 
 /**
  * Guards #1465.
@@ -27,7 +27,7 @@ describe('Modal Escape handling', () => {
     const onClose = vi.fn();
 
     render(
-      <Modal isOpen onClose={onClose} title="Danger">
+      <Modal open closeLabel="Close" onClose={onClose} title="Danger">
         <button type="button">Inside</button>
       </Modal>,
     );
@@ -43,7 +43,7 @@ describe('Modal Escape handling', () => {
     const onClose = vi.fn();
 
     render(
-      <Modal isOpen onClose={onClose} closeOnEscape={false} title="Danger">
+      <Modal open closeLabel="Close" onClose={onClose} closeOnEscape={false} title="Danger">
         <button type="button">Inside</button>
       </Modal>,
     );
@@ -54,19 +54,21 @@ describe('Modal Escape handling', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it('cancels a ConfirmModal on Escape, the real CT304 case', async () => {
+  it('cancels a ConfirmDialog on Escape, the real CT304 case', async () => {
     const user = userEvent.setup();
     const onCancel = vi.fn();
     const onConfirm = vi.fn();
 
     render(
-      <ConfirmModal
-        isOpen
+      <ConfirmDialog
+        open
         onConfirm={onConfirm}
         onCancel={onCancel}
         title="Stop simulation?"
         message="Are you sure?"
         confirmLabel="Stop"
+        cancelLabel="Cancel"
+        closeLabel="Close"
       />,
     );
 

@@ -2,8 +2,8 @@ import { AlignJustify, Columns2 } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
-import { Tag } from '../../ui/Tag';
-import { Tooltip } from '../../ui/Tooltip';
+import { StatusPill } from '../../shared/StatusPill';
+import { Tooltip } from '../../shared/Tooltip';
 import { SmallText } from '../../ui/Typography';
 import { DiffBlockComponent } from './diff-viewer/DiffBlock';
 import { DiffBlockOverlayComponent } from './diff-viewer/DiffBlockOverlay';
@@ -39,15 +39,12 @@ function DiffStatsBar({
   return (
     <div className="flex items-center gap-comfortable flex-wrap">
       <SmallText className="text-text-muted">{t('configDiff.changesLabel')}</SmallText>
-      <Tag colorScheme="green" className="text-xs">
-        {t('configDiff.additionsCount', { count: additions })}
-      </Tag>
-      <Tag colorScheme="red" className="text-xs">
-        {t('configDiff.deletionsCount', { count: deletions })}
-      </Tag>
-      <Tag colorScheme="yellow" className="text-xs">
-        {t('configDiff.modifiedBlocksCount', { count: modifications })}
-      </Tag>
+      <StatusPill tone="success" label={t('configDiff.additionsCount', { count: additions })} />
+      <StatusPill tone="error" label={t('configDiff.deletionsCount', { count: deletions })} />
+      <StatusPill
+        tone="warning"
+        label={t('configDiff.modifiedBlocksCount', { count: modifications })}
+      />
       {showMergeControls && (
         <SmallText className="text-text-muted ml-auto">
           {t('configDiff.decisionsMadeCount', {

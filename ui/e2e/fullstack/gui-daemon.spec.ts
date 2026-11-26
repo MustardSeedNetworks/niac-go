@@ -35,7 +35,7 @@ test.describe('daemon-served GUI', () => {
     await page.goto('/');
 
     await expect(page).toHaveTitle(/NIAC/i);
-    await expect(page.getByRole('navigation')).toBeVisible();
+    await expect(page.getByTestId('sidebar-desktop')).toBeVisible();
     await expect(page.getByTestId('page-header-title')).toHaveText('Dashboard');
 
     await expect

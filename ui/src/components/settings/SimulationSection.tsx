@@ -19,9 +19,9 @@ import { fetchLibraryNetworks } from '../../api/library-client';
 import type { LibraryNetwork } from '../../api/types';
 import { useApiResource } from '../../hooks/useApiResource';
 import { useUsableInterfacesResource } from '../../hooks/usePageResources';
+import { Select } from '../../shared/Select';
 import { type ConfigSource, useUIStore } from '../../stores/ui-store';
 import { cn } from '../../styles/theme';
-import { Select } from '../../ui/Input';
 import { getErrorMessage } from '../../utils/format';
 
 type ConfigTab = 'configs' | 'upload';
@@ -132,7 +132,7 @@ export function SimulationSection(): ReactElement {
           id="sim-interface"
           data-testid="simulation-interface"
           value={simulationSettings.selectedInterface}
-          onChange={(selectedInterface) => setSimulationSettings({ selectedInterface })}
+          onValueChange={(selectedInterface) => setSimulationSettings({ selectedInterface })}
           disabled={interfacesLoading}
           className="min-h-11 text-sm"
           options={[

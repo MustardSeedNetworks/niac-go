@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { clearCaptureFilter, getCaptureFilter, setCaptureFilter } from '../api/capture';
 import { isApiError } from '../api/errors';
 import { iconSizes } from '../constants/sizes';
-import { Button } from '../ui/Button';
+import { Input } from '../shared/Input';
+import { ActionButton } from '../ui/ActionButton';
 import { SmallText } from '../ui/Typography';
 import { getErrorMessage } from '../utils/format';
 import { GlossaryPopover } from './GlossaryPopover';
@@ -145,7 +146,7 @@ export const BpfFilterBar = memo(function BpfFilterBar() {
         </div>
 
         {/* Input */}
-        <input
+        <Input
           type="text"
           value={input}
           onChange={(e) => {
@@ -154,39 +155,35 @@ export const BpfFilterBar = memo(function BpfFilterBar() {
           }}
           onKeyDown={handleKeyDown}
           placeholder={tPages('packets.bpfFilter.inputPlaceholder')}
-          className={`flex-1 bg-bg-base/70 border rounded-lg px-3 py-compact-md text-sm font-mono text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 ${
-            error
-              ? 'border-status-error/60 focus:ring-status-error/40'
-              : isActive
-                ? 'border-status-success/40 focus:ring-status-success/40'
-                : 'border-surface-border focus:ring-brand-primary/40'
-          }`}
+          className="flex-1 font-mono"
+          aria-invalid={error ? true : undefined}
+          aria-label={tPages('packets.bpfFilter.inputPlaceholder')}
           disabled={isLoading}
         />
 
         {/* Apply button */}
-        <Button
+        <ActionButton
+          action="edit"
           variant="ghost"
           size="sm"
           onClick={handleApply}
-          action="edit"
           disabled={isLoading || !input.trim()}
         >
           {t('buttons.apply')}
-        </Button>
+        </ActionButton>
 
         {/* Clear button */}
         {isActive && (
-          <Button
+          <ActionButton
+            action="edit"
             variant="ghost"
             size="sm"
             onClick={handleClear}
-            action="edit"
             disabled={isLoading}
-            leftIcon={<X className="h-3.5 w-3.5" />}
+            icon={<X className="h-3.5 w-3.5" />}
           >
             {t('buttons.clear')}
-          </Button>
+          </ActionButton>
         )}
       </div>
 

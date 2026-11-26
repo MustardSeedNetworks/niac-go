@@ -7,14 +7,8 @@
 import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DeviceStatusMessage } from '../components/device-list/DeviceStatusMessage';
-import { CollapsibleSection } from '../components/form/CollapsibleSection';
 import i18n from '../i18n';
-import { Alert } from './Alert';
-import { BaseCard } from './BaseCard';
-import { Button } from './Button';
 import { ConnectionStatus } from './ConnectionStatus';
-import { SearchInput } from './Input';
-import { StatusBadge } from './StatusBadge';
 
 const noop = () => {};
 
@@ -27,40 +21,10 @@ afterEach(async () => {
 });
 
 describe('shared primitives in es', () => {
-  it('names the dismiss buttons in Spanish', () => {
-    render(
-      <>
-        <Alert status="info" onDismiss={noop}>
-          x
-        </Alert>
-        <DeviceStatusMessage message={{ type: 'success', text: 'ok' }} onDismiss={noop} />
-      </>,
-    );
+  it('names the dismiss button in Spanish', () => {
+    render(<DeviceStatusMessage message={{ type: 'success', text: 'ok' }} onDismiss={noop} />);
 
-    expect(screen.getByRole('button', { name: 'Descartar alerta' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Descartar mensaje' })).toBeInTheDocument();
-  });
-
-  it('names every status badge in Spanish', () => {
-    render(
-      <>
-        <StatusBadge status="success" />
-        <StatusBadge status="warning" variant="dot" />
-        <StatusBadge status="error" />
-        <StatusBadge status="unknown" />
-        <StatusBadge status="loading" />
-      </>,
-    );
-
-    for (const name of [
-      'Estado: correcto',
-      'Estado: advertencia',
-      'Estado: error',
-      'Estado: desconocido',
-      'Estado: cargando',
-    ]) {
-      expect(screen.getByRole('img', { name }), name).toBeInTheDocument();
-    }
   });
 
   it('describes the connection in Spanish', () => {
@@ -71,52 +35,5 @@ describe('shared primitives in es', () => {
       'Servidor inaccesible Sin conexión',
     );
     expect(screen.getByText('Sin conexión')).toBeInTheDocument();
-  });
-
-  it('localizes the search placeholder and clear button', () => {
-    render(<SearchInput value="tcp" onChange={noop} />);
-
-    expect(screen.getByPlaceholderText('Buscar...')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Limpiar búsqueda' })).toBeInTheDocument();
-  });
-
-  it('localizes the default empty message', () => {
-    render(
-      <BaseCard<string> title="Card" data={null} getStatus={() => 'success'}>
-        {(value) => value}
-      </BaseCard>,
-    );
-
-    expect(screen.getByText('No hay datos disponibles')).toBeInTheDocument();
-  });
-
-  it('labels a collapsible section and its state tags in Spanish', () => {
-    const { rerender } = render(
-      <CollapsibleSection title="SNMP" isExpanded={false} onToggle={noop} required enabled>
-        x
-      </CollapsibleSection>,
-    );
-
-    // "Obligatorio" is drawn on the button and is not in the state phrase.
-    expect(
-      screen.getByRole('button', { name: 'Sección SNMP, contraída SNMP Obligatorio' }),
-    ).toBeInTheDocument();
-    expect(screen.getByText('Obligatorio')).toBeInTheDocument();
-    expect(screen.getByText('Habilitado')).toBeInTheDocument();
-
-    rerender(
-      <CollapsibleSection title="SNMP" isExpanded onToggle={noop} enabled={false}>
-        x
-      </CollapsibleSection>,
-    );
-
-    expect(screen.getByRole('button', { name: 'Sección SNMP, expandida' })).toBeInTheDocument();
-    expect(screen.getByText('Deshabilitado')).toBeInTheDocument();
-  });
-
-  it('titles the button spinner in Spanish', () => {
-    render(<Button loading>Guardar</Button>);
-
-    expect(screen.getByTitle('Cargando...')).toBeInTheDocument();
   });
 });

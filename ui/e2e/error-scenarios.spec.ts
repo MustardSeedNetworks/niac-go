@@ -24,7 +24,7 @@ import { sidebar } from './support/sidebar';
 
 /** The app shell rendered, and no render-crash fallback replaced it. */
 async function expectShellSurvives(page: import('@playwright/test').Page): Promise<void> {
-  await expect(sidebar(page).getByTestId('sidebar-settings-button')).toBeVisible({
+  await expect(sidebar(page).getByTestId('rail-settings')).toBeVisible({
     timeout: 15000,
   });
   await expect(page.getByTestId('error-boundary-fallback')).toHaveCount(0);

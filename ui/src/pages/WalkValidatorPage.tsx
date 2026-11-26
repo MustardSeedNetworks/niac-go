@@ -10,18 +10,21 @@ import type {
 } from '../api/types';
 import { GlossaryPopover } from '../components/GlossaryPopover';
 import { useToast } from '../hooks/useToast';
-import { Button } from '../ui/Button';
-import { Card, CardContent } from '../ui/Card';
-import { ConfirmModal } from '../ui/ConfirmModal';
-import { DataTable, type DataTableColumn } from '../ui/DataTable';
-import { Tooltip } from '../ui/Tooltip';
+import { Card } from '../shared/Card';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
+import { DataTable, type DataTableColumn } from '../shared/DataTable';
+import { StatusPill } from '../shared/StatusPill';
+import { Tooltip } from '../shared/Tooltip';
+import { ActionButton } from '../ui/ActionButton';
+import { useDialogLabels } from '../ui/dialogLabels';
+import { useTableLabels } from '../ui/tableLabels';
 
 type Severity = 'error' | 'warning' | 'info';
 
-const SEVERITY_BADGE: Record<Severity, string> = {
-  error: 'bg-status-error/20 text-status-error-strong ring-status-error/40',
-  warning: 'bg-status-warning/20 text-status-warning-strong ring-status-warning/40',
-  info: 'bg-status-info/20 text-status-info-strong ring-status-info/40',
+const SEVERITY_TONE: Record<Severity, 'error' | 'warning' | 'info'> = {
+  error: 'error',
+  warning: 'warning',
+  info: 'info',
 };
 
 const SEVERITY_ORDER: Severity[] = ['error', 'warning', 'info'];
@@ -37,6 +40,7 @@ const severityCounts = (issues: WalkValidationIssue[]): Record<Severity, number>
 };
 
 export function WalkValidatorPage() {
+  const dialogLabels = useDialogLabels();
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const [files, setFiles] = useState<LibraryFileEntry[]>([]);
@@ -137,24 +141,21 @@ export function WalkValidatorPage() {
     [batchResponse],
   );
 
+  const labels = useTableLabels(t('walkValidator.issuesTable.message').toLowerCase());
   const issueColumns: DataTableColumn<WalkValidationIssue>[] = [
     {
       key: 'line',
       header: t('walkValidator.issuesTable.line'),
-      headerClassName: 'w-16',
-      cellClassName: 'font-mono text-xs text-text-muted',
-      cell: (issue) => issue.line,
+      cell: (issue) => <span className="font-mono text-xs text-text-muted">{issue.line}</span>,
     },
     {
       key: 'severity',
       header: t('walkValidator.issuesTable.severity'),
-      headerClassName: 'w-24',
       cell: (issue) => (
-        <span
-          className={`rounded px-cell py-0.5 text-[10px] font-medium ring-1 ${SEVERITY_BADGE[issue.severity as Severity] ?? ''}`}
-        >
-          {issue.severity}
-        </span>
+        <StatusPill
+          tone={SEVERITY_TONE[issue.severity as Severity] ?? 'unknown'}
+          label={issue.severity}
+        />
       ),
     },
     {
@@ -165,14 +166,14 @@ export function WalkValidatorPage() {
     {
       key: 'oid',
       header: t('walkValidator.issuesTable.oid'),
-      cellClassName: 'font-mono text-xs text-text-muted',
-      cell: (issue) => issue.oid ?? '',
+      cell: (issue) => <span className="font-mono text-xs text-text-muted">{issue.oid ?? ''}</span>,
     },
     {
       key: 'original',
       header: t('walkValidator.issuesTable.original'),
-      cellClassName: 'truncate font-mono text-xs text-text-muted',
-      cell: (issue) => issue.original,
+      cell: (issue) => (
+        <span className="truncate font-mono text-xs text-text-muted">{issue.original}</span>
+      ),
     },
   ];
 
@@ -180,40 +181,33 @@ export function WalkValidatorPage() {
     {
       key: 'filename',
       header: t('walkValidator.batchTable.filename'),
-      cellClassName: 'font-mono text-xs',
-      cell: (result) => result.filename,
+      cell: (result) => <span className="font-mono text-xs">{result.filename}</span>,
     },
     {
       key: 'status',
       header: t('walkValidator.batchTable.status'),
-      headerClassName: 'w-24',
       cell: (result) => (
-        <span
-          className={`rounded px-cell py-0.5 text-[10px] font-medium ring-1 ${
+        <StatusPill
+          tone={result.valid ? 'success' : 'error'}
+          label={
             result.valid
-              ? 'bg-status-success/20 text-status-success-strong ring-status-success/40'
-              : 'bg-status-error/20 text-status-error-strong ring-status-error/40'
-          }`}
-        >
-          {result.valid
-            ? t('walkValidator.batchStatusValid')
-            : t('walkValidator.batchStatusInvalid')}
-        </span>
+              ? t('walkValidator.batchStatusValid')
+              : t('walkValidator.batchStatusInvalid')
+          }
+        />
       ),
     },
     {
       key: 'issues',
       header: t('walkValidator.batchTable.issues'),
-      headerClassName: 'w-24',
-      cellClassName: 'text-text-muted',
-      cell: (result) => result.issues.length,
+      cell: (result) => <span className="text-text-muted">{result.issues.length}</span>,
     },
   ];
 
   return (
     <div className="stack-xl">
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="stack-lg">
+      <Card>
+        <div className="stack-lg">
           <header>
             <h2 className="flex items-center gap-compact text-2xl font-semibold text-text-primary">
               {t('walkValidator.pageTitle')}
@@ -234,7 +228,7 @@ export function WalkValidatorPage() {
           <div className="grid gap-comfortable md:grid-cols-2">
             <label className="block text-sm">
               <span className="text-text-secondary">{t('walkValidator.fromWalksDir')}</span>
-              <Tooltip text={t('walkValidator.fromWalksDirHelp')} className="w-full">
+              <Tooltip text={t('walkValidator.fromWalksDirHelp')}>
                 <select
                   data-testid="walk-validator-picker"
                   value={selectedFile}
@@ -260,7 +254,7 @@ export function WalkValidatorPage() {
 
             <label className="block text-sm">
               <span className="text-text-secondary">{t('walkValidator.pastePathLabel')}</span>
-              <Tooltip text={t('walkValidator.pastePathHelp')} className="w-full">
+              <Tooltip text={t('walkValidator.pastePathHelp')}>
                 <input
                   type="text"
                   value={customPath}
@@ -273,54 +267,54 @@ export function WalkValidatorPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-default">
-            <Button
+            <ActionButton
+              variant="primary"
+              action="edit"
               type="button"
               onClick={() => void run('validating')}
-              action="edit"
               disabled={busy !== 'idle' || !targetPath}
               title={t('walkValidator.validateHelp')}
             >
               {busy === 'validating'
                 ? t('walkValidator.validatingButton')
                 : t('walkValidator.validateButton')}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              tone="red"
-              onClick={() => setShowAutoFixConfirm(true)}
+            </ActionButton>
+            <ActionButton
               action="edit"
+              variant="secondary"
+              type="button"
+              onClick={() => setShowAutoFixConfirm(true)}
               disabled={busy !== 'idle' || !targetPath}
               title={t('walkValidator.autoFixHelp')}
             >
               {busy === 'fixing'
                 ? t('walkValidator.fixingButton')
                 : t('walkValidator.autoFixButton')}
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => void runBatch()}
+            </ActionButton>
+            <ActionButton
               action="edit"
+              variant="secondary"
+              type="button"
+              onClick={() => void runBatch()}
               disabled={batchBusy}
               title={t('walkValidator.validateAllHelp')}
             >
               {batchBusy
                 ? t('walkValidator.validatingAllButton')
                 : t('walkValidator.validateAllButton')}
-            </Button>
+            </ActionButton>
             {error && (
               <span className="text-sm text-status-error" role="alert">
                 {error}
               </span>
             )}
           </div>
-        </CardContent>
+        </div>
       </Card>
 
       {response?.result && (
-        <Card className="border-surface-border bg-bg-surface/70">
-          <CardContent className="stack-lg">
+        <Card>
+          <div className="stack-lg">
             <header className="flex flex-wrap items-baseline gap-comfortable">
               <h2 className="heading-3 text-text-primary">
                 {response.message ?? t('walkValidator.resultHeading')}
@@ -331,36 +325,29 @@ export function WalkValidatorPage() {
                   valid: response.result.validLines,
                 })}
               </span>
-              <span
-                className={`rounded px-cell py-0.5 text-xs font-medium ring-1 ${
+              <StatusPill
+                tone={response.result.valid ? 'success' : 'error'}
+                label={
                   response.result.valid
-                    ? 'bg-status-success/20 text-status-success-strong ring-status-success/40'
-                    : 'bg-status-error/20 text-status-error-strong ring-status-error/40'
-                }`}
-              >
-                {response.result.valid
-                  ? t('walkValidator.resultValid')
-                  : t('walkValidator.resultInvalid')}
-              </span>
+                    ? t('walkValidator.resultValid')
+                    : t('walkValidator.resultInvalid')
+                }
+              />
               {SEVERITY_ORDER.map((sev) => (
-                <span
-                  key={sev}
-                  className={`rounded px-cell py-0.5 text-xs font-medium ring-1 ${SEVERITY_BADGE[sev]}`}
-                >
-                  {sev}: {counts[sev]}
-                </span>
+                <StatusPill key={sev} tone={SEVERITY_TONE[sev]} label={`${sev}: ${counts[sev]}`} />
               ))}
               {typeof response.result.fixedCount === 'number' && (
-                <span className="rounded bg-status-success/20 px-cell py-0.5 text-xs font-medium text-status-success-strong ring-1 ring-status-success/40">
-                  {t('walkValidator.fixedCount', { fixed: response.result.fixedCount })}
-                </span>
+                <StatusPill
+                  tone="success"
+                  label={t('walkValidator.fixedCount', { fixed: response.result.fixedCount })}
+                />
               )}
             </header>
 
             {issues.length > 0 && (
               <label className="block text-sm">
                 <span className="text-text-secondary">{t('walkValidator.oidFilterLabel')}</span>
-                <Tooltip text={t('walkValidator.oidFilterHelp')} className="w-full">
+                <Tooltip text={t('walkValidator.oidFilterHelp')}>
                   <input
                     type="text"
                     value={oidFilter}
@@ -381,8 +368,9 @@ export function WalkValidatorPage() {
                 rows={visibleIssues}
                 columns={issueColumns}
                 getRowKey={(issue) => `${issue.line}-${issue.oid ?? ''}-${issue.message}`}
-                emptyMessage={null}
-                rowClassName={() => 'text-text-primary hover:bg-bg-base/40'}
+                caption={t('walkValidator.resultHeading')}
+                labels={labels}
+                empty={null}
               />
             )}
             {filteredIssues.length > ISSUES_DISPLAY_CAP && (
@@ -394,27 +382,24 @@ export function WalkValidatorPage() {
                 })}
               </p>
             )}
-          </CardContent>
+          </div>
         </Card>
       )}
 
       {batchResponse && (
-        <Card className="border-surface-border bg-bg-surface/70">
-          <CardContent className="stack-lg">
+        <Card>
+          <div className="stack-lg">
             <header className="flex flex-wrap items-baseline gap-comfortable">
               <h2 className="heading-3 text-text-primary">{t('walkValidator.batchHeading')}</h2>
               <span className="text-sm text-text-muted">{batchResponse.message}</span>
-              <span
-                className={`rounded px-cell py-0.5 text-xs font-medium ring-1 ${
+              <StatusPill
+                tone={batchResponse.success ? 'success' : 'error'}
+                label={
                   batchResponse.success
-                    ? 'bg-status-success/20 text-status-success-strong ring-status-success/40'
-                    : 'bg-status-error/20 text-status-error-strong ring-status-error/40'
-                }`}
-              >
-                {batchResponse.success
-                  ? t('walkValidator.batchStatusValid')
-                  : t('walkValidator.batchStatusInvalid')}
-              </span>
+                    ? t('walkValidator.batchStatusValid')
+                    : t('walkValidator.batchStatusInvalid')
+                }
+              />
             </header>
 
             {batchResults.length === 0 ? (
@@ -424,17 +409,18 @@ export function WalkValidatorPage() {
                 rows={batchResults}
                 columns={batchColumns}
                 getRowKey={(result) => result.filename}
-                emptyMessage={null}
-                rowClassName={() => 'text-text-primary hover:bg-bg-base/40'}
+                caption={t('walkValidator.batchHeading')}
+                labels={labels}
+                empty={null}
               />
             )}
-          </CardContent>
+          </div>
         </Card>
       )}
 
-      <ConfirmModal
-        action="edit"
-        isOpen={showAutoFixConfirm}
+      <ConfirmDialog
+        {...dialogLabels}
+        open={showAutoFixConfirm}
         onConfirm={() => {
           setShowAutoFixConfirm(false);
           void run('fixing');
@@ -444,7 +430,7 @@ export function WalkValidatorPage() {
         message={t('walkValidator.autoFixConfirmMessage', { file: targetPath })}
         confirmLabel={tCommon('buttons.autoFix')}
         cancelLabel={tCommon('buttons.cancel')}
-        confirmTone="blue"
+        variant="primary"
       />
     </div>
   );

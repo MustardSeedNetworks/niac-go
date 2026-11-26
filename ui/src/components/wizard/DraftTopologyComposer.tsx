@@ -32,7 +32,7 @@ import {
   layoutNodes,
 } from '../../pages/topology';
 import { TrunkEdge } from '../../pages/topology/TrunkEdge';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
 import { SmallText } from '../../ui/Typography';
 import {
   DeviceEditorModal,
@@ -348,8 +348,8 @@ export function DraftTopologyComposer({
       <div className="flex flex-wrap items-center justify-between gap-default">
         <SmallText className="text-text-muted">{t('newSimWizard.topology.help')}</SmallText>
         <Button
-          tone="violet"
-          leftIcon={<Plus className={iconSizes.md} />}
+          variant="primary"
+          icon={<Plus className={iconSizes.md} />}
           disabled={busy || !profiles || model.segmented}
           onClick={() => setDeviceEditor(emptyDevice)}
         >
@@ -362,9 +362,8 @@ export function DraftTopologyComposer({
             {t('newSimWizard.topology.profileLoadError')}
           </SmallText>
           <Button
+            variant="secondary"
             size="sm"
-            variant="outline"
-            tone="red"
             loading={profilesLoading}
             onClick={() => void refetchProfiles()}
           >

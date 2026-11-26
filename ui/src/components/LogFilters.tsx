@@ -3,7 +3,7 @@ import { type ChangeEvent, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LogLevel, Protocol } from '../api/types';
 import { iconSizes } from '../constants/sizes';
-import { Button } from '../ui/Button';
+import { Button } from '../shared/Button';
 import { SmallText } from '../ui/Typography';
 
 const LOG_LEVELS: Array<LogLevel | 'All'> = ['All', 'ERROR', 'WARN', 'INFO', 'DEBUG'];
@@ -167,12 +167,10 @@ export const LogFilters = memo(function LogFilters({
                 running. */}
           {onPauseToggle && (
             <Button
-              variant="solid"
+              variant="primary"
               size="sm"
               onClick={onPauseToggle}
-              leftIcon={
-                paused ? <Play className={iconSizes.md} /> : <Pause className={iconSizes.md} />
-              }
+              icon={paused ? <Play className={iconSizes.md} /> : <Pause className={iconSizes.md} />}
               aria-label={
                 paused
                   ? tPages('debug.resumeLogStreamAriaLabel')
@@ -183,10 +181,10 @@ export const LogFilters = memo(function LogFilters({
             </Button>
           )}
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={onExport}
-            leftIcon={<Download className={iconSizes.md} />}
+            icon={<Download className={iconSizes.md} />}
             aria-label={tPages('debug.exportLogsAriaLabel')}
           >
             {tPages('debug.exportButton')}
@@ -195,7 +193,7 @@ export const LogFilters = memo(function LogFilters({
             variant="ghost"
             size="sm"
             onClick={onClear}
-            leftIcon={<Trash2 className="h-4 w-4" />}
+            icon={<Trash2 className="h-4 w-4" />}
             aria-label={tPages('debug.clearAllLogsAriaLabel')}
           >
             {tPages('debug.clearButton')}

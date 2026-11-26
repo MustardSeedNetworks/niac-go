@@ -2,10 +2,11 @@ import { AlertCircle, ArrowLeft, Check, RefreshCw, Save, Trash2 } from 'lucide-r
 import { useTranslation } from 'react-i18next';
 import { deviceTypeIcons, normalizeDeviceType } from '../../constants/device-types';
 import { iconSizes } from '../../constants/sizes';
-import { Button } from '../../ui/Button';
-import { Card, CardContent } from '../../ui/Card';
-import { Tag } from '../../ui/Tag';
-import { Tooltip } from '../../ui/Tooltip';
+import { Button } from '../../shared/Button';
+import { Card } from '../../shared/Card';
+import { StatusPill } from '../../shared/StatusPill';
+import { Tooltip } from '../../shared/Tooltip';
+import { ActionButton } from '../../ui/ActionButton';
 import { H2, SmallText } from '../../ui/Typography';
 import type { AuthoredDevice } from './generated/authored-device.generated';
 
@@ -49,8 +50,8 @@ export function DeviceEditorHeader({
   const DeviceIcon = deviceTypeIcons[deviceType];
 
   return (
-    <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="stack-lg">
+    <Card>
+      <div className="stack-lg">
         <div className="flex flex-wrap items-center justify-between gap-comfortable">
           <div className="flex items-center gap-default">
             <Tooltip text={t('editor.header.backTitle')}>
@@ -72,34 +73,31 @@ export function DeviceEditorHeader({
                   : t('editor.header.editDeviceSubtitle')}
               </SmallText>
             </div>
-            {isDirty && (
-              <Tag colorScheme="yellow" className="ml-inline">
-                {t('editor.header.unsavedBadge')}
-              </Tag>
-            )}
+            {isDirty && <StatusPill tone="warning" label={t('editor.header.unsavedBadge')} />}
           </div>
           <div className="flex gap-compact">
-            <Button variant="outline" onClick={onToggleYamlPreview}>
+            <Button variant="secondary" onClick={onToggleYamlPreview}>
               {showYamlPreview ? t('editor.header.hideYaml') : t('editor.header.showYaml')}
             </Button>
             {!isNewDevice && (
-              <Button
-                variant="outline"
-                leftIcon={<Trash2 className={iconSizes.md} />}
-                onClick={onDelete}
+              <ActionButton
                 action="delete"
+                variant="secondary"
+                icon={<Trash2 className={iconSizes.md} />}
+                onClick={onDelete}
                 className="text-status-error hover:text-status-error border-status-error/30 hover:border-status-error/50"
                 disabled={deleting}
               >
                 {tCommon('buttons.delete')}
-              </Button>
+              </ActionButton>
             )}
-            <Button variant="outline" onClick={onDiscard} disabled={!isDirty || saving}>
+            <Button variant="secondary" onClick={onDiscard} disabled={!isDirty || saving}>
               {tCommon('buttons.discard')}
             </Button>
-            <Button
-              tone="violet"
-              leftIcon={
+            <ActionButton
+              variant="primary"
+              action="edit"
+              icon={
                 saving ? (
                   <RefreshCw className={`${iconSizes.md} animate-spin`} />
                 ) : (
@@ -107,7 +105,6 @@ export function DeviceEditorHeader({
                 )
               }
               onClick={onSave}
-              action="edit"
               data-testid="device-editor-save"
               disabled={!isDirty || saving}
             >
@@ -116,7 +113,7 @@ export function DeviceEditorHeader({
                 : isNewDevice
                   ? tCommon('buttons.create')
                   : tCommon('buttons.save')}
-            </Button>
+            </ActionButton>
           </div>
         </div>
 
@@ -138,7 +135,7 @@ export function DeviceEditorHeader({
             <span>{message.text}</span>
           </div>
         )}
-      </CardContent>
+      </div>
     </Card>
   );
 }

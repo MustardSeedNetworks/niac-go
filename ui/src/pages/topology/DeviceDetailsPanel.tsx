@@ -1,4 +1,4 @@
-import { Tooltip } from '../../ui/Tooltip';
+import { Tooltip } from '../../shared/Tooltip';
 /**
  * Device Details Panel Component
  *
@@ -10,8 +10,8 @@ import { useTranslation } from 'react-i18next';
 import type { DeviceSummary } from '../../api/types';
 import { getTopologyDeviceColor, getTopologyDeviceIcon } from '../../constants/device-types';
 import { useAppContext } from '../../contexts/AppContext';
-import { Button } from '../../ui/Button';
-import { Tag } from '../../ui/Tag';
+import { Button } from '../../shared/Button';
+import { CategoryChip } from '../../shared/CategoryChip';
 import { sessionPool } from '../runtime/sessionPool';
 import { DeviceAttachmentPool } from './DeviceAttachmentPool';
 
@@ -90,9 +90,7 @@ export function DeviceDetailsPanel({ device, onClose, onEdit }: DeviceDetailsPan
           </div>
           <div className="flex flex-wrap gap-tight">
             {device.protocols.map((proto) => (
-              <Tag key={proto} colorScheme="purple" className="text-xs">
-                {proto}
-              </Tag>
+              <CategoryChip key={proto} label={proto} />
             ))}
           </div>
         </div>
@@ -103,10 +101,10 @@ export function DeviceDetailsPanel({ device, onClose, onEdit }: DeviceDetailsPan
       )}
 
       <div className="flex gap-compact">
-        <Button size="sm" tone="violet" onClick={() => onEdit?.(device)} className="flex-1">
+        <Button variant="primary" size="sm" onClick={() => onEdit?.(device)} className="flex-1">
           {t('deviceEditor.editLabel')}
         </Button>
-        <Button size="sm" variant="outline" onClick={onClose}>
+        <Button variant="secondary" size="sm" onClick={onClose}>
           {tCommon('buttons.close')}
         </Button>
       </div>

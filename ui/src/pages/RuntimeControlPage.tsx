@@ -15,11 +15,12 @@ import { iconSizes } from '../constants/sizes';
 import { useAppContext } from '../contexts/AppContext';
 import { useSimulationStatus } from '../hooks/useSimulationStatus';
 import { useToast } from '../hooks/useToast';
+import { Card } from '../shared/Card';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
+import { Tooltip } from '../shared/Tooltip';
 import { useUIStore } from '../stores/ui-store';
-import { Button } from '../ui/Button';
-import { Card, CardContent } from '../ui/Card';
-import { ConfirmModal } from '../ui/ConfirmModal';
-import { Tooltip } from '../ui/Tooltip';
+import { ActionButton } from '../ui/ActionButton';
+import { useDialogLabels } from '../ui/dialogLabels';
 import { H2, SmallText } from '../ui/Typography';
 import { fileToText } from '../utils/file';
 import { AdvancedSection } from './runtime/AdvancedSection';
@@ -43,6 +44,7 @@ import { SelectedNetworkPreview } from './runtime/SelectedNetworkPreview';
  * - Link to Settings for configuration management
  */
 export function RuntimeControlPage() {
+  const dialogLabels = useDialogLabels();
   const { t } = useTranslation('pages');
   const { data: simStatus, loading: simLoading, refetch: refetchSimStatus } = useSimulationStatus();
 
@@ -263,8 +265,8 @@ export function RuntimeControlPage() {
 
       {/* Daemon Mode Warning */}
       {!isDaemonMode && (
-        <Card className="border-status-warning/30 bg-status-warning/20">
-          <CardContent className="stack">
+        <Card>
+          <div className="stack">
             <div className="flex items-start gap-default">
               <BellRing className={`mt-tight ${iconSizes.lg} text-status-warning`} />
               <div>
@@ -279,14 +281,14 @@ export function RuntimeControlPage() {
                 </code>
               </div>
             </div>
-          </CardContent>
+          </div>
         </Card>
       )}
 
       {/* Start Simulation Card */}
       {isDaemonMode && !simStatus?.running && (
-        <Card className="border-surface-border bg-gradient-to-br from-brand-primary/30 to-bg-surface/70">
-          <CardContent className="stack-lg">
+        <Card>
+          <div className="stack-lg">
             {/* Single-row action bar: interface + start. The interface
                 dropdown takes the natural width of its content; Start sits
                 immediately next to it so the action is obvious. */}
@@ -304,7 +306,7 @@ export function RuntimeControlPage() {
                     <Network
                       className={`absolute left-3 top-1/2 -translate-y-1/2 ${iconSizes.md} text-text-muted`}
                     />
-                    <Tooltip text={t('runtime.interfaceTitle')} className="w-full">
+                    <Tooltip text={t('runtime.interfaceTitle')}>
                       <select
                         id="rc-interface"
                         data-testid="runtime-interface"
@@ -332,14 +334,13 @@ export function RuntimeControlPage() {
                     </Tooltip>
                   </div>
                 </div>
-                <Button
-                  tone="violet"
-                  size="md"
+                <ActionButton
+                  variant="primary"
+                  action="edit"
                   disabled={!hasValidConfig || preparing || starting}
                   onClick={handlePrepare}
                   data-testid="runtime-prepare"
-                  action="edit"
-                  leftIcon={<Activity className={iconSizes.md} />}
+                  icon={<Activity className={iconSizes.md} />}
                   // Pulse the button when everything's picked so it's the obvious next click.
                   className={
                     hasValidConfig && !preparing && !starting
@@ -357,7 +358,7 @@ export function RuntimeControlPage() {
                   {preparing
                     ? t('runtime.preparingConnectionLabel')
                     : t('runtime.reviewConnectionLabel')}
-                </Button>
+                </ActionButton>
               </div>
             </div>
 
@@ -409,7 +410,7 @@ export function RuntimeControlPage() {
                 {successMessage}
               </SmallText>
             )}
-          </CardContent>
+          </div>
         </Card>
       )}
 
@@ -440,10 +441,10 @@ export function RuntimeControlPage() {
 
       <AdvancedSection />
 
-      <ConfirmModal
-        isOpen={showStopConfirm}
+      <ConfirmDialog
+        {...dialogLabels}
+        open={showStopConfirm}
         onConfirm={handleStopConfirmed}
-        action="stop"
         onCancel={() => {
           setShowStopConfirm(false);
           setStopTarget(null);

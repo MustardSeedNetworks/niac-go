@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 import { usePages } from '../pageRegistry';
+import { documentTitle } from '../shared/documentTitle';
 
 /**
  * useDocumentTitle keeps the browser tab naming the route you are on.
@@ -23,8 +24,6 @@ export function useDocumentTitle(): void {
   useEffect(() => {
     const product = t('app.name');
     const page = pages.find((candidate) => candidate.path === pathname);
-    // The dashboard is the product's front page, so "Dashboard | NIAC" would
-    // only be a longer way of saying NIAC.
-    document.title = page && page.path !== '/' ? `${page.label} | ${product}` : product;
+    document.title = documentTitle(page?.label ?? '', product);
   }, [pathname, pages, t]);
 }

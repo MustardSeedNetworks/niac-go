@@ -4,9 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 import { iconSizes } from '../../constants/sizes';
 import { useRunHistory } from '../../hooks/useRunHistory';
-import { Button } from '../../ui/Button';
-import { Card, CardContent } from '../../ui/Card';
-import { Tag } from '../../ui/Tag';
+import { Button } from '../../shared/Button';
+import { Card } from '../../shared/Card';
+import { CategoryChip } from '../../shared/CategoryChip';
 import { H2, SmallText } from '../../ui/Typography';
 import { formatDuration, formatNumber, formatTime } from '../../utils/format';
 
@@ -29,14 +29,14 @@ export function RunHistoryCard() {
   }, [location.hash]);
 
   return (
-    <Card id="recent-runs" className="border-surface-border bg-bg-surface/70">
-      <CardContent className="stack">
+    <Card id="recent-runs">
+      <div className="stack">
         <div className="flex-between">
           <H2 className="flex items-center gap-compact text-lg">
             <History className={`${iconSizes.lg} text-text-muted`} />
             {t('runtime.recentRunsTitle')}
           </H2>
-          <Tag colorScheme="gray">{t('runtime.recentRunsTag')}</Tag>
+          <CategoryChip label={t('runtime.recentRunsTag')} />
         </div>
         <SmallText className="text-text-muted">{t('runtime.recentRunsDescription')}</SmallText>
         <div className="stack-sm text-sm text-text-secondary">
@@ -79,25 +79,25 @@ export function RunHistoryCard() {
         </div>
         <div className="flex-between">
           <Button
-            data-testid="history-newer"
-            variant="outline"
+            variant="secondary"
             size="sm"
+            data-testid="history-newer"
             onClick={newer}
             disabled={loading || !hasNewer}
           >
             {t('runtime.newerRuns')}
           </Button>
           <Button
-            data-testid="history-older"
-            variant="outline"
+            variant="secondary"
             size="sm"
+            data-testid="history-older"
             onClick={older}
             disabled={loading || !hasOlder}
           >
             {t('runtime.olderRuns')}
           </Button>
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 }
