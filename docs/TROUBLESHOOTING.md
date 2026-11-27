@@ -1127,7 +1127,7 @@ niac --dry-run lo0 config.yaml
 
 ### Error injection
 
-Fault injection lives in the web UI (Traffic → Fault Injection) and the
+Fault injection lives in the web UI (Tools → Fault injection) and the
 `/api/v1/faults` API, against a running `niac daemon`.
 
 ```bash

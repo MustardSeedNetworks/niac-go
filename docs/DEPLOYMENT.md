@@ -51,9 +51,24 @@ brew install libpcap
 The archive includes launchd helper files under `launchd/` for users who want
 NIAC to run as a service.
 
-A service started this way approves no host interface, so a simulation start on
-an interface fails with `attachment_policy_denied` until you approve it with
-`sudo niac attachment-policy add INTERFACE=direct` and restart the service. See
+### Approving an interface
+
+Neither the package nor the archive approves a host interface, so a simulation
+start on one fails with `attachment_policy_denied` until you approve it. The
+persistent way is the attachment-policy file, which survives upgrades and needs
+no edit to the launchd plist:
+
+```bash
+sudo niac attachment-policy add en16=direct     # or en16=access:200, en16=trunk:200,201
+sudo niac attachment-policy list
+sudo launchctl unload /Library/LaunchDaemons/com.niac.plist
+sudo launchctl load -w /Library/LaunchDaemons/com.niac.plist
+```
+
+The daemon reads `/usr/local/niac/attachment-policy.conf` once at start, so
+reload the service after a change. A `--attachment-policy` argument in the
+plist's `ProgramArguments` works too, but it is lost when the plist is replaced
+and is not shown by `niac attachment-policy list`; prefer the file. See
 "Approving an interface" in [ATTACHMENTS.md](ATTACHMENTS.md).
 
 ## Daemon Simulation Recovery

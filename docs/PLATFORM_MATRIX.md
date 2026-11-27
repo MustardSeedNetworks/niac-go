@@ -46,8 +46,9 @@ $ curl -sk https://127.0.0.1:18448/__version
 }
 ```
 
-No `.pkg` is produced by the release pipeline, so macOS is an archive install
-today. Capture was not exercised here.
+This run installed the archive. The release pipeline also publishes a signed,
+notarized `.pkg` (see [DISTRIBUTION.md](DISTRIBUTION.md)); installing it is not
+recorded here. Capture was not exercised here.
 
 ## Ubuntu 24.04, x86_64 (`dev-srv-ubuntu`)
 
@@ -230,4 +231,4 @@ separately in the v1 plan and is an owner-run check, not an automated one.
 ## What closing this row still needs
 
 1. Npcap on a Windows host, then capture there.
-2. The `.pkg` cell, once the pipeline produces one.
+2. The `.pkg` cell: install the signed, notarized package from a release and record it.
