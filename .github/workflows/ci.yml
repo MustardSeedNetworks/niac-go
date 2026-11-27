@@ -625,6 +625,55 @@ jobs:
           "$GITHUB_WORKSPACE/capture-rawsocket.test" -test.v
 
   # ===========================================================================
+  # Real daemon on a real interface (Linux, explicit capabilities)
+  # ===========================================================================
+  # `niac scenario generate --save` then `niac simulation start` is the
+  # no-UI path to a running pack (AUD-2). The CLI tests drive each command
+  # against an httptest daemon; this job runs the hand-off against a real
+  # daemon process bound to loopback, so a policy, library or preflight
+  # break between the two commands fails here. The suite is behind the
+  # `realdaemon` build tag. The niac binary, not the test binary, is granted
+  # the capabilities: it is the process that opens the interface.
+  real-daemon:
+    name: Real daemon on loopback (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.ci_infra == 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: ./.github/actions/setup-go
+
+      - name: Install libpcap-dev
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@76eb579ee0cbdef0a2aef9d9df1ae9ca38cad6bd # v1.14.0
+        timeout-minutes: 20
+        with:
+          attempts: ${{ startsWith(github.head_ref, 'release-please') && '3' || '2' }}
+          retry-delay-seconds: ${{ startsWith(github.head_ref, 'release-please') && '90' || '10' }}
+          packages: libpcap-dev
+
+      # Not under /tmp: it is mounted nosuid, which strips file capabilities
+      # silently (see capture-rawsocket).
+      - name: Build niac and grant it raw-socket capabilities
+        run: |
+          # Version ldflags as `make build` injects them. The UI is not
+          # embedded here, so no UIBuildHash: nothing in this job reads it.
+          pkg=github.com/MustardSeedNetworks/niac-go/internal/version
+          go build -ldflags="-X $pkg.Version=$(git describe --tags --always --dirty) -X $pkg.Commit=$(git rev-parse --short HEAD) -X $pkg.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            -o "$GITHUB_WORKSPACE/niac-realdaemon" ./cmd/niac
+          sudo setcap cap_net_raw,cap_net_admin+eip "$GITHUB_WORKSPACE/niac-realdaemon"
+          getcap "$GITHUB_WORKSPACE/niac-realdaemon"
+
+      - name: Run the real-daemon suite
+        env:
+          NIAC_BIN: ${{ github.workspace }}/niac-realdaemon
+        run: go test -tags realdaemon -count=1 -v ./tests/integration/ -run RealDaemon
+
+  # ===========================================================================
   # Frontend (TypeScript)
   # ===========================================================================
   # `build` and `e2e` both embed the built UI (internal/api/ui/ via go:embed),
@@ -1560,6 +1609,7 @@ jobs:
       - race-2
       - race-3
       - capture-rawsocket
+      - real-daemon
       - docker-image
       - build-ui
       - frontend
