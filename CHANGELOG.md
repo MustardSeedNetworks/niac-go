@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.130.4](https://github.com/MustardSeedNetworks/niac-go/compare/v0.130.3...v0.130.4) (2026-11-27)
+
+
+### Miscellaneous
+
+* **deps:** update markdownlint to v0.24.2 ([#3146](https://github.com/MustardSeedNetworks/niac-go/issues/3146)) ([ca99286](https://github.com/MustardSeedNetworks/niac-go/commit/ca992863954f43de02607ad1393902484691da92))
+* drop legacy configs migration shim and empty coverage_func.txt; ratchet coverage floor to 75 ([#3155](https://github.com/MustardSeedNetworks/niac-go/issues/3155)) ([bc2de30](https://github.com/MustardSeedNetworks/niac-go/commit/bc2de306ef84bd917251f72da4f54cd9e2765698)), closes [#3150](https://github.com/MustardSeedNetworks/niac-go/issues/3150)
+
 ## [0.130.3](https://github.com/MustardSeedNetworks/niac-go/compare/v0.130.2...v0.130.3) (2026-11-27)
 
 
