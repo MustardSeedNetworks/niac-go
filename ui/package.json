@@ -64,7 +64,7 @@
     "react-hook-form": "7.92.0",
     "react-i18next": "17.1.13",
     "react-router": "8.5.2",
-    "tailwind-merge": "3.7.0",
+    "tailwind-merge": "3.7.1",
     "tailwindcss": "4.3.3",
     "valibot": "1.5.0",
     "yaml": "2.9.1",
