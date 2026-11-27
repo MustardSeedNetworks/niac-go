@@ -25,7 +25,6 @@ func apiDomainImports() map[string][]string {
 		"config_diagnostics.go":       {"internal/config", "internal/converter", "internal/fabric"},
 		"config_ops.go":               {"internal/config"},
 		"config_state.go":             {"internal/config", "internal/protocols", "internal/topology"},
-		"configs_migrate.go":          {"internal/library"},
 		"debug_level.go":              {"internal/protocols"},
 		"decode.go":                   {"internal/content"},
 		"devices.go":                  {"internal/config"},
