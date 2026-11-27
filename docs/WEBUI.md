@@ -45,17 +45,17 @@ layout.
 - **Dashboard** — build, simulation, device, and traffic status.
 - **Simulation** — choose a configuration and physical attachment, run
   preflight, and start or stop the runtime.
-- **Running Devices** — inspect the authoritative state of the active devices.
-- **Device Library** — create and edit saved device configurations.
+- **Running devices** — inspect the authoritative state of the active devices.
+- **Device library** — create and edit saved device configurations.
 - **Topology** — view authored and observed links and discovery data.
 - **Alerts** — configure observable runtime notifications.
-- **Fault Injection** — inject and clear supported interface or protocol
+- **Fault injection** — inject and clear supported interface or protocol
   faults and control PCAP replay.
 - **Logs** — inspect the live structured log stream.
 - **Packets** — inspect live packets or analyze an uploaded capture while no
   live capture is running.
-- **Compare & Merge** — compare or merge configuration documents.
-- **SNMP Walks** — validate, analyze, sanitize, and manage walk files.
+- **Compare & merge** — compare or merge configuration documents.
+- **SNMP walks** — validate, analyze, sanitize, and manage walk files.
 
 The canonical route registry is `ui/src/pageRegistry.tsx`; navigation groups
 are defined in `ui/src/navGroups.ts`.

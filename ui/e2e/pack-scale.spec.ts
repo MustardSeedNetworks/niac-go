@@ -83,31 +83,42 @@ async function scrollJumps(page: Page, scroller: Locator): Promise<number[]> {
 }
 
 /**
- * Block per page change across the table's pager: forward to the last page and
- * back to the first, so every change mounts a page that shares no row with the
- * one before.
+ * Block per page of the table, from paging forward to the last page and back
+ * to the first, twice, so every change mounts a page that shares no row with
+ * the one before. Each click is its own sample, and a page's figure is the
+ * least-blocked of the times it was entered. One sample per traversal would
+ * take the worst of ten clicks, so a single descheduled click inflated every
+ * sample at once (233 ms against the 200 ms budget on WebKit in CI). Taking the
+ * minimum per page keeps what a cards jump measures: noise differs between
+ * visits to a page, its own cost does not.
  */
 async function pageJumps(page: Page, list: Locator): Promise<number[]> {
   const next = list.getByRole('button', { name: 'Next page' });
   const previous = list.getByRole('button', { name: 'Previous page' });
-  const jumps: number[] = [];
+  const byPage = new Map<number, number>();
+  let current = 0;
+  const step = async (button: Locator, delta: number) => {
+    await resetBlock(page);
+    await button.click();
+    current += delta;
+    byPage.set(
+      current,
+      Math.min(byPage.get(current) ?? Number.POSITIVE_INFINITY, await readBlock(page)),
+    );
+  };
   for (let round = 0; round < 2; round++) {
-    await resetBlock(page);
     while (await next.isEnabled()) {
-      await next.click();
+      await step(next, 1);
     }
-    jumps.push(await readBlock(page));
-    await resetBlock(page);
     while (await previous.isEnabled()) {
-      await previous.click();
+      await step(previous, -1);
     }
-    jumps.push(await readBlock(page));
   }
   // Leave the list on its last page, where the final device is.
   while (await next.isEnabled()) {
     await next.click();
   }
-  return jumps;
+  return [...byPage.values()];
 }
 
 async function servePack(page: Page) {
@@ -208,7 +219,9 @@ for (const viewport of VIEWPORTS) {
           jumps = await pageJumps(page, list);
         }
         await expect(page.getByText(last, { exact: true })).toBeVisible();
-        const scrollBlockMs = Math.min(...jumps);
+        // Cards: the least-blocked jump. Table: the most-blocked page, each page
+        // already reduced to its least-blocked visit by pageJumps.
+        const scrollBlockMs = mode === 'cards' ? Math.min(...jumps) : Math.max(...jumps);
         expect(await rows.count()).toBeLessThanOrEqual(MAX_MOUNTED_ROWS);
 
         // Search narrows the whole pack, not just the mounted window.
