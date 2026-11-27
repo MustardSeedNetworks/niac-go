@@ -365,7 +365,7 @@ jobs:
       # land. Kept fresh so the image's baked Multi-Arch:same libs
       # (libsystemd0, …) stay aligned with ubuntu-ports — a stale image
       # drifts and breaks the arm64 libpcap install.
-      image: goreleaser/goreleaser-cross:v1.27.3-3-v2.20.2@sha256:74447bcb1afe2472293568c1226ba3460f0e2db9f023d288d60cc72ffa92ee1b
+      image: goreleaser/goreleaser-cross:v1.27.3-4-v2.20.3@sha256:0acd8827de9901bd99082eaa846304e74e1d3c60f05c09739feabcc8aa8fdbd8
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -917,7 +917,7 @@ jobs:
       # present at the exact version the core job uses. No cross toolchain is
       # needed (this is a data-only meta package), but version parity beats
       # installing a second goreleaser.
-      image: goreleaser/goreleaser-cross:v1.27.3-3-v2.20.2@sha256:74447bcb1afe2472293568c1226ba3460f0e2db9f023d288d60cc72ffa92ee1b
+      image: goreleaser/goreleaser-cross:v1.27.3-4-v2.20.3@sha256:0acd8827de9901bd99082eaa846304e74e1d3c60f05c09739feabcc8aa8fdbd8
     env:
       # Job-level env CAN reference secrets; step-level `if` CAN reference the
       # env context. This indirection is required because a job-level `if:`

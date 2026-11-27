@@ -777,7 +777,7 @@ jobs:
           args: "-no-fail -fmt sarif -out gosec-results.sarif ./..."
 
       - name: Upload gosec results
-        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        uses: github/codeql-action/upload-sarif@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4.39.4
         # Code scanning requires a public repo or Advanced Security (same
         # gate as codeql.yml); gosec enforcement stays blocking via the
         # golangci-lint gosec linter in the backend job.
@@ -854,7 +854,7 @@ jobs:
         # gosec upload above: this is the step that actually reddened run
         # 38978937411. The findings gate below still runs.
         if: always() && hashFiles('trivy-results.sarif') != '' && github.event.repository.visibility == 'public' && github.event_name != 'merge_group'
-        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        uses: github/codeql-action/upload-sarif@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4.39.4
         with:
           sarif_file: trivy-results.sarif
 
