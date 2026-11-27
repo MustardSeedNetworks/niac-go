@@ -91,7 +91,11 @@
     "connected": "Connected to backend",
     "disconnected": "Backend unreachable",
     "offline": "Offline",
-    "online": "Online"
+    "online": "Online",
+    "railConnected": "Connected",
+    "railConnectedDetail": "The NIAC daemon is reachable.",
+    "railDisconnected": "Disconnected",
+    "railDisconnectedDetail": "The NIAC daemon cannot be reached."
   },
   "emptyState": {
     "noData": "No data available",

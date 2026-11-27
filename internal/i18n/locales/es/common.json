@@ -225,7 +225,11 @@
     "connected": "Conectado al servidor",
     "disconnected": "Servidor inaccesible",
     "offline": "Sin conexión",
-    "online": "En línea"
+    "online": "En línea",
+    "railConnected": "Conectado",
+    "railConnectedDetail": "El daemon de NIAC está accesible.",
+    "railDisconnected": "Desconectado",
+    "railDisconnectedDetail": "No se puede acceder al daemon de NIAC."
   },
   "statusLabel": {
     "success": "Estado: correcto",

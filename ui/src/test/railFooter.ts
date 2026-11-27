@@ -4,7 +4,7 @@ const noop = () => undefined;
 
 /** A complete footer for a SidebarLayout rendered on its own in a test or story. */
 export const testFooter: SidebarFooterProps = {
-  status: { tone: 'success', label: 'Online' },
+  status: { state: 'connected', label: 'Connected', detail: 'The NIAC daemon is reachable.' },
   help: { label: 'Open help', onClick: noop },
   settings: { label: 'Open settings', onClick: noop },
   theme: { label: 'Switch to light mode', onClick: noop, isDark: true },

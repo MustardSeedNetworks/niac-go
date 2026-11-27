@@ -57,7 +57,7 @@ test('imports, reviews, and creates a reusable walk profile', async ({ page }) =
 
   await page.goto('/walk-analyzer');
   await expect(page.getByTestId('sidebar-desktop').getByTestId('rail-status')).toContainText(
-    'Online',
+    'Connected',
   );
   await expect(page.getByTestId('walk-profile-creator')).toBeVisible();
   const walkFile = page.getByTestId('walk-profile-file');

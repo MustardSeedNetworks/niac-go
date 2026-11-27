@@ -79,7 +79,7 @@ for (const collapsed of [false, true]) {
     // The status is a verdict to read, not a control: a pill in the rail, a dot
     // when collapsed.
     await expect(status).toBeVisible();
-    if (!collapsed) await expect(status).toContainText('Online');
+    if (!collapsed) await expect(status).toContainText('Connected');
     const switcher = rail.getByTestId('rail-product-slot');
     await tabTo(page, switcher);
     await expectControlFits(switcher);
