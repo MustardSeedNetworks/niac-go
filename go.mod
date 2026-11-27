@@ -5,16 +5,16 @@ go 1.27.4
 require (
 	github.com/MustardSeedNetworks/foundation v0.15.0
 	github.com/fatih/color v1.19.0
-	github.com/go-playground/validator/v10 v10.30.5
-	github.com/gopacket/gopacket v1.7.4
-	github.com/gosnmp/gosnmp v1.45.0
+	github.com/go-playground/validator/v10 v10.30.6
+	github.com/gopacket/gopacket v1.8.0
+	github.com/gosnmp/gosnmp v1.47.0
 	github.com/invopop/jsonschema v0.14.0
 	github.com/kardianos/service v1.3.0
 	github.com/spf13/cobra v1.10.2
-	github.com/spf13/pflag v1.0.10
+	github.com/spf13/pflag v1.1.0
 	go.etcd.io/bbolt v1.5.0
 	golang.org/x/crypto v0.59.0
-	golang.org/x/net v0.62.0
+	golang.org/x/net v0.63.0
 	golang.org/x/sys v0.50.0
 	golang.org/x/time v0.16.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -25,8 +25,8 @@ require (
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.6.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
-	github.com/gabriel-vasile/mimetype v1.4.15 // indirect
-	github.com/go-playground/locales v0.14.1 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.16 // indirect
+	github.com/go-playground/locales v0.14.2 // indirect
 	github.com/go-playground/universal-translator v0.18.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
@@ -42,10 +42,10 @@ require (
 	golang.org/x/exp/typeparams v0.0.0-20260908205506-85c1c2202aba // indirect
 	golang.org/x/mod v0.43.0 // indirect
 	golang.org/x/sync v0.25.0 // indirect
-	golang.org/x/telemetry v0.0.0-20261010193011-f71dc92da45e // indirect
+	golang.org/x/telemetry v0.0.0-20261116191925-e77a43154acb // indirect
 	golang.org/x/text v0.44.0 // indirect
-	golang.org/x/tools v0.52.0 // indirect
-	golang.org/x/vuln v1.9.0 // indirect
+	golang.org/x/tools v0.53.0 // indirect
+	golang.org/x/vuln v1.10.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	honnef.co/go/tools v0.8.2 // indirect
 )
