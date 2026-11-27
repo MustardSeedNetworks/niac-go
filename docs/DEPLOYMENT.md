@@ -83,9 +83,16 @@ replacement cannot combine a new launch with an old run's saved faults.
 An explicit simulation Stop removes that session's recovery intent and runtime
 record. A subsequent Start begins from the authored configuration with no
 previous runtime faults. If recovery fails, NIAC keeps
-the API available, leaves the simulation stopped, and reports an actionable
-`recovery` object from `GET /api/v1/simulation`. Correct the reported condition
-or remove the named state file before restarting the daemon.
+the API available, leaves the failed session stopped, and reports a `recovery`
+object from `GET /api/v1/simulation` that lists each session it could not
+restore (`recovery.failed`: session, interface, reason). A failed session never
+blocks starting another one. The saved record is kept and retried at every
+restart, since the cause is often temporary (an unplugged USB adapter). To stop
+retrying it, forget it: the Simulation page offers Forget beside each listed
+session, and so does `niac simulation forget SESSION`
+(`DELETE /api/v1/simulation/recovery?sessionId=SESSION`). Forgetting needs an
+admin-scoped token, removes the session's record and runtime state, and applies
+only to sessions listed in `recovery.failed`.
 
 Writes use a synchronized temporary file followed by an atomic replacement.
 An interrupted temporary write is ignored on the next start.

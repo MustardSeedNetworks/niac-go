@@ -468,6 +468,17 @@ func (s *Server) registerTopologyReadOnlyRoutes(reg *route.Registrar) {
 			Limiter:      limitWrite,
 			CSRF:         true,
 		},
+		// Forgetting deletes a saved session's persisted record: a destructive
+		// state change, so admin scope in addition to CSRF and the write limiter.
+		{
+			Path:    "/api/v1/simulation/recovery",
+			Handler: s.handleSimulationRecovery,
+			Auth:    true,
+			Methods: []string{http.MethodDelete},
+			Limiter: limitWrite,
+			CSRF:    true,
+			Scope:   scopeAdmin,
+		},
 		{Path: "/api/v1/version", Handler: s.handleVersion, Auth: true, Methods: []string{http.MethodGet}},
 		{Path: "/api/v1/neighbors", Handler: s.handleNeighbors, Auth: true, Methods: []string{http.MethodGet}},
 		// #762: scope discovery — safe GET, no CSRF / write wrappers needed.

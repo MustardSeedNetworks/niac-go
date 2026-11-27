@@ -266,3 +266,29 @@ func TestSimulationLifecycleUsesDaemonRoutes(t *testing.T) {
 		}
 	}
 }
+
+func TestForgetSavedSessionUsesTheRecoveryRoute(t *testing.T) {
+	t.Parallel()
+
+	var got string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v1/csrf-token" {
+			_, _ = w.Write([]byte(`{"token":"csrf"}`))
+			return
+		}
+		got = r.Method + " " + r.URL.RequestURI() + " csrf=" + r.Header.Get("X-Csrf-Token")
+		_, _ = w.Write([]byte(`{"status":"forgotten"}`))
+	}))
+	defer server.Close()
+
+	client, err := cliclient.New(cliclient.Config{BaseURL: server.URL})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = client.ForgetSavedSession(context.Background(), "modern one"); err != nil {
+		t.Fatal(err)
+	}
+	if want := "DELETE /api/v1/simulation/recovery?sessionId=modern+one csrf=csrf"; got != want {
+		t.Fatalf("request = %q, want %q", got, want)
+	}
+}

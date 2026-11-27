@@ -189,3 +189,48 @@ func TestStartRejectsAnUnknownScenarioName(t *testing.T) {
 		t.Fatalf("want ErrScenarioNotFound for a removed built-in, got %v", err)
 	}
 }
+
+// A content pack installs its networks into the library and names its captures
+// relative to the library (`include_path: ../walks`). Sent by name, the
+// daemon loads the file in place and the walk resolves; sent as inline data,
+// the same text resolves against the configs directory and the walk is "not
+// found". The Simulation page used to send pack networks inline, so no pack
+// scenario could start from it (#3154).
+func TestStartResolvesAPackNetworkWalkOnlyByName(t *testing.T) {
+	libraryRoot := exampleTestHost(t)
+	starter, err := os.ReadDir(filepath.Join(libraryRoot, "walks"))
+	if err != nil || len(starter) == 0 {
+		t.Fatalf("starter walks: %v (%d entries)", err, len(starter))
+	}
+	pack := "include_path: ../walks\ndevices:\n  - name: pack-switch\n    type: switch\n" +
+		"    mac: \"02:00:00:00:00:09\"\n    ips: [\"192.0.2.9\"]\n    snmp_agent:\n" +
+		"      community: public\n      walk_file: " + starter[0].Name() + "\n"
+
+	for _, extension := range []string{".yaml", ".yml"} {
+		t.Run("by name "+extension, func(t *testing.T) {
+			networks := filepath.Join(libraryRoot, "networks")
+			if mkErr := os.MkdirAll(networks, 0o750); mkErr != nil {
+				t.Fatal(mkErr)
+			}
+			file := filepath.Join(networks, "pack-net"+extension)
+			if writeErr := os.WriteFile(file, []byte(pack), 0o600); writeErr != nil {
+				t.Fatal(writeErr)
+			}
+			t.Cleanup(func() { _ = os.Remove(file) })
+			d := newExampleTestDaemon(t)
+
+			status := startExample(t, d, api.SimulationRequest{ScenarioName: "pack-net"})
+			if !status.Running || status.DeviceCount != 1 {
+				t.Fatalf("status = %+v, want the pack network running", status)
+			}
+		})
+	}
+
+	t.Run("inline loses the library context", func(t *testing.T) {
+		d := newExampleTestDaemon(t)
+		startErr := d.StartSimulation(api.SimulationRequest{Interface: exampleTestInterface, ConfigData: pack})
+		if !errors.Is(startErr, config.ErrWalkFileNotFound) {
+			t.Fatalf("StartSimulation(inline) = %v, want ErrWalkFileNotFound", startErr)
+		}
+	})
+}

@@ -91,6 +91,18 @@ func runSimulationStop(ctx context.Context, options *simulationCLIOptions, sessi
 	return err
 }
 
+func runSimulationForget(ctx context.Context, options *simulationCLIOptions, session string) error {
+	client, err := simulationClient(options)
+	if err != nil {
+		return err
+	}
+	if err = client.ForgetSavedSession(ctx, session); err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(os.Stdout, "Forgot saved scenario %s\n", session)
+	return err
+}
+
 func writeSimulationJSON(value any) error {
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")

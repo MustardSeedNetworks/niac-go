@@ -2,7 +2,6 @@ import { Activity, BellRing, Network, PlugZap } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchUsableInterfaces, startSimulation, stopSimulation } from '../api/client';
-import { fetchLibraryNetworkContent, fetchLibraryNetworks } from '../api/library-client';
 import type {
   LibraryNetwork,
   NetworkInterface,
@@ -29,6 +28,7 @@ import { ConcurrentSessionsPanel } from './runtime/ConcurrentSessionsPanel';
 import { RunHistoryCard } from './runtime/RunHistoryCard';
 import { RunningSimulationCard } from './runtime/RunningSimulationCard';
 import { RuntimeRollup } from './runtime/RuntimeRollup';
+import { SavedSessionRecoveryCard } from './runtime/SavedSessionRecoveryCard';
 import { SelectedNetworkPreview } from './runtime/SelectedNetworkPreview';
 
 /**
@@ -169,22 +169,13 @@ export function RuntimeControlPage() {
       if (quickUploadFile) {
         configData = await fileToText(quickUploadFile);
       }
-      // Handle a saved library network — the library confines entries
-      // behind an os.Root keyed by name (internal/library/list.go), so
-      // there's no filesystem path to hand the daemon; fetch the content
-      // and send it inline instead. A shipped example has no file at all and
-      // is started by name: the daemon resolves it the way it resolves any
-      // bare library name, and a pack's multi-megabyte document never crosses
-      // the browser.
+      // A saved library network is started by name, whatever its source. The
+      // daemon loads it in place, so a content pack's `include_path: ../walks`
+      // still reaches the library's walks; the same text posted inline resolves
+      // against the configs directory instead and the walk is "not found". A
+      // pack's multi-megabyte document also never crosses the browser.
       else if (simulationSettings.configSource === 'userConfig') {
-        const networks = await fetchLibraryNetworks();
-        const selected = networks.find((network) => network.name === simulationSettings.configName);
-        if (selected?.source === 'example') {
-          scenarioName = selected.name;
-        } else {
-          const userConfigContent = await fetchLibraryNetworkContent(simulationSettings.configName);
-          configData = userConfigContent.content;
-        }
+        scenarioName = simulationSettings.configName;
       }
 
       if (requestSequence.current !== sequence) return;
@@ -262,6 +253,10 @@ export function RuntimeControlPage() {
   return (
     <div className="stack-xl">
       <RuntimeRollup simStatus={shownSession} loading={simLoading} />
+
+      {simStatus?.recovery && (
+        <SavedSessionRecoveryCard recovery={simStatus.recovery} onForgotten={refetchSimStatus} />
+      )}
 
       {/* Daemon Mode Warning */}
       {!isDaemonMode && (

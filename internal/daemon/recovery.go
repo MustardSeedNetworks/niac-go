@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
@@ -166,17 +167,18 @@ func (d *Daemon) recoverActiveSimulation() {
 
 		return
 	}
-	var failures []error
+	var failed []api.FailedRecoverySession
 	for _, session := range state.Sessions {
 		if startErr := d.startGeneration(session.Request, session.Generation, true); startErr != nil {
-			failures = append(
-				failures,
-				fmt.Errorf("session %q: %w", session.Request.SessionID, startErr),
-			)
+			failed = append(failed, api.FailedRecoverySession{
+				SessionID: session.Request.SessionID,
+				Interface: session.Request.Interface,
+				Reason:    startErr.Error(),
+			})
 		}
 	}
-	if len(failures) != 0 {
-		d.setRecoveryFailure(attemptedAt, errors.Join(failures...))
+	if len(failed) != 0 {
+		d.setSessionRecoveryFailure(attemptedAt, failed, len(state.Sessions))
 		return
 	}
 	d.mu.Lock()
@@ -212,6 +214,86 @@ func (d *Daemon) quarantineUnusableState(attemptedAt time.Time, recoveryErr erro
 	}
 	d.mu.Unlock()
 	logging.Warningf("%s", message)
+}
+
+// setSessionRecoveryFailure records saved sessions that did not come back. The
+// others restarted, and nothing here stops a new start: the daemon keeps the
+// failed records so a session returns when its interface does, and says how to
+// let one go instead of asking the operator to edit a root-owned file.
+func (d *Daemon) setSessionRecoveryFailure(attemptedAt time.Time, failed []api.FailedRecoverySession, saved int) {
+	d.mu.Lock()
+	d.recovery = &api.SimulationRecovery{
+		State:       recoveryStateFailed,
+		Message:     failedRecoveryMessage(failed),
+		AttemptedAt: attemptedAt,
+		Failed:      failed,
+	}
+	d.mu.Unlock()
+	logging.Warningf("%s (%d of %d saved sessions restored)", failedRecoveryMessage(failed), saved-len(failed), saved)
+}
+
+func failedRecoveryMessage(failed []api.FailedRecoverySession) string {
+	parts := make([]string, len(failed))
+	for i, session := range failed {
+		parts[i] = fmt.Sprintf("session %q: %s", session.SessionID, session.Reason)
+	}
+	return fmt.Sprintf(
+		"Recovery failed: %s. The saved session is kept and retried at every restart; "+
+			"other scenarios start normally. Forget it to stop retrying.",
+		strings.Join(parts, "; "),
+	)
+}
+
+// dropRecoveryFailureLocked removes one session from the failed list. The list
+// is replaced, not edited, because GetStatus hands the pointer out.
+func (d *Daemon) dropRecoveryFailureLocked(sessionID string) {
+	if d.recovery == nil {
+		return
+	}
+	index := slices.IndexFunc(d.recovery.Failed, func(f api.FailedRecoverySession) bool {
+		return f.SessionID == sessionID
+	})
+	if index < 0 {
+		return
+	}
+	next := *d.recovery
+	next.Failed = slices.Delete(slices.Clone(d.recovery.Failed), index, index+1)
+	if len(next.Failed) == 0 {
+		d.recovery = nil
+		return
+	}
+	next.Message = failedRecoveryMessage(next.Failed)
+	d.recovery = &next
+}
+
+// ForgetSavedSession deletes a saved session that failed recovery -- its
+// record, runtime state and inline configuration -- so it is not retried again.
+// Only sessions listed in the recovery status qualify: a running session is
+// stopped, not forgotten, and the daemon never drops a record on its own, since
+// the interface may be a USB adapter that is simply unplugged.
+func (d *Daemon) ForgetSavedSession(sessionID string) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.recovery == nil || !slices.ContainsFunc(d.recovery.Failed, func(f api.FailedRecoverySession) bool {
+		return f.SessionID == sessionID
+	}) {
+		return api.ErrSavedSessionNotFound
+	}
+	saved, err := d.persistedSimulationRequests()
+	if err != nil {
+		return fmt.Errorf("forget saved session: %w", err)
+	}
+	entry, recorded := saved[sessionID]
+	if persistErr := d.persistSessionsExcluding(sessionID); persistErr != nil {
+		return fmt.Errorf("forget saved session: %w", persistErr)
+	}
+	if recorded {
+		d.clearRuntimeState(sessionID, entry.Generation)
+		d.removeInlineConfig(sessionID, entry.Generation)
+	}
+	d.dropRecoveryFailureLocked(sessionID)
+	logging.Infof("Forgot saved session %q", sessionID)
+	return nil
 }
 
 func (d *Daemon) setRecoveryFailure(attemptedAt time.Time, recoveryErr error) {

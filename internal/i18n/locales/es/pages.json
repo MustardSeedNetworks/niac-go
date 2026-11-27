@@ -66,6 +66,15 @@
     "daemonModeWarning": "Modo daemon no detectado",
     "startSimulationTitle": "Iniciar simulación",
     "noUsableInterfaces": "Sin interfaces utilizables",
+    "recovery": {
+      "title": "Escenarios guardados que no se reiniciaron",
+      "help": "El daemon no pudo restaurarlos tras su último reinicio. Aún puede iniciar cualquier otro escenario. El registro guardado se conserva y se reintenta en cada reinicio hasta que lo olvide.",
+      "session": "{{session}} en {{interface}}",
+      "forget": "Olvidar",
+      "forgetLabel": "Olvidar el escenario guardado {{session}}",
+      "confirmTitle": "¿Olvidar el escenario guardado?",
+      "confirmMessage": "El escenario {{session}} ya no se restaurará cuando el daemon se reinicie. Esta acción no se puede deshacer."
+    },
     "stopConfirmTitle": "¿Detener la simulación?",
     "stopConfirmMessage": "¿Está seguro de que desea detener la simulación? Esto interrumpirá la ejecución actual.",
     "stopConfirmLabel": "Detener",

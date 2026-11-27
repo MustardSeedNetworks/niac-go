@@ -56,6 +56,9 @@ export function PreflightStep({ request, onStart, starting = false }: PreflightS
   const [attachmentNames, setAttachmentNames] = useState<string[] | null>(null);
   const [routed, setRouted] = useState(true);
   const [discovering, setDiscovering] = useState(true);
+  // Why the attachment lookup failed, shown so the operator is not left with a
+  // disabled button and no reason.
+  const [discoveryFailure, setDiscoveryFailure] = useState<{ cause: unknown } | null>(null);
 
   const { interface: interfaceName, configData, configPath, scenarioName } = request;
 
@@ -76,6 +79,7 @@ export function PreflightStep({ request, onStart, starting = false }: PreflightS
   useEffect(() => {
     let current = true;
     setDiscovering(true);
+    setDiscoveryFailure(null);
     fetchSimulationAttachments({ interface: interfaceName, configData, configPath, scenarioName })
       .then((response) => {
         if (!current) return;
@@ -83,12 +87,13 @@ export function PreflightStep({ request, onStart, starting = false }: PreflightS
         setAttachmentNames(response.attachments ?? []);
         setAttachment(response.attachments?.[0] ?? '');
       })
-      .catch(() => {
-        // The configuration could not be read -- preflight will say why. Fall
-        // back to the typed field so the screen stays usable meanwhile.
+      .catch((err: unknown) => {
+        // The configuration could not be read. Say why; the typed field below
+        // keeps the screen usable meanwhile.
         if (!current) return;
         setAttachmentNames(null);
         setRouted(true);
+        setDiscoveryFailure({ cause: err });
       })
       .finally(() => {
         if (current) setDiscovering(false);
@@ -318,6 +323,18 @@ export function PreflightStep({ request, onStart, starting = false }: PreflightS
               />
             )}
           </label>
+        )}
+        {discoveryFailure && (
+          <div data-testid="wizard-attachments-error">
+            <ApiErrorMessage
+              message={
+                discoveryFailure.cause instanceof Error
+                  ? discoveryFailure.cause.message
+                  : t('newSimWizard.preflight.requestError')
+              }
+              details={isApiError(discoveryFailure.cause) ? discoveryFailure.cause.details : []}
+            />
+          </div>
         )}
         {error && <ApiErrorMessage message={error} details={errorDetails} />}
         {report?.safe && (

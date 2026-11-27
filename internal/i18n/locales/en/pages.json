@@ -988,6 +988,15 @@
     "startTitlePickConfig": "Pick a config below first",
     "startTitlePickInterface": "Pick a network interface first",
     "startTitleReady": "Start the simulation on the selected interface with the picked config",
+    "recovery": {
+      "title": "Saved scenarios that did not restart",
+      "help": "The daemon could not restore these after its last restart. You can still start any other scenario. The saved record is kept and retried at every restart until you forget it.",
+      "session": "{{session}} on {{interface}}",
+      "forget": "Forget",
+      "forgetLabel": "Forget saved scenario {{session}}",
+      "confirmTitle": "Forget saved scenario?",
+      "confirmMessage": "Scenario {{session}} will no longer be restored when the daemon restarts. This cannot be undone."
+    },
     "stopConfirmLabel": "Stop",
     "stopConfirmMessage": "Are you sure you want to stop the simulation? This will interrupt the current run.",
     "stopConfirmTitle": "Stop simulation?",

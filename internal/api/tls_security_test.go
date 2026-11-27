@@ -100,9 +100,10 @@ func (*nilDaemonController) SimulationAttachments(SimulationRequest) (Simulation
 func (*nilDaemonController) PinAttachmentClient(string, AttachmentPin) error {
 	return nil
 }
-func (*nilDaemonController) StopSimulation(string) error   { return nil }
-func (*nilDaemonController) SelectSimulation(string) error { return nil }
-func (*nilDaemonController) GetStatus() SimulationStatus   { return SimulationStatus{} }
+func (*nilDaemonController) StopSimulation(string) error     { return nil }
+func (*nilDaemonController) SelectSimulation(string) error   { return nil }
+func (*nilDaemonController) ForgetSavedSession(string) error { return nil }
+func (*nilDaemonController) GetStatus() SimulationStatus     { return SimulationStatus{} }
 
 func TestStart_LoopbackWithoutTokenIsAllowed(t *testing.T) {
 	// Loopback bind without token must NOT trip the gate. We don't

@@ -324,6 +324,14 @@ export const stopSimulation = (sessionId?: string) =>
       : '/api/v1/simulation',
     { method: 'DELETE' },
   );
+// Drops a saved session that failed recovery (admin scope on the daemon).
+export const forgetSavedSession = (sessionId: string) =>
+  request<{ status: string }>(
+    `/api/v1/simulation/recovery?sessionId=${encodeURIComponent(sessionId)}`,
+    {
+      method: 'DELETE',
+    },
+  );
 
 // =====================================================================
 // Standalone packet capture (PCAP Inspector "sniff without a sim" mode)

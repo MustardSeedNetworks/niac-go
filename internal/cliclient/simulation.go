@@ -96,6 +96,13 @@ func (c *Client) StopSimulation(ctx context.Context, sessionID string) error {
 	return c.mutate(ctx, http.MethodDelete, path, struct{}{}, nil)
 }
 
+// ForgetSavedSession asks the daemon to drop a saved session that failed
+// recovery, so it is no longer retried at every restart.
+func (c *Client) ForgetSavedSession(ctx context.Context, sessionID string) error {
+	path := "/api/v1/simulation/recovery?sessionId=" + url.QueryEscape(sessionID)
+	return c.mutate(ctx, http.MethodDelete, path, struct{}{}, nil)
+}
+
 func (c *Client) mutate(ctx context.Context, method, path string, input, output any) error {
 	ctx, cancel := context.WithTimeout(ctx, requestTimeout)
 	defer cancel()
