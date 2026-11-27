@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.131.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.130.5...v0.131.0) (2026-11-27)
+
+
+### Features
+
+* **ui:** typed rail status vocabulary; bump shared set and foundation ([#3157](https://github.com/MustardSeedNetworks/niac-go/issues/3157)) ([e4d7fea](https://github.com/MustardSeedNetworks/niac-go/commit/e4d7fea608f848dc9878e3fe7cdf5aa79b8d83d1))
+
 ## [0.130.5](https://github.com/MustardSeedNetworks/niac-go/compare/v0.130.4...v0.130.5) (2026-11-27)
 
 
