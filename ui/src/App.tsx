@@ -66,19 +66,20 @@ function AppShell() {
   // `checking` is no verdict yet, so the rail shows no status until the first
   // probe answers.
   const railStatus: SidebarFooterProps['status'] =
-    status === 'checking'
-      ? undefined
-      : {
-          state: status,
-          label: tCommon(
-            status === 'connected' ? 'connection.railConnected' : 'connection.railDisconnected',
-          ),
-          detail: tCommon(
-            status === 'connected'
-              ? 'connection.railConnectedDetail'
-              : 'connection.railDisconnectedDetail',
-          ),
-        };
+    status === 'connected'
+      ? {
+          state: 'connected',
+          label: tCommon('connection.railConnected'),
+          detail: tCommon('connection.railConnectedDetail'),
+        }
+      : status === 'disconnected'
+        ? {
+            state: 'disconnected',
+            label: tCommon('connection.railDisconnected'),
+            detail: tCommon('connection.railDisconnectedDetail'),
+          }
+        : undefined;
+
   const footer: SidebarFooterProps = {
     status: railStatus,
     productSlot: {
