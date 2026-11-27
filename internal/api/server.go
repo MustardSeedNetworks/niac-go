@@ -29,7 +29,6 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
-	"path/filepath"
 	"slices"
 	"sync"
 	"time"
@@ -773,17 +772,11 @@ func (s *Server) warnIfUnauthenticated() {
 // every fallback port taken, an unusable certificate) reaches Start's caller
 // instead of disappearing into a background log.
 func (s *Server) startAPIListener() error {
-	// securedir refuses a relative path and never follows a link in one, so
-	// the default "certs" (and a relative --cert-dir) is made absolute here.
-	certDir, err := filepath.Abs(cmp.Or(s.cfg.CertDir, defaultCertDir))
-	if err != nil {
-		return fmt.Errorf("resolve certificate directory: %w", err)
-	}
 	ln, err := httpserver.Listen(context.Background(), httpserver.Config{
 		Addr:     s.cfg.Addr,
 		CertFile: s.cfg.CertFile,
 		KeyFile:  s.cfg.KeyFile,
-		CertDir:  certDir,
+		CertDir:  cmp.Or(s.cfg.CertDir, defaultCertDir),
 		Cert: httpserver.CertOptions{
 			CommonName: "NIAC Self-Signed",
 			DNSNames:   []string{"localhost", "niac.local"},

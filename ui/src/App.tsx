@@ -63,18 +63,25 @@ function AppShell() {
   const pageTitleRef = useRef<HTMLHeadingElement>(null);
   const { pathname } = useLocation();
 
-  const connectionTone = {
-    connected: 'success',
-    disconnected: 'error',
-    checking: 'warning',
-  } as const;
-  const connectionLabel = {
-    connected: tCommon('connection.online'),
-    disconnected: tCommon('connection.offline'),
-    checking: tCommon('connection.checking'),
-  } as const;
+  // `checking` is no verdict yet, so the rail shows no status until the first
+  // probe answers.
+  const railStatus: SidebarFooterProps['status'] =
+    status === 'connected'
+      ? {
+          state: 'connected',
+          label: tCommon('connection.railConnected'),
+          detail: tCommon('connection.railConnectedDetail'),
+        }
+      : status === 'disconnected'
+        ? {
+            state: 'disconnected',
+            label: tCommon('connection.railDisconnected'),
+            detail: tCommon('connection.railDisconnectedDetail'),
+          }
+        : undefined;
+
   const footer: SidebarFooterProps = {
-    status: { tone: connectionTone[status], label: connectionLabel[status] },
+    status: railStatus,
     productSlot: {
       label: tCommon('session.label'),
       value: sessionId ?? tCommon('session.none'),

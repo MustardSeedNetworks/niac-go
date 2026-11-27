@@ -987,7 +987,7 @@ jobs:
   # of .github@main (a canonical change there reaches this repo only when this
   # pin moves).
   ci-conformance:
-    uses: MustardSeedNetworks/.github/.github/workflows/ci-conformance.yml@8c1c503ab53a927a0a5980f01f52a09fae9825a1 # .github#304, untagged
+    uses: MustardSeedNetworks/.github/.github/workflows/ci-conformance.yml@9ccd017950f5467977f1d7ab17e3f1eb8cc85741 # .github#310, untagged
     permissions:
       contents: read
       id-token: write
@@ -1010,7 +1010,7 @@ jobs:
       # MustardSeedNetworks/.github (`python3 scripts/ui_shared.py copy .`). A
       # local edit fails here by sha256, the way the theme file does.
       - name: Verify shared UI copies
-        uses: MustardSeedNetworks/.github/.github/actions/ui-shared-verify@8c1c503ab53a927a0a5980f01f52a09fae9825a1 # .github#304, untagged
+        uses: MustardSeedNetworks/.github/.github/actions/ui-shared-verify@9ccd017950f5467977f1d7ab17e3f1eb8cc85741 # .github#310, untagged
 
       - name: Check file sizes
         run: |
