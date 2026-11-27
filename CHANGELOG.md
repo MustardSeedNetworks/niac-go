@@ -5,6 +5,28 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.130.5](https://github.com/MustardSeedNetworks/niac-go/compare/v0.130.4...v0.130.5) (2026-11-27)
+
+
+### Bug Fixes
+
+* **ui:** start library networks by name, forget failed saved sessions ([#3159](https://github.com/MustardSeedNetworks/niac-go/issues/3159)) ([11a2cae](https://github.com/MustardSeedNetworks/niac-go/commit/11a2caeea6952c4ed51e9d897490d3ebd826abb4))
+
+
+### Documentation
+
+* sentence-case page names, signed pkg, attachment-policy file; test(e2e): per-page table samples ([#3158](https://github.com/MustardSeedNetworks/niac-go/issues/3158)) ([7ebf843](https://github.com/MustardSeedNetworks/niac-go/commit/7ebf8431950dc184f0828ccbd17fc907e9243610)), closes [#3151](https://github.com/MustardSeedNetworks/niac-go/issues/3151) [#3152](https://github.com/MustardSeedNetworks/niac-go/issues/3152)
+
+
+### Tests
+
+* **cli:** real-daemon test for generate --save then simulation start on loopback ([#3153](https://github.com/MustardSeedNetworks/niac-go/issues/3153)) ([2360177](https://github.com/MustardSeedNetworks/niac-go/commit/2360177fce78556976c5d04dc88dbe9bbb86f9b5))
+
+
+### Miscellaneous
+
+* **deps:** update storybook monorepo to v10.6.8 ([#3148](https://github.com/MustardSeedNetworks/niac-go/issues/3148)) ([8cc4140](https://github.com/MustardSeedNetworks/niac-go/commit/8cc4140c5474edcc96d54873f1b11e18e37535fb))
+
 ## [0.130.4](https://github.com/MustardSeedNetworks/niac-go/compare/v0.130.3...v0.130.4) (2026-11-27)
 
 
