@@ -385,6 +385,17 @@ type SimulationRecovery struct {
 	State       string    `json:"state"`
 	Message     string    `json:"message"`
 	AttemptedAt time.Time `json:"attemptedAt"`
+	// Failed names each saved session the restart could not bring back. The
+	// daemon keeps the record so the session returns when its interface does;
+	// an operator who will not wait forgets it (ForgetSavedSession).
+	Failed []FailedRecoverySession `json:"failed,omitempty"`
+}
+
+// FailedRecoverySession is one saved session that did not come back.
+type FailedRecoverySession struct {
+	SessionID string `json:"sessionId"`
+	Interface string `json:"interface"`
+	Reason    string `json:"reason"`
 }
 
 // SimulationFabricStatus exposes the active routed topology and its live counters.
@@ -437,6 +448,9 @@ type DaemonController interface {
 	PinAttachmentClient(sessionID string, pin AttachmentPin) error
 	StopSimulation(sessionID string) error
 	SelectSimulation(sessionID string) error
+	// ForgetSavedSession drops a saved session that failed recovery. It
+	// returns ErrSavedSessionNotFound for an ID that is not one.
+	ForgetSavedSession(sessionID string) error
 	GetStatus() SimulationStatus
 }
 

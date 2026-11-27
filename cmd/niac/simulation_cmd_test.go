@@ -20,7 +20,7 @@ func TestSimulationCommandExposesDaemonLifecycle(t *testing.T) {
 	if command == nil {
 		t.Fatal("simulation command is not registered")
 	}
-	for _, name := range []string{"preflight", "start", "select", "stop"} {
+	for _, name := range []string{"preflight", "start", "select", "stop", "forget"} {
 		if findSubcommand(command, name) == nil {
 			t.Errorf("simulation %s is not registered", name)
 		}

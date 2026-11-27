@@ -17,9 +17,10 @@ func addSimulationCommand(root *cobra.Command, _ *serviceOptions) {
 	command := &cobra.Command{
 		Use:   "simulation",
 		Short: "Control scenarios through the running NIAC daemon",
-		Long:  "Preflight, start, select, and stop scenarios through the running NIAC daemon.",
+		Long:  "Preflight, start, select, stop, and forget scenarios through the running NIAC daemon.",
 		Example: `  niac simulation start -i eth0 --config clinic.yaml --session clinic
-  niac simulation stop clinic`,
+  niac simulation stop clinic
+  niac simulation forget clinic`,
 		Args: cobra.NoArgs,
 	}
 	addSimulationConnectionFlags(command, options)
@@ -27,6 +28,7 @@ func addSimulationCommand(root *cobra.Command, _ *serviceOptions) {
 	command.AddCommand(newSimulationStartCommand(options))
 	command.AddCommand(newSimulationSelectCommand(options))
 	command.AddCommand(newSimulationStopCommand(options))
+	command.AddCommand(newSimulationForgetCommand(options))
 	root.AddCommand(command)
 }
 
@@ -98,6 +100,19 @@ func newSimulationStopCommand(options *simulationCLIOptions) *cobra.Command {
 		Example: "  niac simulation stop clinic", Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runSimulationStop(cmd.Context(), options, args[0])
+		},
+	}
+}
+
+func newSimulationForgetCommand(options *simulationCLIOptions) *cobra.Command {
+	return &cobra.Command{
+		Use: "forget <session>", Short: "Forget a saved scenario that failed to restart",
+		Long: "Delete a saved scenario the daemon could not restore after a restart, for example because its " +
+			"interface is unplugged, so it is no longer retried at every restart. Needs an admin-scoped token. " +
+			"A scenario that is running is stopped with 'simulation stop', not forgotten.",
+		Example: "  niac simulation forget modern", Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runSimulationForget(cmd.Context(), options, args[0])
 		},
 	}
 }

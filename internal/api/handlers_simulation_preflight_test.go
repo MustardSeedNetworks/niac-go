@@ -30,6 +30,8 @@ type preflightDaemon struct {
 	pinned         AttachmentPin
 	pinSession     string
 	pinErr         error
+	forgetErr      error
+	forgotten      string
 }
 
 func (d *preflightDaemon) PreflightSimulation(req SimulationRequest) (fabric.Report, error) {
@@ -124,6 +126,11 @@ func (d *preflightDaemon) StartSimulation(_ SimulationRequest) error {
 func (d *preflightDaemon) StopSimulation(sessionID string) error {
 	d.stopped = sessionID
 	return d.stopErr
+}
+
+func (d *preflightDaemon) ForgetSavedSession(sessionID string) error {
+	d.forgotten = sessionID
+	return d.forgetErr
 }
 
 func (d *preflightDaemon) SelectSimulation(sessionID string) error {

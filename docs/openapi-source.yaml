@@ -167,6 +167,17 @@ operations:
   DELETE /api/v1/simulation:
     summary: Stop the simulation
     tags: [Simulation]
+  DELETE /api/v1/simulation/recovery:
+    summary: Forget a saved session that failed recovery
+    description: >
+      Deletes the saved record, runtime state and inline configuration of one
+      session listed in `recovery.failed` of the simulation status, so the
+      daemon stops retrying it at every restart. The daemon never drops such a
+      record on its own: its interface may only be unplugged. Takes the session
+      as the `sessionId` query parameter and needs an admin-scoped token.
+      Answers 404 for a session that is not in that list, which includes any
+      running session.
+    tags: [Simulation]
   GET /api/v1/topology:
     summary: Topology graph for the selected session
     tags: [Topology]

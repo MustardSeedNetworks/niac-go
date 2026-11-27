@@ -275,7 +275,7 @@ describe('RuntimeControlPage — routed start preflight', () => {
     });
   });
 
-  it('preflights the selected routed library network and starts with the approved binding', async () => {
+  it('preflights the selected routed library network by name and starts with the approved binding', async () => {
     const user = userEvent.setup();
     renderPage();
 
@@ -287,7 +287,7 @@ describe('RuntimeControlPage — routed start preflight', () => {
     await waitFor(() =>
       expect(preflightSimulation).toHaveBeenCalledWith({
         interface: 'eth0',
-        configData: ROUTED_YAML,
+        scenarioName: 'routed-lab',
         attachment: 'cyberscope',
         attachmentMode: 'access',
         accessVlan: 200,
@@ -300,13 +300,47 @@ describe('RuntimeControlPage — routed start preflight', () => {
     await waitFor(() =>
       expect(startSimulation).toHaveBeenCalledWith({
         interface: 'eth0',
-        configData: ROUTED_YAML,
+        scenarioName: 'routed-lab',
         attachment: 'cyberscope',
         attachmentMode: 'access',
         accessVlan: 200,
       }),
     );
   });
+
+  // A content pack's networks sit in the library but name their walks relative
+  // to it (`include_path: ../walks`). Posted inline they resolve against the
+  // configs directory and the daemon answers "walk file not found", so every
+  // library source, bundle included, is started by name (#3154).
+  it.each(['bundle', 'user'] as const)(
+    'starts a %s library network by name, not inline',
+    async (source) => {
+      const user = userEvent.setup();
+      const library = await import('../api/library-client');
+      vi.mocked(library.fetchLibraryNetworks).mockResolvedValue([
+        {
+          name: 'modern-hospital',
+          description: 'Installed pack network',
+          deviceCount: 310,
+          modifiedAt: '2026-10-04T00:00:00Z',
+          sizeBytes: 5_000_000,
+          source,
+          valid: true,
+        },
+      ]);
+      renderPage();
+
+      await screen.findByText('modern-hospital');
+      await user.click(screen.getByRole('button', { name: /^select$/i }));
+      await user.click(await screen.findByRole('button', { name: /review connection/i }));
+      await user.click(await screen.findByTestId('wizard-preflight-check'));
+
+      await waitFor(() => expect(preflightSimulation).toHaveBeenCalled());
+      const sent = preflightSimulation.mock.calls[0]?.[0];
+      expect(sent?.scenarioName).toBe('modern-hospital');
+      expect(sent?.configData).toBeUndefined();
+    },
+  );
 
   // A shipped example has no file in the library: it is started by name, so the
   // request never carries a document that, for a pack, is megabytes.

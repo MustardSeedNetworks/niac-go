@@ -136,9 +136,7 @@ for (const theme of ['light', 'dark']) {
     await close.focus();
     await page.keyboard.press('Enter');
     await expect(drawer).toBeHidden();
-    await expect(
-      page.getByTestId('sidebar-desktop').getByTestId('rail-help'),
-    ).toBeFocused();
+    await expect(page.getByTestId('sidebar-desktop').getByTestId('rail-help')).toBeFocused();
   });
 }
 

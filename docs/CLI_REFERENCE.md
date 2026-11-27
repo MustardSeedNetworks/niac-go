@@ -68,6 +68,7 @@ Complete command-line reference for NIAC-Go.
 - [`niac scenario show`](#niac-scenario-show) — show scenario contents
 - [`niac scenario use`](#niac-scenario-use) — copy scenario to a new file
 - [`niac simulation`](#niac-simulation) — control scenarios through the running NIAC daemon
+- [`niac simulation forget`](#niac-simulation-forget) — forget a saved scenario that failed to restart
 - [`niac simulation preflight`](#niac-simulation-preflight) — validate a scenario through the daemon
 - [`niac simulation select`](#niac-simulation-select) — select the scenario used by global status views
 - [`niac simulation start`](#niac-simulation-start) — start a scenario through the daemon
@@ -1722,7 +1723,7 @@ niac simulation
 ```
 
 ```text
-Preflight, start, select, and stop scenarios through the running NIAC daemon.
+Preflight, start, select, stop, and forget scenarios through the running NIAC daemon.
 ```
 
 Flags:
@@ -1738,6 +1739,25 @@ Examples:
 ```bash
 niac simulation start -i eth0 --config clinic.yaml --session clinic
 niac simulation stop clinic
+niac simulation forget clinic
+```
+
+### `niac simulation forget`
+
+Forget a saved scenario that failed to restart.
+
+```text
+niac simulation forget <session>
+```
+
+```text
+Delete a saved scenario the daemon could not restore after a restart, for example because its interface is unplugged, so it is no longer retried at every restart. Needs an admin-scoped token. A scenario that is running is stopped with 'simulation stop', not forgotten.
+```
+
+Examples:
+
+```bash
+niac simulation forget modern
 ```
 
 ### `niac simulation preflight`

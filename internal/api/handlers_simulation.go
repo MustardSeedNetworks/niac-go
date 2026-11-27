@@ -22,6 +22,8 @@ var (
 	ErrSimulationSessionIDRequired = errors.New("simulation session ID is required")
 	// ErrSimulationSessionNotFound means the named session ID has no registered simulation state.
 	ErrSimulationSessionNotFound = errors.New("simulation session was not found")
+	// ErrSavedSessionNotFound means no saved session with that ID failed recovery.
+	ErrSavedSessionNotFound = errors.New("no saved session with that ID failed recovery")
 	// ErrSimulationSessionCapacity and ErrSimulationDeviceCapacity are daemon-wide
 	// technical capacity limits, not entitlements. A per-config check cannot
 	// enforce them because several sessions run at once.
@@ -303,6 +305,35 @@ func writeManagedConfigPathError(w http.ResponseWriter, r *http.Request, err err
 }
 
 // handleSimulationStop processes DELETE requests to stop a simulation.
+// handleSimulationRecovery serves DELETE /api/v1/simulation/recovery?sessionId=<id>:
+// forget one saved session that failed recovery.
+func (s *Server) handleSimulationRecovery(w http.ResponseWriter, r *http.Request) {
+	if s.daemon == nil {
+		writeError(w, r, http.StatusNotImplemented, "daemon_required",
+			"Simulation control is only available in daemon mode. "+
+				"Start NIAC with the 'niac daemon' command.", nil)
+		return
+	}
+	sessionID := r.URL.Query().Get("sessionId")
+	if !ValidSessionID(sessionID) {
+		writeError(w, r, http.StatusBadRequest, "validation_failed", "Validation failed",
+			[]ErrorDetail{{Field: "sessionId", Issue: "session ID is invalid", Value: sessionID}})
+		return
+	}
+	if err := s.daemon.ForgetSavedSession(sessionID); err != nil {
+		if errors.Is(err, ErrSavedSessionNotFound) {
+			writeError(w, r, http.StatusNotFound, "saved_session_not_found",
+				"No saved session with that ID failed recovery", nil)
+			return
+		}
+		s.logger.ErrorContext(r.Context(), "[API] Failed to forget saved session", "error", err)
+		writeError(w, r, http.StatusInternalServerError, "forget_saved_session_failed",
+			"Failed to forget the saved session", nil)
+		return
+	}
+	s.writeJSON(w, map[string]string{"status": "forgotten"})
+}
+
 func (s *Server) handleSimulationStop(w http.ResponseWriter, r *http.Request) {
 	sessionID := r.URL.Query().Get("sessionId")
 	if sessionID != "" && !ValidSessionID(sessionID) {

@@ -3193,6 +3193,54 @@ paths:
             summary: Validate a simulation request without starting it
             tags:
                 - Simulation
+    /api/v1/simulation/recovery:
+        delete:
+            description: |
+                Deletes the saved record, runtime state and inline configuration of one session listed in `recovery.failed` of the simulation status, so the daemon stops retrying it at every restart. The daemon never drops such a record on its own: its interface may only be unplugged. Takes the session as the `sessionId` query parameter and needs an admin-scoped token. Answers 404 for a session that is not in that list, which includes any running session.
+            operationId: deleteApiV1SimulationRecovery
+            responses:
+                "401":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                    description: Missing or invalid bearer token.
+                "403":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                    description: Admin scope required, or CSRF token missing or invalid.
+                "405":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                    description: Method not allowed; the Allow header lists the accepted set.
+                "413":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                    description: Request body larger than 1048576 bytes.
+                "429":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                    description: Rate limit exceeded for this route class.
+                "500":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                    description: Internal error.
+            security:
+                - BearerAuth: []
+                  CsrfToken: []
+            summary: Forget a saved session that failed recovery
+            tags:
+                - Simulation
     /api/v1/stats:
         get:
             operationId: getApiV1Stats

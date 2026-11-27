@@ -364,6 +364,23 @@ export interface SimulationStatus {
   capture?: TrunkCaptureHealth;
   /** Daemon-wide, so present on the top-level status only — not per session. */
   capacity?: DaemonCapacity;
+  /** The daemon's last attempt to restore saved sessions at startup. */
+  recovery?: SimulationRecovery;
+}
+
+/** One saved session the daemon could not bring back after a restart. */
+export interface FailedRecoverySession {
+  sessionId: string;
+  interface: string;
+  reason: string;
+}
+
+export interface SimulationRecovery {
+  state: 'recovered' | 'failed';
+  message: string;
+  attemptedAt: string;
+  /** Present when `state` is `failed` for specific sessions; each can be forgotten. */
+  failed?: FailedRecoverySession[];
 }
 
 /** One running simulation session a client can address by name. */

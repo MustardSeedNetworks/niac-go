@@ -88,4 +88,24 @@ describe('simulation preflight client', () => {
     });
     expect(body).not.toHaveProperty('config_data');
   });
+
+  it('forgets a saved session with a DELETE naming the session', async () => {
+    // An earlier request in this file may have cached the CSRF token, so answer
+    // by URL and inspect the last call rather than counting fetches.
+    mockFetch.mockImplementation((url: string) =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve(url.includes('csrf') ? { token: 'csrf-token' } : { status: 'forgotten' }),
+      }),
+    );
+
+    const { forgetSavedSession } = await import('./client');
+    await forgetSavedSession('modern one');
+
+    const call = mockFetch.mock.calls.at(-1);
+    expect(call?.[0]).toContain('/api/v1/simulation/recovery?sessionId=modern%20one');
+    const init = call?.[1];
+    expect(init.method).toBe('DELETE');
+  });
 });

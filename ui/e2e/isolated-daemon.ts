@@ -20,9 +20,13 @@ export async function withIsolatedDaemon(
   request: APIRequestContext,
   check: (baseURL: string) => Promise<void>,
   attachmentPolicy = 'e2e-dry-run0=access:200',
+  // Runs with the daemon's data root before it starts, to leave state behind
+  // the way an earlier run would have (the recovery record lives in <root>/state).
+  seed?: (root: string) => Promise<void>,
 ) {
   const root = await mkdtemp(resolve(tmpdir(), 'niac-browser-isolated-'));
   try {
+    await seed?.(root);
     const baseURL = `https://127.0.0.1:${await unusedPort()}`;
     const daemon = spawn(
       resolve('../niac'),

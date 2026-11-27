@@ -389,41 +389,7 @@ const maxSimulationConfigSize = 10 * 1024 * 1024 // 10MB limit
 func loadSimulationConfig(req api.SimulationRequest) (*config.Config, string, error) {
 	switch {
 	case req.ScenarioName != "":
-		// Loading built-in scenarios by name preserves the scenario's own
-		// directory as the include_path base — needed for vendor
-		// scenarios with `include_path: ".."` plus relative walk_file
-		// refs that resolve to sibling directories (e.g. examples/
-		// device_walks_sanitized/...). Fetching the YAML text and
-		// POSTing it as ConfigData would lose that context.
-		roots := simulationConfigRoots()
-		scenarioPath := builtins.Find(req.ScenarioName)
-		if scenarioPath == "" {
-			// The scenario directories builtins.Find walks are a
-			// development-tree and system-install idea; the deb and rpm
-			// create none of them. What an installed host has is the
-			// library, which first run seeds with exactly the scenarios
-			// `niac scenario list` advertises -- and which is also where
-			// their `include_path: ../walks` resolves from, so loading one
-			// from there keeps the directory context this case exists for.
-			// Composed here rather than inside builtins.Dirs(), which is a
-			// leaf over stdlib and may not know about the library.
-			//
-			// Only existence is asked here; the name itself is handed on, so
-			// the load resolves and confines it exactly as a named ConfigPath
-			// is. Passing the resolved real path instead would fail the
-			// pre-symlink containment check wherever a root sits under a
-			// symlinked directory, which is every macOS /var.
-			candidate := req.ScenarioName + ".yaml"
-			if _, libraryErr := config.ResolveManagedConfigPath(candidate, roots); libraryErr != nil {
-				return nil, "", fmt.Errorf("%w: %s", ErrScenarioNotFound, req.ScenarioName)
-			}
-			scenarioPath = candidate
-		}
-		cfg, managedPath, err := config.LoadYAMLManaged(scenarioPath, roots)
-		if err != nil {
-			return nil, "", fmt.Errorf("load scenario %q: %w", req.ScenarioName, err)
-		}
-		return cfg, managedPath, nil
+		return loadNamedScenario(req.ScenarioName)
 	case req.ConfigData != "":
 		if len(req.ConfigData) > maxSimulationConfigSize {
 			return nil, "", fmt.Errorf(
@@ -637,6 +603,10 @@ func (d *Daemon) startGenerationLocked(req api.SimulationRequest, generation str
 		return fmt.Errorf("persist active simulation: %w", persistErr)
 	}
 	committed = true
+	if !recovering {
+		// A fresh start under a saved session's ID replaces its record.
+		d.dropRecoveryFailureLocked(sessionID)
+	}
 
 	active = d.publishSimulation(replacement)
 	if active != nil {
