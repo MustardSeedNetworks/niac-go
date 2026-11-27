@@ -339,10 +339,10 @@ jobs:
         # Anti-regression floor, a few points under the measured total so
         # ordinary churn does not fail the build. Project target is 90%.
         # Ratchet: 50 (2026-Q2), 68 (2026-Q3; measured 71.3% at b86fc10c),
-        # 75 (2026-Q4), 82 (2027-Q2), 90 long-term.
+        # 75 (2026-Q4; measured 78.3% on 2026-11-27), 82 (2027-Q2), 90 long-term.
         # bc -l may print 1 or 1.0. The shared step runs this with sh, which
         # has no (( )).
-        MIN_COVERAGE=68
+        MIN_COVERAGE=75
         below=$(echo "$COVERAGE < $MIN_COVERAGE" | bc -l)
         case "$below" in
           1*)

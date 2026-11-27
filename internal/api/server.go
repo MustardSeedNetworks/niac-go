@@ -524,25 +524,10 @@ func NewServer(cfg ServerConfig) *Server {
 }
 
 // bootstrapLibraryContent runs the one-time, non-destructive population
-// steps for a freshly-opened library: folding legacy user configs into
-// networks/, and adopting the niac-content deb/rpm bundle into walks/ if
-// it's installed and walks/ is still empty. Both are additive/no-op on
-// a library that already has content.
+// steps for a freshly-opened library: adopting the niac-content deb/rpm
+// bundle into walks/ if it's installed and walks/ is still empty. Additive
+// and a no-op on a library that already has content.
 func bootstrapLibraryContent(lib *library.Library) {
-	// #897 L4: fold the legacy $HOME/.niac/configs (and friends) user
-	// configs into the library's networks/ store, once, non-destructively,
-	// so the unified /api/v1/library/networks surface is the only config
-	// picker the UI needs after upgrading from the removed
-	// /api/v1/configs endpoint.
-	migrated, migrateErr := migrateLegacyUserConfigs(lib)
-	switch {
-	case migrateErr != nil:
-		slog.Error("[API] Failed to migrate legacy user configs into the library",
-			"error", migrateErr)
-	case migrated > 0:
-		slog.Info("[API] Migrated legacy user configs into the library", "count", migrated)
-	}
-
 	// Workstream L3a: if the niac-content deb/rpm is installed (see
 	// .goreleaser.yml), adopt its full device set over the embedded
 	// essentials that bootstrapWalks just seeded — precedence is deb
