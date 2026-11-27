@@ -660,7 +660,11 @@ jobs:
       # silently (see capture-rawsocket).
       - name: Build niac and grant it raw-socket capabilities
         run: |
-          go build -o "$GITHUB_WORKSPACE/niac-realdaemon" ./cmd/niac
+          # Version ldflags as `make build` injects them. The UI is not
+          # embedded here, so no UIBuildHash: nothing in this job reads it.
+          pkg=github.com/MustardSeedNetworks/niac-go/internal/version
+          go build -ldflags="-X $pkg.Version=$(git describe --tags --always --dirty) -X $pkg.Commit=$(git rev-parse --short HEAD) -X $pkg.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            -o "$GITHUB_WORKSPACE/niac-realdaemon" ./cmd/niac
           sudo setcap cap_net_raw,cap_net_admin+eip "$GITHUB_WORKSPACE/niac-realdaemon"
           getcap "$GITHUB_WORKSPACE/niac-realdaemon"
 
