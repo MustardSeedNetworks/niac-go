@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.131.4](https://github.com/MustardSeedNetworks/niac-go/compare/v0.131.3...v0.131.4) (2026-11-28)
+
+
+### Code Refactoring
+
+* **ui:** import theme tokens directly, drop theme.ts barrel ([#3176](https://github.com/MustardSeedNetworks/niac-go/issues/3176)) ([a0c732b](https://github.com/MustardSeedNetworks/niac-go/commit/a0c732bbd486bd1cf7e049208666202a53798d83))
+
+
+### Miscellaneous
+
+* **deps:** update dependency i18next-cli to v1.93.1 ([#3177](https://github.com/MustardSeedNetworks/niac-go/issues/3177)) ([e6b0da5](https://github.com/MustardSeedNetworks/niac-go/commit/e6b0da5cfe0464c10223c5d5f27dedd7f7235132))
+
 ## [0.131.3](https://github.com/MustardSeedNetworks/niac-go/compare/v0.131.2...v0.131.3) (2026-11-28)
 
 
