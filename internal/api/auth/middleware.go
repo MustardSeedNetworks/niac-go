@@ -5,7 +5,6 @@ package auth
 import (
 	"log/slog"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/MustardSeedNetworks/foundation/pkg/httpserver/route"
@@ -74,17 +73,9 @@ func Middleware(d Deps, next http.HandlerFunc) http.HandlerFunc {
 		// non-loopback address without a token; #739 hardens this at request
 		// time too, so a refactor that weakens the startup gate can never
 		// silently expose a non-loopback listener. The bypass is allowed only
-		// when the bind is loopback-only OR the operator opted out via
-		// NIAC_AUTH_DISABLED=true.
+		// when the bind is loopback-only.
 		tokens := d.Tokens()
 		if tokens == nil || tokens.Len() == 0 {
-			if os.Getenv("NIAC_AUTH_DISABLED") == "true" {
-				// #743: dev-only bypass — treat as admin so dev workflows can
-				// still exercise admin-gated routes.
-				next(w, r.WithContext(WithScope(r.Context(), tokenstore.ScopeAdmin)))
-
-				return
-			}
 			nonLoopback, _ := d.NonLoopback(d.Addr)
 			if !nonLoopback {
 				// Loopback-only, no token: the documented local-dev path.
@@ -93,12 +84,12 @@ func Middleware(d Deps, next http.HandlerFunc) http.HandlerFunc {
 
 				return
 			}
-			// Non-loopback + no token + no explicit opt-out. The startup gate
+			// Non-loopback + no token. The startup gate
 			// should have prevented this; failing closed here is the
 			// defense-in-depth backstop.
 			d.Logger.ErrorContext(
 				r.Context(),
-				"[API] Refusing request: non-loopback bind has no tokens and NIAC_AUTH_DISABLED is not set",
+				"[API] Refusing request: non-loopback bind has no tokens",
 				"event",
 				"auth.misconfigured",
 				"requestID",
@@ -110,7 +101,7 @@ func Middleware(d Deps, next http.HandlerFunc) http.HandlerFunc {
 			)
 			d.WriteErr(w, r, http.StatusUnauthorized, "auth_not_configured",
 				"Server is bound to a non-loopback address without authentication tokens. "+
-					"Set NIAC_API_TOKEN, or NIAC_AUTH_DISABLED=true to explicitly disable auth (development only).")
+					"Set NIAC_API_TOKEN or a token file.")
 
 			return
 		}

@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 )
 
@@ -115,6 +116,35 @@ func TestStart_LoopbackWithoutTokenIsAllowed(t *testing.T) {
 	}
 	if non {
 		t.Fatal("127.0.0.1:0 should be reported as loopback")
+	}
+}
+
+func TestEnforceNonLoopbackAuthGate_AuthDisabled(t *testing.T) {
+	tests := []struct {
+		name string
+		addr string
+		env  string
+		want error
+	}{
+		{"non-loopback, disabled", "0.0.0.0:8445", "true", errAuthDisabledNonLoopback},
+		{"non-loopback, disabled, token present", "10.0.0.5:8445", "true", errAuthDisabledNonLoopback},
+		{"loopback, disabled", "127.0.0.1:8445", "true", nil},
+		{"loopback, unset", "127.0.0.1:8445", "", nil},
+		{"non-loopback, false", "0.0.0.0:8445", "false", errNonLoopbackRequiresToken},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("NIAC_AUTH_DISABLED", tt.env)
+			s := makeGateServer(tt.addr, "")
+			if tt.name == "non-loopback, disabled, token present" {
+				s.tokens = tokenstore.NewTokenStore(
+					[]tokenstore.ScopedToken{{Value: "t", Scope: tokenstore.ScopeAdmin}},
+				)
+			}
+			if err := s.enforceNonLoopbackAuthGate(); !errors.Is(err, tt.want) {
+				t.Errorf("got %v, want %v", err, tt.want)
+			}
+		})
 	}
 }
 

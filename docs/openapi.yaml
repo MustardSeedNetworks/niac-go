@@ -70,9 +70,11 @@ info:
         (`NIAC_API_TOKEN` or a token file). `/__version`, `/__capabilities`,
         `/health/live` and `/health/ready` are deliberately unauthenticated
         deployment introspection. The installed
-        loopback-only daemon additionally permits tokenless local access, which
-        OpenAPI 3.0 cannot express per server and so is documented here rather
-        than in a security requirement.
+        loopback-only daemon additionally permits tokenless local access (admin,
+        and only for a loopback `Host` header on the bound port), which OpenAPI
+        3.0 cannot express per server and so is documented here rather than in a
+        security requirement. This mode is temporary and ends when human login
+        lands (#3165).
 
         ## CSRF protection
         Operations marked with the `CsrfToken` security scheme need a token from

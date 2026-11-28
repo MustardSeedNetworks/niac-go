@@ -76,7 +76,12 @@ Out of scope:
 
 - Always run `niac daemon --token <secret>` when exposed to the
   network. The daemon explicitly warns when bound to a non-loopback
-  address without a token.
+  address without a token. `NIAC_AUTH_DISABLED=true` on a non-loopback
+  address is refused at startup.
+- Running with no token is a temporary, loopback-only mode: every local
+  request is admin, and requests whose `Host` header is not the daemon's
+  own loopback address are refused (DNS-rebinding guard). It ends when
+  human login lands (#3165).
 - Set `--webhook-allowed-host` to lock the alert webhook destination
   to a known host (the default rejects raw private/loopback IPs but an
   explicit allowlist is the canonical SSRF defense).

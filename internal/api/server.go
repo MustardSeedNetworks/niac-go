@@ -29,6 +29,7 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"os"
 	"slices"
 	"sync"
 	"time"
@@ -209,6 +210,14 @@ var errNonLoopbackRequiresToken = errors.New(
 	"niac refuses to bind a non-loopback address without an API token.\n" +
 		"Set NIAC_API_TOKEN=<value> or pass --api-token=<value>.\n" +
 		"If you want loopback-only (no auth), set --listen=127.0.0.1")
+
+// errAuthDisabledNonLoopback refuses startup when NIAC_AUTH_DISABLED=true is
+// set on a non-loopback bind: the variable must never open a network-reachable
+// admin API. Loopback needs no opt-out, since a tokenless loopback daemon is
+// already the (temporary) local mode.
+var errAuthDisabledNonLoopback = errors.New(
+	"niac refuses NIAC_AUTH_DISABLED=true on a non-loopback address.\n" +
+		"Unset it and set NIAC_API_TOKEN=<value>, or bind loopback with --listen=127.0.0.1")
 
 // AlertConfig controls basic threshold-based alerting.
 type AlertConfig struct {
@@ -744,6 +753,9 @@ func (s *Server) enforceNonLoopbackAuthGate() error {
 	if parseErr != nil {
 		return fmt.Errorf("parse listen address: %w", parseErr)
 	}
+	if nonLoopback && os.Getenv("NIAC_AUTH_DISABLED") == "true" {
+		return errAuthDisabledNonLoopback
+	}
 	if nonLoopback && !s.AuthConfigured() {
 		return errNonLoopbackRequiresToken
 	}
@@ -760,7 +772,9 @@ func (s *Server) warnIfUnauthenticated() {
 		return
 	}
 	s.logger.Warn(
-		"API server running WITHOUT authentication - all endpoints are publicly accessible",
+		"API server running WITHOUT authentication: loopback-only, every local request is admin. "+
+			"Temporary mode that ends when human login lands (#3165)",
+		"event", "auth.loopback_admin",
 	)
 	s.logger.Warn("Set NIAC_API_TOKEN environment variable to enable authentication")
 	s.logger.Info("Example: export NIAC_API_TOKEN=$(openssl rand -base64 32)")
@@ -786,7 +800,11 @@ func (s *Server) startAPIListener() error {
 	if err != nil {
 		return fmt.Errorf("API server listen: %w", err)
 	}
-	s.httpServer = newSecureHTTPServer(ln.Addr().String(), s.apiHandler())
+	handler := s.apiHandler()
+	if tcp, ok := ln.Addr().(*net.TCPAddr); ok {
+		handler = s.loopbackHostGuard(handler, tcp.IP, tcp.Port)
+	}
+	s.httpServer = newSecureHTTPServer(ln.Addr().String(), handler)
 	go func() {
 		if serveErr := s.httpServer.Serve(ln); serveErr != nil &&
 			!errors.Is(serveErr, http.ErrServerClosed) {
