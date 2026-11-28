@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.131.1](https://github.com/MustardSeedNetworks/niac-go/compare/v0.131.0...v0.131.1) (2026-11-28)
+
+
+### Bug Fixes
+
+* **ui:** re-copy the shared set for the tooltip escape fix ([#3163](https://github.com/MustardSeedNetworks/niac-go/issues/3163)) ([676991c](https://github.com/MustardSeedNetworks/niac-go/commit/676991cade9ebf6668e4ab2eccbc92eb66d318b2))
+
+
+### Miscellaneous
+
+* **deps:** update amannn/action-semantic-pull-request action to v6.1.3 ([#3168](https://github.com/MustardSeedNetworks/niac-go/issues/3168)) ([4af417a](https://github.com/MustardSeedNetworks/niac-go/commit/4af417ac7d304c55cc24ebfd88d08bae77542933))
+
 ## [0.131.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.130.5...v0.131.0) (2026-11-27)
 
 
