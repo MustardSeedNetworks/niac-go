@@ -9,7 +9,8 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cn, layout } from '../../styles/theme';
+import { layout } from '../../styles/themeLayout';
+import { cn } from '../../styles/themeUtils';
 import type { HelpItem } from './types';
 
 interface HelpItemCardProps {

@@ -32,7 +32,7 @@
  */
 import type { ReactNode } from 'react';
 import { Card } from '../shared/Card';
-import { cn } from '../styles/theme';
+import { cn } from '../styles/themeUtils';
 
 /**
  * Height of the record list and of the pane column beside it. They match so

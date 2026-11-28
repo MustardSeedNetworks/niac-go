@@ -9,7 +9,9 @@ import type { ReactElement } from 'react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { categories, features } from '../../data/help-content';
-import { badge, cn, layout } from '../../styles/theme';
+import { badge } from '../../styles/themeComponents';
+import { layout } from '../../styles/themeLayout';
+import { cn } from '../../styles/themeUtils';
 import type { Feature } from './types';
 
 interface OverviewSectionProps {

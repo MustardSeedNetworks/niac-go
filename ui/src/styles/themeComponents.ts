@@ -1,6 +1,5 @@
 /**
  * themeComponents.ts — reusable component styling tokens.
- * Re-exported through theme.ts.
  *
  * All values reference semantic theme tokens declared in src/index.css via
  * Tailwind v4 @theme directive (brand-*, status-*, text-*, bg-*, border-*).

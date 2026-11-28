@@ -9,7 +9,8 @@ import type { ReactElement } from 'react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SHORTCUTS } from '../../data/help-content';
-import { cn, layout } from '../../styles/theme';
+import { layout } from '../../styles/themeLayout';
+import { cn } from '../../styles/themeUtils';
 import type { Shortcut } from './types';
 
 interface ShortcutsSectionProps {

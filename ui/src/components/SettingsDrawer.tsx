@@ -40,7 +40,8 @@ import { SegmentedControl } from '../shared/SegmentedControl';
 import { Select } from '../shared/Select';
 import { SettingsTabs } from '../shared/SettingsTabs';
 import { Skeleton } from '../shared/Skeleton';
-import { cn, layout } from '../styles/theme';
+import { layout } from '../styles/themeLayout';
+import { cn } from '../styles/themeUtils';
 import { ConnectionStatus } from '../ui/ConnectionStatus';
 import { SimulationSection } from './settings/SimulationSection';
 
