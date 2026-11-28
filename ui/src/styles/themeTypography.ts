@@ -1,7 +1,7 @@
 /**
  * themeTypography.ts — semantic typography tokens. CSS utility classes are
  * defined in index.css `@layer components`; use these TS constants for
- * programmatic styling. Re-exported through theme.ts.
+ * programmatic styling.
  *
  * Canonical responsive type scale (2026-05-22) — harmonized with Seed and Stem.
  * Replaces the pre-audit flat scale that lacked responsive sizing and tracking.

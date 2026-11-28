@@ -1,6 +1,5 @@
 /**
  * themeDeviceColors.ts — niac-specific accent colors for topology.
- * Re-exported through theme.ts.
  *
  * All classes reference niac's semantic device/proto/link tokens declared
  * in src/index.css via @theme:

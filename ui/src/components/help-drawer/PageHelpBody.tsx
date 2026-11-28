@@ -11,7 +11,7 @@
 
 import type { ReactElement, ReactNode } from 'react';
 import type { PageHelpBlock } from '../../data/page-help';
-import { cn } from '../../styles/theme';
+import { cn } from '../../styles/themeUtils';
 
 /** Splits on the inline markers while keeping them, so index order is stable. */
 const INLINE = /(`[^`]+`|\*\*[^*]+\*\*|\[[^\]]+\]\([^)]+\))/g;

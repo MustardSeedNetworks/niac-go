@@ -8,7 +8,7 @@ and constraints rather than duplicating every token value.
 
 - `src/index.css` owns light and dark semantic variables and the Tailwind
   `@theme` mapping.
-- `src/styles/theme.ts` exports typed token groups for TSX code.
+- `src/styles/theme*.ts` export typed token groups for TSX code; import each from its own module (no barrel).
 - `src/styles/themeDeviceColors.ts` owns topology device, link, and protocol
   colors.
 - `src/hooks/useTheme.ts` owns theme selection and persistence.

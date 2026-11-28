@@ -21,7 +21,7 @@ import { useApiResource } from '../../hooks/useApiResource';
 import { useUsableInterfacesResource } from '../../hooks/usePageResources';
 import { Select } from '../../shared/Select';
 import { type ConfigSource, useUIStore } from '../../stores/ui-store';
-import { cn } from '../../styles/theme';
+import { cn } from '../../styles/themeUtils';
 import { getErrorMessage } from '../../utils/format';
 
 type ConfigTab = 'configs' | 'upload';

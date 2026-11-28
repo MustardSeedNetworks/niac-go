@@ -14,7 +14,7 @@ import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getPageHelp, type PageHelpBlock } from '../../data/page-help';
 import { usePages } from '../../pageRegistry';
-import { cn } from '../../styles/theme';
+import { cn } from '../../styles/themeUtils';
 import { PageHelpBody } from './PageHelpBody';
 
 interface PagesSectionProps {
