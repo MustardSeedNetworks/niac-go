@@ -253,10 +253,12 @@ func logDaemonAuthMode(token, tokenFile string) bool {
 		logging.Infof("API authentication enabled (single token via env/flag; SIGHUP rotates)")
 	default:
 		logging.Warningf(
-			"SECURITY: No API token set. Anyone with network access can control simulations.",
+			"SECURITY: No API token set. Loopback-only: every local request is admin, and requests " +
+				"whose Host header is not this daemon's loopback address are refused (DNS-rebinding guard).",
 		)
 		logging.Warningf(
-			"         Use NIAC_API_TOKEN env var for production or network-exposed deployments.",
+			"         Temporary mode: it ends when human login lands (#3165). " +
+				"Set NIAC_API_TOKEN to authenticate, and to bind a non-loopback address.",
 		)
 		return false
 	}

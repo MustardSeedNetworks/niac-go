@@ -9,9 +9,9 @@
  * niac's tiers (from internal/api/token_store.go):
  *   read-only  < read-write  < admin
  * The auth() middleware stashes the resolved scope on the request
- * context; handleAuthScope echoes it. On bypass paths (loopback no-
- * token, NIAC_AUTH_DISABLED) the backend returns "admin" so dev
- * sessions aren't suddenly locked out of admin controls.
+ * context; handleAuthScope echoes it. On the loopback no-token
+ * path the backend returns "admin" so local sessions aren't locked out of
+ * admin controls (temporary: ends when human login lands, #3165).
  *
  * Fail-closed: on fetch error or while the initial request is in
  * flight, `canWrite` and `isAdmin` are false so write/admin controls

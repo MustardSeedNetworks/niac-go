@@ -420,10 +420,10 @@ func TestAuth_EmptyStore_NonLoopbackFailsClosed(t *testing.T) {
 	}
 }
 
-// TestAuth_EmptyStore_NonLoopbackExplicitOptOut verifies the operator can
-// still run unauthenticated on a non-loopback bind, but only by setting
-// NIAC_AUTH_DISABLED=true explicitly (#739).
-func TestAuth_EmptyStore_NonLoopbackExplicitOptOut(t *testing.T) {
+// TestAuth_EmptyStore_NonLoopbackIgnoresAuthDisabled pins that
+// NIAC_AUTH_DISABLED=true no longer opens a non-loopback listener: the
+// middleware fails closed whatever the variable says.
+func TestAuth_EmptyStore_NonLoopbackIgnoresAuthDisabled(t *testing.T) {
 	t.Setenv("NIAC_AUTH_DISABLED", "true")
 	server := createTestServerForMiddleware(t)
 	server.tokens = tokenstore.NewTokenStore(nil)
@@ -435,11 +435,10 @@ func TestAuth_EmptyStore_NonLoopbackExplicitOptOut(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/devices", nil)
 	rec := httptest.NewRecorder()
-	wrapped(rec, req)
+	wrapped(rec, httptest.NewRequest(http.MethodGet, "/api/v1/devices", nil))
 
-	if !called || rec.Code != http.StatusOK {
-		t.Errorf("explicit NIAC_AUTH_DISABLED=true should bypass: called=%v code=%d", called, rec.Code)
+	if called || rec.Code != http.StatusUnauthorized {
+		t.Errorf("NIAC_AUTH_DISABLED must not bypass off-loopback: called=%v code=%d", called, rec.Code)
 	}
 }

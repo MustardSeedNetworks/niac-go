@@ -168,7 +168,13 @@ Never put the API token in a machine-level `NIAC_API_TOKEN` variable: machine
 environment variables live under `HKLM` and every local user can read them.
 Keep tokens in a token file under `%ProgramData%\NiAC` and set only its path,
 `NIAC_API_TOKEN_FILE`, for the service. The service refuses a non-loopback bind
-without a token.
+without a token, and refuses `NIAC_AUTH_DISABLED=true` on a non-loopback bind.
+
+With no token the loopback service treats every local request as admin and
+rejects any request whose `Host` header is not `127.0.0.1`, `localhost`,
+`[::1]` or the bound address on the bound port, which stops a web page from
+driving it through DNS rebinding. This is a temporary mode that ends when human
+login lands (#3165); set a token to leave it.
 
 The service loads the token file only if SYSTEM or Administrators own it and
 every directory above it, no other account can write, delete or re-ACL it, and
