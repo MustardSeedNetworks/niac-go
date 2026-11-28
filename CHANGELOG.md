@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.131.2](https://github.com/MustardSeedNetworks/niac-go/compare/v0.131.1...v0.131.2) (2026-11-28)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @tanstack/react-query to v5.108.2 ([#3169](https://github.com/MustardSeedNetworks/niac-go/issues/3169)) ([2238b7e](https://github.com/MustardSeedNetworks/niac-go/commit/2238b7e50f14cd2f656749f453ddef2dcd3309be))
+
+
+### Miscellaneous
+
+* **deps:** update dependency i18next-cli to v1.93.0 ([#3171](https://github.com/MustardSeedNetworks/niac-go/issues/3171)) ([bec61ea](https://github.com/MustardSeedNetworks/niac-go/commit/bec61ea486d5c5ab2f967d7fe06fe8ec814b4412))
+
 ## [0.131.1](https://github.com/MustardSeedNetworks/niac-go/compare/v0.131.0...v0.131.1) (2026-11-28)
 
 
